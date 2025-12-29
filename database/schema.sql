@@ -130,9 +130,26 @@ VALUES
   ('Luxury Transport Solutions', 'transport', 'Cardiff', 'CF10', 'Premium event transportation', 4.8, 'Wales')
 ON CONFLICT DO NOTHING;
 
+-- Analytics Events table
+-- Stores analytics events for tracking conversions and metrics
+CREATE TABLE IF NOT EXISTS analytics_events (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  event_name VARCHAR(100) NOT NULL,
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  properties JSONB DEFAULT '{}'::jsonb,
+  timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indexes for analytics queries
+CREATE INDEX IF NOT EXISTS idx_analytics_events_name ON analytics_events(event_name);
+CREATE INDEX IF NOT EXISTS idx_analytics_events_user_id ON analytics_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_analytics_events_timestamp ON analytics_events(timestamp);
+CREATE INDEX IF NOT EXISTS idx_analytics_events_name_timestamp ON analytics_events(event_name, timestamp);
+
 -- Comments for documentation
 COMMENT ON TABLE users IS 'User accounts with flexible authentication provider support';
 COMMENT ON TABLE conversations IS 'Chat conversations between users and the AI assistant';
 COMMENT ON TABLE messages IS 'Individual messages within conversations';
 COMMENT ON TABLE event_plans IS 'Event planning details and progress tracking';
 COMMENT ON TABLE suppliers IS 'Curated database of event suppliers across the UK';
+COMMENT ON TABLE analytics_events IS 'Analytics events for tracking user behavior and conversions';

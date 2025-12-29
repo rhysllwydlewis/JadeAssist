@@ -16,6 +16,8 @@ import { RATE_LIMITS } from './utils/constants';
 import healthRouter from './routes/health';
 import chatRouter from './routes/chat';
 import planningRouter from './routes/planning';
+import suppliersRouter from './routes/suppliers';
+import analyticsRouter from './routes/analytics';
 
 // Create Express app
 const app: Application = express();
@@ -62,6 +64,8 @@ app.use((req, _res, next) => {
 app.use('/health', healthRouter);
 app.use('/api/chat', chatRouter);
 app.use('/api/planning', planningRouter);
+app.use('/api/suppliers', suppliersRouter);
+app.use('/api/analytics', analyticsRouter);
 
 // Root endpoint
 app.get('/', (_req, res) => {

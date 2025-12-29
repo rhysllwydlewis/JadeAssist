@@ -1,0 +1,99 @@
+name: Deploy JadeAssist Backend
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  lint-and-test:
+    name: Lint and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Build packages
+        run: npm run build
+
+  build-docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+        if: secrets.DOCKER_USERNAME != ''
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: ${{ secrets.DOCKER_USERNAME != '' }}
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/jadeassist:latest
+            ${{ secrets.DOCKER_USERNAME }}/jadeassist:${{ github.sha }}
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/jadeassist:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/jadeassist:buildcache,mode=max
+
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build-docker
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Render
+        # This is a placeholder - configure based on your deployment target
+        # For Render, deployment happens automatically on git push
+        # For other platforms, add deployment steps here
+        run: |
+          echo "Deployment triggered for commit ${{ github.sha }}"
+          echo "Configure deployment steps based on your platform:"
+          echo "  - Render: Automatic on git push"
+          echo "  - Railway: Use railway CLI"
+          echo "  - Fly.io: Use flyctl"
+          echo "  - Vercel: Use vercel CLI"
+
+      - name: Notify deployment
+        run: |
+          echo "✅ JadeAssist backend deployed successfully"
+          echo "Commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"

@@ -1,0 +1,72 @@
+# JadeAssist Docker Compose Configuration
+# For local development and testing
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: jadeassist-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: jadeassist
+      POSTGRES_PASSWORD: jadeassist_dev
+      POSTGRES_DB: jadeassist
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U jadeassist']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # JadeAssist Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jadeassist-api
+    restart: unless-stopped
+    ports:
+      - '3001:3001'
+    environment:
+      # Server
+      PORT: 3001
+      NODE_ENV: production
+      API_URL: http://localhost:3001
+
+      # Database
+      DATABASE_URL: postgresql://jadeassist:jadeassist_dev@postgres:5432/jadeassist
+
+      # LLM - Set your OpenAI API key
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      LLM_MODEL: gpt-4-turbo
+      LLM_TOKEN_LIMIT: 4000
+
+      # Auth
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
+      AUTH_PROVIDER: jwt
+
+      # Logging
+      LOG_LEVEL: info
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'node', '-e', "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s
+      retries: 3
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  default:
+    name: jadeassist-network
