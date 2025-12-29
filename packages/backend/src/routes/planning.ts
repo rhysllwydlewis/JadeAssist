@@ -364,4 +364,266 @@ router.post(
   })
 );
 
+/**
+ * POST /planning/estimate-budget
+ * Dynamic budget calculator
+ */
+const estimateBudgetSchema = z.object({
+  eventType: z.enum([
+    'wedding',
+    'birthday',
+    'corporate',
+    'conference',
+    'party',
+    'anniversary',
+    'other',
+  ]),
+  guestCount: z.number().int().positive(),
+  eventDate: z.string().datetime(),
+  location: z.string(),
+  includeVenue: z.boolean().default(true),
+  includeCatering: z.boolean().default(true),
+  includeEntertainment: z.boolean().default(true),
+});
+
+router.post(
+  '/estimate-budget',
+  validateBody(estimateBudgetSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const {
+      eventType,
+      guestCount,
+      // eventDate and location are provided but not currently used in calculation
+      // They may be used for future seasonal pricing or location-based adjustments
+      includeVenue,
+      includeCatering,
+      includeEntertainment,
+    } = req.body as z.infer<typeof estimateBudgetSchema>;
+
+    logger.info({ eventType, guestCount }, 'Estimating budget');
+
+    // Calculate base budget estimate
+    const estimatedBudget = eventCalcService.estimateBudget(eventType as EventType, guestCount);
+
+    // Calculate detailed breakdown
+    const calculations = eventCalcService.calculateBudget({
+      eventType: eventType as EventType,
+      budget: estimatedBudget,
+      guestCount,
+    });
+
+    // Adjust based on inclusions
+    let adjustedTotal = estimatedBudget;
+    const breakdown: Record<string, number> = {};
+
+    calculations.allocations.forEach((allocation) => {
+      const category = allocation.category.toLowerCase();
+      let amount = allocation.amount;
+
+      // Exclude categories if not included
+      if (!includeVenue && category === 'venue') {
+        amount = 0;
+        adjustedTotal -= allocation.amount;
+      }
+      if (!includeCatering && category === 'catering') {
+        amount = 0;
+        adjustedTotal -= allocation.amount;
+      }
+      if (!includeEntertainment && category === 'entertainment') {
+        amount = 0;
+        adjustedTotal -= allocation.amount;
+      }
+
+      breakdown[allocation.category] = Math.round(amount * 100) / 100;
+    });
+
+    // Generate savings tips
+    const savings = await Promise.resolve([
+      { tip: 'Book during off-peak season', savings: Math.round(adjustedTotal * 0.15) },
+      { tip: 'Choose a weekday instead of weekend', savings: Math.round(adjustedTotal * 0.2) },
+      { tip: 'Reduce guest count by 10%', savings: Math.round(adjustedTotal * 0.1) },
+      { tip: 'Use in-house suppliers', savings: Math.round(adjustedTotal * 0.12) },
+    ]);
+
+    const response: ApiResponse = {
+      success: true,
+      data: {
+        breakdown,
+        total: Math.round(adjustedTotal * 100) / 100,
+        savings,
+      },
+      timestamp: new Date().toISOString(),
+    };
+
+    logger.info({ total: adjustedTotal }, 'Budget estimated');
+
+    res.status(200).json(response);
+  })
+);
+
+/**
+ * POST /planning/suggest-suppliers
+ * Supplier matching based on criteria
+ */
+const suggestSuppliersSchema = z.object({
+  eventType: z.enum([
+    'wedding',
+    'birthday',
+    'corporate',
+    'conference',
+    'party',
+    'anniversary',
+    'other',
+  ]),
+  category: z.string(),
+  postcode: z.string(),
+  budget: z.number().positive(),
+  guestCount: z.number().int().positive(),
+  preferences: z.record(z.unknown()).optional(),
+});
+
+router.post(
+  '/suggest-suppliers',
+  validateBody(suggestSuppliersSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { eventType, category, postcode, budget, guestCount, preferences } = req.body as z.infer<
+      typeof suggestSuppliersSchema
+    >;
+
+    logger.info({ eventType, category, postcode }, 'Suggesting suppliers');
+
+    // Get suppliers from planning engine
+    const suppliers = await planningEngine.suggestSuppliers({
+      eventType: eventType as EventType,
+      category,
+      postcode,
+      budget,
+      guestCount,
+      preferences,
+    });
+
+    const response: ApiResponse = {
+      success: true,
+      data: {
+        suppliers,
+      },
+      timestamp: new Date().toISOString(),
+    };
+
+    logger.info({ count: suppliers.length }, 'Suppliers suggested');
+
+    res.status(200).json(response);
+  })
+);
+
+/**
+ * POST /planning/build-timeline
+ * Generate event timeline
+ */
+const buildTimelineSchema = z.object({
+  eventType: z.enum([
+    'wedding',
+    'birthday',
+    'corporate',
+    'conference',
+    'party',
+    'anniversary',
+    'other',
+  ]),
+  eventDate: z.string().datetime(),
+  guestCount: z.number().int().positive(),
+  complexity: z.enum(['simple', 'moderate', 'complex']).default('moderate'),
+});
+
+router.post(
+  '/build-timeline',
+  validateBody(buildTimelineSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { eventType, eventDate, guestCount, complexity } = req.body as z.infer<
+      typeof buildTimelineSchema
+    >;
+
+    logger.info({ eventType, eventDate, complexity }, 'Building timeline');
+
+    const timeline = await planningEngine.buildTimeline({
+      eventType: eventType as EventType,
+      eventDate: new Date(eventDate),
+      guestCount,
+      complexity,
+    });
+
+    const response: ApiResponse = {
+      success: true,
+      data: timeline,
+      timestamp: new Date().toISOString(),
+    };
+
+    logger.info({ totalTasks: timeline.totalTasks }, 'Timeline built');
+
+    res.status(200).json(response);
+  })
+);
+
+/**
+ * POST /planning/create-checklist
+ * Generate event checklist
+ */
+const createChecklistSchema = z.object({
+  eventType: z.enum([
+    'wedding',
+    'birthday',
+    'corporate',
+    'conference',
+    'party',
+    'anniversary',
+    'other',
+  ]),
+  guestCount: z.number().int().positive(),
+  venue: z.string().optional(),
+  includeVenue: z.boolean().default(true),
+  includeDecor: z.boolean().default(true),
+  includeFood: z.boolean().default(true),
+  includeMusic: z.boolean().default(true),
+});
+
+router.post(
+  '/create-checklist',
+  validateBody(createChecklistSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const {
+      eventType,
+      guestCount,
+      venue,
+      includeVenue,
+      includeDecor,
+      includeFood,
+      includeMusic,
+    } = req.body as z.infer<typeof createChecklistSchema>;
+
+    logger.info({ eventType, guestCount }, 'Creating checklist');
+
+    const checklist = await planningEngine.createChecklist({
+      eventType: eventType as EventType,
+      guestCount,
+      venue,
+      includeVenue,
+      includeDecor,
+      includeFood,
+      includeMusic,
+    });
+
+    const response: ApiResponse = {
+      success: true,
+      data: {
+        checklist,
+      },
+      timestamp: new Date().toISOString(),
+    };
+
+    logger.info({ categories: checklist.length }, 'Checklist created');
+
+    res.status(200).json(response);
+  })
+);
+
 export default router;

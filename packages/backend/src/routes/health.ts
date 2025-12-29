@@ -62,4 +62,39 @@ router.get(
   })
 );
 
+/**
+ * GET /health/ready
+ * Readiness check endpoint for Kubernetes/container orchestration
+ */
+router.get(
+  '/ready',
+  asyncHandler(async (_req: Request, res: Response) => {
+    logger.debug('Readiness check requested');
+
+    // Check if critical services are ready
+    const dbHealthy = await checkDatabaseHealth();
+    const llmHealthy = await llmService.healthCheck();
+
+    const ready = dbHealthy && llmHealthy;
+
+    const response: ApiResponse = {
+      success: ready,
+      data: {
+        ready,
+        services: {
+          database: dbHealthy ? 'ready' : 'not ready',
+          llm: llmHealthy ? 'ready' : 'not ready',
+        },
+      },
+      timestamp: new Date().toISOString(),
+    };
+
+    const statusCode = ready ? 200 : 503;
+
+    logger.info({ ready }, 'Readiness check completed');
+
+    res.status(statusCode).json(response);
+  })
+);
+
 export default router;
