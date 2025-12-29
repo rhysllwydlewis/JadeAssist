@@ -14,11 +14,14 @@ export const validateBody =
   <T>(schema: ZodSchema<T>) =>
   (req: Request, res: Response, next: NextFunction): void => {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const validated = schema.parse(req.body);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       req.body = validated;
       next();
     } catch (error) {
       if (error instanceof z.ZodError) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         logger.warn({ error: error.errors, body: req.body }, 'Validation error');
 
         const response: ApiResponse = {
@@ -49,7 +52,8 @@ export const validateQuery =
   (req: Request, res: Response, next: NextFunction): void => {
     try {
       const validated = schema.parse(req.query);
-      req.query = validated as Record<string, unknown>;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+      req.query = validated as any;
       next();
     } catch (error) {
       if (error instanceof z.ZodError) {

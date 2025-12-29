@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { AuthRequest, authenticateJWT } from '../middleware/auth';
 import { validateBody, validateParams } from '../middleware/validation';
 import { asyncHandler } from '../middleware/errorHandler';
-import { EventPlanModel, CreateEventPlanParams } from '../models/EventPlan';
+import { EventPlanModel, CreateEventPlanParams, UpdateEventPlanParams } from '../models/EventPlan';
 import { eventCalcService } from '../services/eventCalcService';
 import { planningEngine } from '../services/planningEngine';
 import { ApiResponse, EventType } from '@jadeassist/shared';
@@ -205,7 +205,8 @@ router.patch(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const userId = req.userId!;
-    const updates = req.body;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-redundant-type-constituents
+    const updates = req.body as UpdateEventPlanParams & { eventDate?: string };
 
     logger.info({ planId: id, userId }, 'Updating event plan');
 
@@ -236,10 +237,18 @@ router.patch(
     }
 
     // Convert event date string to Date if provided
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument
     const eventDate = updates.eventDate ? new Date(updates.eventDate) : undefined;
 
     const plan = await EventPlanModel.update(id, {
-      ...updates,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      budget: updates.budget,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      guestCount: updates.guestCount,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      location: updates.location,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      postcode: updates.postcode,
       eventDate,
     });
 

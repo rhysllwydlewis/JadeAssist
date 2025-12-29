@@ -3,7 +3,6 @@
  */
 import { llmService, LLMMessage } from './llmService';
 import { ConversationModel } from '../models/Conversation';
-import { EventPlanModel } from '../models/EventPlan';
 import {
   EventType,
   TimelineItem,

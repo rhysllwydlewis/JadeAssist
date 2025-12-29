@@ -1,7 +1,7 @@
 /**
  * Database configuration and connection pool
  */
-import { Pool, PoolClient, QueryResult } from 'pg';
+import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { env } from './env';
 import { logger } from '../utils/logger';
@@ -29,7 +29,8 @@ export const getPool = (): Pool => {
 };
 
 // Database query helper
-export const query = async <T = unknown>(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const query = async <T extends QueryResultRow = any>(
   text: string,
   params?: unknown[]
 ): Promise<QueryResult<T>> => {

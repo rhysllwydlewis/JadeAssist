@@ -62,7 +62,7 @@ export const authenticateJWT = (req: AuthRequest, res: Response, next: NextFunct
 /**
  * Optional authentication - doesn't fail if no token
  */
-export const optionalAuth = (req: AuthRequest, res: Response, next: NextFunction): void => {
+export const optionalAuth = (req: AuthRequest, _res: Response, next: NextFunction): void => {
   try {
     const authHeader = req.headers.authorization;
 

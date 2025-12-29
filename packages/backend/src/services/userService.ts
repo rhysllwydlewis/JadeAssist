@@ -3,7 +3,7 @@
  */
 import jwt from 'jsonwebtoken';
 import { UserModel, CreateUserParams, UpdateUserParams } from '../models/User';
-import { User, UserSession, AuthProvider } from '@jadeassist/shared';
+import { User, UserSession } from '@jadeassist/shared';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
 
@@ -75,7 +75,7 @@ class UserService {
   /**
    * Create user session
    */
-  async createSession(user: User): Promise<UserSession> {
+  createSession(user: User): UserSession {
     const token = this.generateToken(user);
 
     // Calculate expiration (7 days from now)

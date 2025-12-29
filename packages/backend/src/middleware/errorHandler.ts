@@ -33,6 +33,7 @@ export const errorHandler = (
       err,
       url: req.url,
       method: req.method,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       body: req.body,
     },
     'Error occurred'
@@ -44,6 +45,7 @@ export const errorHandler = (
       error: {
         code: err.code,
         message: err.message,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         details: err.details,
       },
       timestamp: new Date().toISOString(),

@@ -80,7 +80,7 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 // Initialize database pool
-const pool = getPool();
+getPool();
 
 // Graceful shutdown
 const gracefulShutdown = async (signal: string) => {
@@ -99,18 +99,18 @@ const gracefulShutdown = async (signal: string) => {
 };
 
 // Handle shutdown signals
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => void gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => void gracefulShutdown('SIGINT'));
 
 // Handle uncaught errors
 process.on('uncaughtException', (error) => {
   logger.error({ error }, 'Uncaught exception');
-  gracefulShutdown('uncaughtException');
+  void gracefulShutdown('uncaughtException');
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   logger.error({ reason, promise }, 'Unhandled rejection');
-  gracefulShutdown('unhandledRejection');
+  void gracefulShutdown('unhandledRejection');
 });
 
 // Start server

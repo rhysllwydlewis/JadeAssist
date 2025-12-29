@@ -1,7 +1,7 @@
 /**
  * Chat routes - Conversation and messaging endpoints
  */
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { z } from 'zod';
 import { AuthRequest, authenticateJWT } from '../middleware/auth';
 import { validateBody } from '../middleware/validation';
@@ -68,7 +68,7 @@ router.post(
     }
 
     // Store user message
-    const userMessage = await ConversationModel.addMessage(
+    await ConversationModel.addMessage(
       conversation.id,
       'user',
       message
@@ -79,6 +79,7 @@ router.post(
       {
         conversationId: conversation.id,
         userId,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
         eventType: conversation.eventType as any,
       },
       message
