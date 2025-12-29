@@ -9,6 +9,8 @@ Base URL: `http://localhost:3001` (development) or your deployed URL
 - [Health Endpoints](#health-endpoints)
 - [Chat Endpoints](#chat-endpoints)
 - [Planning Endpoints](#planning-endpoints)
+- [Supplier Endpoints](#supplier-endpoints)
+- [Analytics Endpoints](#analytics-endpoints)
 - [Error Handling](#error-handling)
 
 ## Authentication
@@ -536,6 +538,138 @@ Generate a comprehensive event checklist.
         "items": [...]
       }
     ]
+  },
+  "timestamp": "2024-01-15T10:30:00.000Z"
+}
+```
+
+## Supplier Endpoints
+
+### GET /api/suppliers/:id
+
+Get details about a specific supplier.
+
+**Parameters:**
+- `id` (UUID) - Supplier ID
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "supplier-uuid",
+    "name": "Premium Catering Services",
+    "category": "catering",
+    "location": "London",
+    "postcode": "SW1A",
+    "description": "Professional catering services",
+    "rating": 4.8,
+    "region": "London",
+    "createdAt": "2024-01-15T10:00:00.000Z"
+  },
+  "timestamp": "2024-01-15T10:30:00.000Z"
+}
+```
+
+### POST /api/suppliers/:id/message
+
+Initiate messaging with a supplier via EventFlow integration.
+
+**Parameters:**
+- `id` (UUID) - Supplier ID
+
+**Request:**
+```json
+{
+  "eventType": "wedding",
+  "message": "I'd like to discuss catering for 100 guests"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "messagingUrl": "https://event-flow.co.uk/api/messages/new?supplier=...&user=...&eventType=wedding",
+    "supplier": {
+      "id": "supplier-uuid",
+      "name": "Premium Catering Services",
+      "category": "catering"
+    }
+  },
+  "timestamp": "2024-01-15T10:30:00.000Z"
+}
+```
+
+The `messagingUrl` redirects to the EventFlow messaging system where users can communicate directly with suppliers.
+
+## Analytics Endpoints
+
+### GET /api/analytics/metrics
+
+Get analytics metrics for a date range. Useful for tracking conversions and usage patterns.
+
+**Query Parameters:**
+- `startDate` (ISO datetime, optional) - Start of date range (defaults to 30 days ago)
+- `endDate` (ISO datetime, optional) - End of date range (defaults to now)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "period": {
+      "start": "2024-01-01T00:00:00.000Z",
+      "end": "2024-01-31T23:59:59.000Z"
+    },
+    "metrics": {
+      "conversationsStarted": 150,
+      "plansCreated": 85,
+      "upgradeRequests": 12,
+      "conversionRate": 14.12,
+      "popularEventTypes": [
+        { "eventType": "wedding", "count": 45 },
+        { "eventType": "birthday", "count": 25 },
+        { "eventType": "corporate", "count": 15 }
+      ],
+      "avgResponseTime": 0
+    }
+  },
+  "timestamp": "2024-01-31T10:30:00.000Z"
+}
+```
+
+**Metrics Explained:**
+- `conversationsStarted` - Total new conversations
+- `plansCreated` - Total event plans created
+- `upgradeRequests` - Number of escalations to human planners
+- `conversionRate` - Percentage of plans that led to upgrade requests
+- `popularEventTypes` - Event types sorted by frequency
+- `avgResponseTime` - Average AI response time (placeholder for future implementation)
+
+### POST /api/analytics/track
+
+Track a custom analytics event.
+
+**Request:**
+```json
+{
+  "eventName": "supplier_viewed",
+  "properties": {
+    "supplierId": "supplier-uuid",
+    "category": "catering"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "tracked": true,
+    "eventName": "supplier_viewed"
   },
   "timestamp": "2024-01-15T10:30:00.000Z"
 }
