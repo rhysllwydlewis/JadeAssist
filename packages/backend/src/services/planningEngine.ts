@@ -3,12 +3,7 @@
  */
 import { llmService, LLMMessage } from './llmService';
 import { ConversationModel } from '../models/Conversation';
-import {
-  EventType,
-  TimelineItem,
-  ChecklistItem,
-  EVENT_TYPE_METADATA,
-} from '@jadeassist/shared';
+import { EventType, TimelineItem, ChecklistItem, EVENT_TYPE_METADATA } from '@jadeassist/shared';
 import { logger } from '../utils/logger';
 
 export interface PlanningContext {
@@ -33,10 +28,7 @@ class PlanningEngineService {
   /**
    * Process a planning request and generate response
    */
-  async processRequest(
-    context: PlanningContext,
-    userMessage: string
-  ): Promise<PlanningResponse> {
+  async processRequest(context: PlanningContext, userMessage: string): Promise<PlanningResponse> {
     try {
       // Get conversation history
       const messages = await ConversationModel.getMessages(context.conversationId);

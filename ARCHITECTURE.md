@@ -73,21 +73,25 @@ JadeAssist is a conversational AI-powered event planning assistant built as a pr
 ## Architecture Principles
 
 ### 1. Modularity
+
 - **Monorepo Structure**: Separate packages for backend and shared types
 - **Service Layer**: Business logic separated from routes
 - **Model Layer**: Data access abstracted from business logic
 
 ### 2. Type Safety
+
 - **TypeScript Strict Mode**: Full type safety across the stack
 - **Shared Types**: Common types in `@jadeassist/shared` package
 - **Runtime Validation**: Zod schemas for request validation
 
 ### 3. Swappable Components
+
 - **LLM Abstraction**: Easy to swap OpenAI for other providers
 - **Auth Flexibility**: Support for JWT, Supabase, or custom providers
 - **Database Agnostic**: Works with PostgreSQL or Supabase
 
 ### 4. Production Ready
+
 - **Error Handling**: Comprehensive error middleware
 - **Logging**: Structured logging with Pino
 - **Security**: Helmet, rate limiting, CORS
@@ -100,11 +104,13 @@ JadeAssist is a conversational AI-powered event planning assistant built as a pr
 #### 1. Configuration Layer (`src/config/`)
 
 **env.ts**
+
 - Environment variable validation using Zod
 - Type-safe configuration export
 - Fails fast on invalid configuration
 
 **database.ts**
+
 - PostgreSQL connection pool management
 - Supabase client initialization
 - Transaction helpers
@@ -113,16 +119,19 @@ JadeAssist is a conversational AI-powered event planning assistant built as a pr
 #### 2. Routes Layer (`src/routes/`)
 
 **health.ts**
+
 - System health endpoint
 - Database and LLM service checks
 - Uptime and version information
 
 **chat.ts**
+
 - Conversation management
 - Message handling
 - Integration with planning engine
 
 **planning.ts**
+
 - Event plan CRUD operations
 - Timeline generation
 - Checklist generation
@@ -131,6 +140,7 @@ JadeAssist is a conversational AI-powered event planning assistant built as a pr
 #### 3. Services Layer (`src/services/`)
 
 **llmService.ts**
+
 - OpenAI integration
 - Message formatting
 - Token usage tracking
@@ -138,6 +148,7 @@ JadeAssist is a conversational AI-powered event planning assistant built as a pr
 - **Swappable Design**: Interface can work with any LLM provider
 
 **planningEngine.ts**
+
 - Core planning logic
 - Context building for LLM
 - Response parsing
@@ -145,12 +156,14 @@ JadeAssist is a conversational AI-powered event planning assistant built as a pr
 - Information gap detection
 
 **eventCalcService.ts**
+
 - Budget allocation calculations
 - Per-guest cost calculations
 - Budget validation
 - Event type-specific allocations
 
 **userService.ts**
+
 - User management
 - JWT token generation
 - Session management
@@ -159,21 +172,25 @@ JadeAssist is a conversational AI-powered event planning assistant built as a pr
 #### 4. Models Layer (`src/models/`)
 
 **User.ts**
+
 - User CRUD operations
 - Auth provider lookups
 - Email lookups
 
 **Conversation.ts**
+
 - Conversation management
 - Message operations
 - User conversation history
 
 **EventPlan.ts**
+
 - Event plan CRUD
 - Timeline and checklist updates
 - JSON field handling
 
 **Supplier.ts**
+
 - Supplier search with filters
 - Category-based queries
 - Location-based matching
@@ -181,17 +198,20 @@ JadeAssist is a conversational AI-powered event planning assistant built as a pr
 #### 5. Middleware (`src/middleware/`)
 
 **auth.ts**
+
 - JWT authentication
 - Optional authentication
 - User context injection
 
 **errorHandler.ts**
+
 - Global error handling
 - Custom AppError class
 - 404 handler
 - Async handler wrapper
 
 **validation.ts**
+
 - Request body validation
 - Query parameter validation
 - URL parameter validation
@@ -202,21 +222,25 @@ JadeAssist is a conversational AI-powered event planning assistant built as a pr
 #### Types (`src/types/`)
 
 **chat.ts**
+
 - Message and conversation types
 - Chat request/response types
 
 **event.ts**
+
 - Event planning types
 - Timeline and checklist types
 - Supplier recommendation types
 - Budget allocation types
 
 **user.ts**
+
 - User profile types
 - Authentication types
 - Session types
 
 **api.ts**
+
 - Common API response types
 - Error types
 - Pagination types
@@ -225,6 +249,7 @@ JadeAssist is a conversational AI-powered event planning assistant built as a pr
 #### Constants (`src/constants/`)
 
 **eventTypes.ts**
+
 - Event type definitions
 - Event metadata (budgets, guest counts, timelines)
 - Supplier categories
@@ -296,10 +321,12 @@ User Request
 ### 1. Event-flow.co.uk Integration
 
 #### Current Integration
+
 - **Authentication**: Can use event-flow as auth provider
 - **Configuration**: Environment variables for API URL and key
 
 #### Planned Integration (Phase 2)
+
 - **Escalation API**: Send complex requests to human planners
 - **Booking API**: Direct booking through event-flow
 - **Supplier Sync**: Synchronize supplier database
@@ -361,6 +388,7 @@ export interface LLMProvider {
 ### 3. Database Integration
 
 Supports both PostgreSQL and Supabase:
+
 - **PostgreSQL**: Direct connection via `pg` library
 - **Supabase**: Optional Supabase client for additional features
 - **Transaction Support**: ACID compliance for complex operations
@@ -398,6 +426,7 @@ Supports both PostgreSQL and Supabase:
 ### Current Architecture
 
 The current setup is suitable for:
+
 - **Users**: Up to 10,000 concurrent users
 - **Requests**: 100+ req/s
 - **Database**: PostgreSQL handles millions of records
@@ -428,6 +457,7 @@ Backend → Redis Cache → PostgreSQL
 ```
 
 Caching candidates:
+
 - Supplier data (rarely changes)
 - Event type metadata
 - User sessions
@@ -464,12 +494,14 @@ API Request → Queue (Bull/BullMQ) → Worker Process
 ### Phase 2: Frontend & Widget (Q1 2024)
 
 **Deliverables:**
+
 - React-based chat widget
 - Embeddable on event-flow.co.uk
 - Real-time conversation UI
 - Event plan visualization
 
 **Architecture:**
+
 ```
 ┌────────────────────────────────────────┐
 │  packages/frontend/                    │
@@ -484,12 +516,14 @@ API Request → Queue (Bull/BullMQ) → Worker Process
 ### Phase 3: Supplier Management Portal (Q2 2024)
 
 **Features:**
+
 - Supplier self-registration
 - Profile management
 - Review system
 - Analytics dashboard
 
 **New Services:**
+
 - Supplier verification service
 - Review moderation service
 - Analytics service
@@ -497,6 +531,7 @@ API Request → Queue (Bull/BullMQ) → Worker Process
 ### Phase 4: Advanced Features (Q3 2024)
 
 **Features:**
+
 - Multi-language support
 - Voice input/output
 - Calendar integration
@@ -504,6 +539,7 @@ API Request → Queue (Bull/BullMQ) → Worker Process
 - SMS notifications
 
 **Integrations:**
+
 - Google Calendar
 - Outlook Calendar
 - Twilio (SMS)
@@ -512,10 +548,12 @@ API Request → Queue (Bull/BullMQ) → Worker Process
 ### Phase 5: Mobile Apps (Q4 2024)
 
 **Platforms:**
+
 - iOS (React Native)
 - Android (React Native)
 
 **Features:**
+
 - Native chat experience
 - Push notifications
 - Offline mode
@@ -526,6 +564,7 @@ API Request → Queue (Bull/BullMQ) → Worker Process
 ### 1. Soft Deletes (Future Enhancement)
 
 Add `deleted_at` columns for audit trail:
+
 ```sql
 ALTER TABLE event_plans ADD COLUMN deleted_at TIMESTAMP;
 ```
@@ -533,6 +572,7 @@ ALTER TABLE event_plans ADD COLUMN deleted_at TIMESTAMP;
 ### 2. Audit Logging (Future Enhancement)
 
 Track all changes:
+
 ```sql
 CREATE TABLE audit_log (
   id UUID PRIMARY KEY,
@@ -549,6 +589,7 @@ CREATE TABLE audit_log (
 ### 3. Full-Text Search (Future Enhancement)
 
 For supplier and message search:
+
 ```sql
 ALTER TABLE suppliers ADD COLUMN search_vector tsvector;
 CREATE INDEX idx_suppliers_search ON suppliers USING gin(search_vector);

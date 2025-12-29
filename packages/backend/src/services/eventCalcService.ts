@@ -99,7 +99,10 @@ class EventCalcService {
   /**
    * Validate budget against event type ranges
    */
-  validateBudget(eventType: EventType, budget: number): {
+  validateBudget(
+    eventType: EventType,
+    budget: number
+  ): {
     valid: boolean;
     message?: string;
     suggestion?: number;

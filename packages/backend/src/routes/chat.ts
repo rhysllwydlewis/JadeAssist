@@ -68,11 +68,7 @@ router.post(
     }
 
     // Store user message
-    await ConversationModel.addMessage(
-      conversation.id,
-      'user',
-      message
-    );
+    await ConversationModel.addMessage(conversation.id, 'user', message);
 
     // Process with planning engine
     const planningResponse = await planningEngine.processRequest(

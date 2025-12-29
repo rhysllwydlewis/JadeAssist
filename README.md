@@ -19,6 +19,7 @@ JadeAssist is a production-ready monorepo containing a Node.js backend API that 
 ## Tech Stack
 
 ### Backend
+
 - **Runtime**: Node.js 18+
 - **Framework**: Express.js with TypeScript
 - **Database**: PostgreSQL / Supabase
@@ -28,6 +29,7 @@ JadeAssist is a production-ready monorepo containing a Node.js backend API that 
 - **Auth**: JWT / Supabase
 
 ### Development
+
 - **Language**: TypeScript (strict mode)
 - **Package Manager**: npm workspaces
 - **Linting**: ESLint
@@ -71,32 +73,37 @@ JadeAssist/
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/rhysllwydlewis/JadeAssist.git
    cd JadeAssist
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    ```
 
 3. **Set up environment variables**
+
    ```bash
    cp .env.example .env
    # Edit .env with your configuration
    ```
 
 4. **Set up the database**
+
    ```bash
    # For PostgreSQL
    createdb jadeassist
    psql jadeassist < database/schema.sql
-   
+
    # For Supabase - paste schema.sql into SQL Editor
    ```
 
 5. **Build the packages**
+
    ```bash
    npm run build
    ```
@@ -111,6 +118,7 @@ The API will be available at `http://localhost:3001`
 ### Verify Installation
 
 Check the health endpoint:
+
 ```bash
 curl http://localhost:3001/health
 ```
@@ -118,14 +126,17 @@ curl http://localhost:3001/health
 ## API Endpoints
 
 ### Health Check
+
 - `GET /health` - System health status
 
 ### Chat
+
 - `POST /api/chat` - Send a message in a conversation
 - `GET /api/chat/conversations` - Get user's conversations
 - `GET /api/chat/conversations/:id` - Get specific conversation with messages
 
 ### Planning
+
 - `POST /api/planning/plans` - Create a new event plan
 - `GET /api/planning/plans` - Get user's event plans
 - `GET /api/planning/plans/:id` - Get specific event plan
@@ -189,6 +200,7 @@ JWT_SECRET=your-secret-key
 ### Database Setup
 
 The database schema supports PostgreSQL and Supabase. Key features:
+
 - UUID primary keys
 - Automatic timestamp triggers
 - JSONB for flexible data storage
@@ -198,6 +210,7 @@ The database schema supports PostgreSQL and Supabase. Key features:
 ## Architecture
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed architecture documentation, including:
+
 - System design and data flow
 - Integration with event-flow.co.uk
 - LLM abstraction layer
@@ -244,6 +257,7 @@ MIT License - see LICENSE file for details
 ## Support
 
 For issues and questions:
+
 - GitHub Issues: [Create an issue](https://github.com/rhysllwydlewis/JadeAssist/issues)
 - Event-flow integration: Contact through event-flow.co.uk
 

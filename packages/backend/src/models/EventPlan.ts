@@ -80,10 +80,9 @@ export class EventPlanModel {
    * Find event plan by conversation ID
    */
   static async findByConversationId(conversationId: string): Promise<EventPlan | null> {
-    const result = await query<EventPlan>(
-      'SELECT * FROM event_plans WHERE conversation_id = $1',
-      [conversationId]
-    );
+    const result = await query<EventPlan>('SELECT * FROM event_plans WHERE conversation_id = $1', [
+      conversationId,
+    ]);
     return result.rows[0] || null;
   }
 
