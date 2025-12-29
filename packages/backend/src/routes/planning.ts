@@ -9,6 +9,7 @@ import { asyncHandler } from '../middleware/errorHandler';
 import { EventPlanModel, CreateEventPlanParams, UpdateEventPlanParams } from '../models/EventPlan';
 import { eventCalcService } from '../services/eventCalcService';
 import { planningEngine } from '../services/planningEngine';
+import { analyticsService } from '../services/analyticsService';
 import { ApiResponse, EventType } from '@jadeassist/shared';
 import { logger } from '../utils/logger';
 
@@ -80,6 +81,15 @@ router.post(
       ...planData,
       eventDate,
     });
+
+    // Track plan creation
+    await analyticsService.trackPlanCreated(
+      userId,
+      plan.id,
+      plan.eventType,
+      plan.budget || undefined,
+      plan.guestCount || undefined
+    );
 
     // Calculate budget allocations if budget is provided
     let calculations = undefined;

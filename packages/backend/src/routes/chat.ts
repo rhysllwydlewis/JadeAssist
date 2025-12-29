@@ -8,6 +8,8 @@ import { validateBody } from '../middleware/validation';
 import { asyncHandler } from '../middleware/errorHandler';
 import { ConversationModel } from '../models/Conversation';
 import { planningEngine } from '../services/planningEngine';
+import { analyticsService } from '../services/analyticsService';
+import { escalationService } from '../services/escalationService';
 import { ChatRequest, ChatResponse, ApiResponse } from '@jadeassist/shared';
 import { logger } from '../utils/logger';
 
@@ -65,10 +67,17 @@ router.post(
     } else {
       // Create new conversation
       conversation = await ConversationModel.create({ userId });
+      // Track conversation started
+      await analyticsService.trackConversationStarted(userId);
     }
 
     // Store user message
     await ConversationModel.addMessage(conversation.id, 'user', message);
+
+    // Check for escalation signals
+    const allMessages = await ConversationModel.getMessages(conversation.id);
+    const messageHistory = allMessages.map((m) => m.content);
+    const escalationCheck = escalationService.detectEscalation(message, messageHistory);
 
     // Process with planning engine
     const planningResponse = await planningEngine.processRequest(
@@ -85,10 +94,23 @@ router.post(
     const messages = await ConversationModel.getMessages(conversation.id);
     const assistantMessage = messages[messages.length - 1];
 
+    // Add escalation message if needed
+    let escalationMessage: string | undefined;
+    if (escalationCheck.shouldEscalate) {
+      escalationMessage = escalationCheck.suggestedMessage;
+      // Track escalation offered
+      await analyticsService.trackEscalationOffered(
+        userId,
+        escalationCheck.reason || 'unknown',
+        escalationCheck.confidence
+      );
+    }
+
     const chatResponse: ChatResponse = {
       conversationId: conversation.id,
       message: assistantMessage,
       suggestions: planningResponse.suggestions,
+      ...(escalationMessage && { escalationMessage }),
     };
 
     const response: ApiResponse<ChatResponse> = {

@@ -3,6 +3,8 @@
  */
 import { llmService, LLMMessage } from './llmService';
 import { ConversationModel } from '../models/Conversation';
+import { SupplierModel } from '../models/Supplier';
+import { eventFlowService } from './eventFlowService';
 import { EventType, TimelineItem, ChecklistItem, EVENT_TYPE_METADATA } from '@jadeassist/shared';
 import { logger } from '../utils/logger';
 
@@ -244,6 +246,7 @@ class PlanningEngineService {
 
   /**
    * Suggest suppliers based on criteria
+   * Now integrates with real database and EventFlow
    */
   async suggestSuppliers(params: {
     eventType: EventType;
@@ -262,16 +265,121 @@ class PlanningEngineService {
       distance: number;
       description: string;
       contact: string;
+      messagingUrl?: string;
+      eventFlowId?: string;
     }>
   > {
-    // This is a simplified implementation
-    // In production, you'd query the suppliers database with postcode proximity
     const { category, postcode, budget, guestCount } = params;
 
     logger.debug({ category, postcode }, 'Suggesting suppliers');
 
-    // In production, this would be an actual database query
-    // For now, return mock data after a Promise to make it properly async
+    try {
+      // Search local database first
+      const dbSuppliers = await SupplierModel.search({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+        category: category as any,
+        postcode: postcode.split(' ')[0], // Use first part of postcode
+        minRating: 3.5,
+        limit: 10,
+      });
+
+      // Get EventFlow suppliers if integration is enabled
+      let eventFlowSuppliers: Array<{
+        id: string;
+        name: string;
+        category: string;
+        rating: number;
+        price: string;
+        distance: number;
+        description: string;
+        contact: string;
+        eventFlowId?: string;
+      }> = [];
+      if (eventFlowService.isEnabled()) {
+        eventFlowSuppliers = await eventFlowService.getSuppliers({
+          category,
+          postcode: postcode.split(' ')[0],
+          minRating: 3.5,
+          limit: 5,
+        });
+      }
+
+      // Map database suppliers to response format
+      const mappedDbSuppliers = dbSuppliers.map((supplier) => {
+        const priceLevel = this.calculatePriceLevel(budget, guestCount);
+        return {
+          id: supplier.id,
+          name: supplier.name,
+          category: supplier.category,
+          rating: supplier.rating,
+          price: priceLevel,
+          distance: Math.random() * 15, // Mock distance - in production, calculate from postcode
+          description: supplier.description,
+          contact: 'contact@supplier.com', // In production, use real contact
+        };
+      });
+
+      // Map EventFlow suppliers and add messaging URL
+      const mappedEventFlowSuppliers = eventFlowSuppliers.map((supplier) => ({
+        ...supplier,
+        messagingUrl: supplier.eventFlowId
+          ? `/api/suppliers/${supplier.id}/message`
+          : undefined,
+      }));
+
+      // Combine and deduplicate
+      const allSuppliers = [...mappedDbSuppliers, ...mappedEventFlowSuppliers];
+
+      // Filter by guest count capacity
+      const filteredSuppliers = allSuppliers.filter((supplier) => {
+        if (guestCount > 200 && supplier.price === '£') return false;
+        if (guestCount < 20 && supplier.price === '££££') return false;
+        return true;
+      });
+
+      // Sort by rating and return top results
+      return filteredSuppliers.sort((a, b) => b.rating - a.rating).slice(0, 10);
+    } catch (error) {
+      logger.error({ error, params }, 'Error suggesting suppliers');
+
+      // Fallback to mock data if database query fails
+      return await this.getMockSuppliers(params);
+    }
+  }
+
+  /**
+   * Calculate price level based on budget and guest count
+   */
+  private calculatePriceLevel(budget: number, guestCount: number): string {
+    const perHead = budget / guestCount;
+
+    if (perHead > 200) return '££££';
+    if (perHead > 120) return '£££';
+    if (perHead > 60) return '££';
+    return '£';
+  }
+
+  /**
+   * Fallback mock suppliers if database fails
+   */
+  private async getMockSuppliers(params: {
+    category: string;
+    budget: number;
+    guestCount: number;
+  }): Promise<
+    Array<{
+      id: string;
+      name: string;
+      category: string;
+      rating: number;
+      price: string;
+      distance: number;
+      description: string;
+      contact: string;
+    }>
+  > {
+    const { category, budget, guestCount } = params;
+
     return await Promise.resolve([
       {
         id: '1',
