@@ -6,6 +6,13 @@
 import { JadeWidget as Widget } from './widget';
 import type { WidgetConfig } from './types';
 
+// Extend window interface for our widget
+declare global {
+  interface Window {
+    JadeWidget?: JadeWidgetGlobal;
+  }
+}
+
 // Global API
 interface JadeWidgetGlobal {
   init: (config?: WidgetConfig) => void;
@@ -15,8 +22,8 @@ interface JadeWidgetGlobal {
 // Initialize the widget
 function init(config?: WidgetConfig): void {
   // Remove existing instance if any
-  if ((window as any).JadeWidget?.instance) {
-    (window as any).JadeWidget.instance.unmount();
+  if (window.JadeWidget?.instance) {
+    window.JadeWidget.instance.unmount();
   }
 
   // Create and mount new instance
@@ -24,7 +31,9 @@ function init(config?: WidgetConfig): void {
   widget.mount();
 
   // Store instance
-  (window as any).JadeWidget.instance = widget;
+  if (window.JadeWidget) {
+    window.JadeWidget.instance = widget;
+  }
 }
 
 // Create and expose global API immediately
@@ -34,7 +43,7 @@ const api: JadeWidgetGlobal = {
 
 // Attach to window immediately
 if (typeof window !== 'undefined') {
-  (window as any).JadeWidget = api;
+  window.JadeWidget = api;
 }
 
 // Default export for IIFE

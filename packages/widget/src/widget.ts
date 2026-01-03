@@ -207,7 +207,7 @@ export class JadeWidget {
         e.stopPropagation();
         this.closeGreeting();
       } else if (action === 'send') {
-        this.handleSend();
+        void this.handleSend();
       } else if (action === 'quick-reply') {
         const reply = target.getAttribute('data-reply');
         if (reply) {
@@ -223,7 +223,7 @@ export class JadeWidget {
       if (target.hasAttribute('data-input')) {
         if (keyboardEvent.key === 'Enter' && !keyboardEvent.shiftKey) {
           e.preventDefault();
-          this.handleSend();
+          void this.handleSend();
         }
       }
     });
@@ -346,7 +346,7 @@ export class JadeWidget {
     const input = this.shadowRoot.querySelector('[data-input]') as HTMLTextAreaElement;
     if (input) {
       input.value = reply;
-      this.handleSend();
+      void this.handleSend();
     }
   }
 
@@ -394,7 +394,7 @@ export class JadeWidget {
   private escapeHtml(text: string): string {
     const div = document.createElement('div');
     div.textContent = text;
-    return div.innerHTML;
+    return div.innerHTML as string;
   }
 
   public mount(target?: HTMLElement): void {

@@ -18,7 +18,7 @@ export class StorageManager {
   static loadState(): Partial<WidgetState> {
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.STATE);
-      return stored ? JSON.parse(stored) : {};
+      return stored ? (JSON.parse(stored) as Partial<WidgetState>) : {};
     } catch (error) {
       console.warn('Failed to load widget state:', error);
       return {};
@@ -36,7 +36,7 @@ export class StorageManager {
   static loadMessages(): WidgetMessage[] {
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.MESSAGES);
-      return stored ? JSON.parse(stored) : [];
+      return stored ? (JSON.parse(stored) as WidgetMessage[]) : [];
     } catch (error) {
       console.warn('Failed to load messages:', error);
       return [];
@@ -53,7 +53,7 @@ export class StorageManager {
 
   static loadConversationId(): string | null {
     try {
-      return localStorage.getItem(STORAGE_KEYS.CONVERSATION_ID);
+      return localStorage.getItem(STORAGE_KEYS.CONVERSATION_ID) as string | null;
     } catch (error) {
       console.warn('Failed to load conversation ID:', error);
       return null;
