@@ -322,12 +322,17 @@ export class JadeWidget {
       this.state.messages.push(response.message);
       StorageManager.saveMessages(this.state.messages);
 
-      // Re-render with response
+      // Remove typing indicator and re-render with response
+      this.removeTypingIndicator();
       this.render();
       this.scrollToBottom();
       this.focusInput();
     } catch (error) {
       console.error('Failed to send message:', error);
+
+      // Remove typing indicator
+      this.removeTypingIndicator();
+
       // Show error message
       const errorMessage: WidgetMessage = {
         id: 'error-' + Date.now(),
@@ -351,6 +356,9 @@ export class JadeWidget {
   }
 
   private showTypingIndicator(): void {
+    // Remove any existing typing indicators first
+    this.removeTypingIndicator();
+
     const messagesContainer = this.shadowRoot.querySelector('[data-messages-container]');
     if (messagesContainer) {
       const indicator = document.createElement('div');
@@ -370,6 +378,13 @@ export class JadeWidget {
       `;
       messagesContainer.appendChild(indicator);
       this.scrollToBottom();
+    }
+  }
+
+  private removeTypingIndicator(): void {
+    const indicator = this.shadowRoot.querySelector('[data-typing-indicator]');
+    if (indicator) {
+      indicator.remove();
     }
   }
 
@@ -407,6 +422,18 @@ export class JadeWidget {
     if (this.greetingTimeout) {
       clearTimeout(this.greetingTimeout);
     }
+  }
+
+  public open(): void {
+    this.openChat();
+  }
+
+  public close(): void {
+    this.closeChat();
+  }
+
+  public toggle(): void {
+    this.toggleChat();
   }
 
   public reset(): void {

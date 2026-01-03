@@ -269,9 +269,8 @@
     // Helper functions for demo buttons
     function openWidget() {
       const widget = window.JadeWidget.instance;
-      if (widget && widget.state) {
-        widget.state.isOpen = true;
-        widget.render();
+      if (widget) {
+        widget.open();
       }
     }
 

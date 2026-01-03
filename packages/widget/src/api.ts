@@ -74,9 +74,12 @@ export class ApiClient {
         },
       };
     } catch (error) {
-      console.error('API request failed:', error);
+      console.error('API request failed, falling back to demo mode:', error);
       // Fallback to demo mode on error
-      return this.mockResponse(message);
+      const response = await this.mockResponse(message);
+      // Add a note to the message indicating it's a demo response
+      response.message.content = `⚠️ (Demo Mode) ${response.message.content}`;
+      return response;
     }
   }
 
