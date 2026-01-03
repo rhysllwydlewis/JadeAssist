@@ -50,11 +50,17 @@ JadeAssist/
 │   │   │   └── utils/    # Utilities
 │   │   └── package.json
 │   │
-│   └── shared/           # Shared TypeScript types
-│       ├── src/
-│       │   ├── types/    # Type definitions
-│       │   └── constants/ # Shared constants
-│       └── package.json
+│   ├── shared/           # Shared TypeScript types
+│   │   ├── src/
+│   │   │   ├── types/    # Type definitions
+│   │   │   └── constants/ # Shared constants
+│   │   └── package.json
+│   │
+│   └── widget/           # Embeddable chat widget
+│       ├── src/          # Widget source code
+│       ├── dist/         # Built widget bundle
+│       ├── example.html  # Usage demo
+│       └── README.md     # Widget documentation
 │
 ├── database/             # Database schema and migrations
 ├── .env.example          # Environment template
@@ -151,6 +157,7 @@ curl http://localhost:3001/health
 ```bash
 # Development
 npm run dev              # Start backend in dev mode
+npm run dev:widget       # Start widget dev server
 npm run build            # Build all packages
 npm run typecheck        # Run TypeScript compiler
 
@@ -170,6 +177,7 @@ npm run clean            # Clean all build artifacts
 # Build specific package
 npm run build:shared
 npm run build:backend
+npm run build:widget
 
 # Work in specific workspace
 npm run dev --workspace=packages/backend
@@ -218,13 +226,38 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed architecture documentation
 
 ## Integration
 
+### Embeddable Chat Widget
+
+The widget provides an easy way to add JadeAssist to any website:
+
+```html
+<!-- Add to your website -->
+<script src="https://your-cdn.com/jade-widget.js"></script>
+<script>
+  window.JadeWidget.init({
+    apiBaseUrl: 'https://api.jadeassist.com',
+    primaryColor: '#8B5CF6',
+  });
+</script>
+```
+
+**Features:**
+- 🎨 Hitched-style floating chat UI
+- 💾 Persistent conversations via localStorage
+- 🎯 Configurable colors, text, and branding
+- 🔒 Shadow DOM for style isolation
+- ♿ Accessible (ARIA labels, keyboard navigation)
+- 🚀 Works in demo mode without backend
+
+See [packages/widget/README.md](packages/widget/README.md) for full documentation.
+
 ### Event-flow.co.uk
 
 JadeAssist is designed to integrate with event-flow.co.uk:
 
 - **Authentication**: Can use event-flow auth provider
 - **Escalation**: Complex requests can be escalated to human planners
-- **Widget**: Embeddable chat widget (Phase 2)
+- **Widget**: Embeddable chat widget ✅ (Phase 2 - Complete)
 - **Billing**: Shared billing integration (Phase 2)
 
 ## Contributing
@@ -245,7 +278,7 @@ JadeAssist is designed to integrate with event-flow.co.uk:
 ## Roadmap
 
 - [x] Phase 1: Core backend API and types
-- [ ] Phase 2: Frontend widget and UI
+- [x] Phase 2: Frontend widget and UI
 - [ ] Phase 3: Supplier management portal
 - [ ] Phase 4: Advanced analytics and reporting
 - [ ] Phase 5: Mobile applications

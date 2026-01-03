@@ -43,3 +43,6 @@ tmp/
 # Debug
 .vscode-test/
 *.cpuprofile
+
+# Widget build output (example uses locally built version)
+packages/widget/dist/

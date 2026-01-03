@@ -8,9 +8,11 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace=packages/backend",
+    "dev:widget": "npm run dev --workspace=packages/widget",
     "build": "npm run build --workspaces --if-present",
     "build:shared": "npm run build --workspace=packages/shared",
     "build:backend": "npm run build --workspace=packages/backend",
+    "build:widget": "npm run build --workspace=packages/widget",
     "test": "npm run test --workspaces --if-present",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",

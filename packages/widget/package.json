@@ -1,0 +1,21 @@
+{
+  "name": "@jadeassist/widget",
+  "version": "1.0.0",
+  "description": "Embeddable chat widget for JadeAssist",
+  "main": "dist/jade-widget.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@jadeassist/shared": "1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0",
+    "vite": "^5.0.0"
+  }
+}
