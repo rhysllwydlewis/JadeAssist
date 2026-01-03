@@ -65,7 +65,11 @@ export class JadeWidget {
   }
 
   private render(): void {
-    const styles = getWidgetStyles(this.config.primaryColor);
+    const styles = getWidgetStyles(
+      this.config.primaryColor,
+      this.config.accentColor,
+      this.config.fontFamily
+    );
 
     this.shadowRoot.innerHTML = `
       <style>${styles}</style>
@@ -409,7 +413,7 @@ export class JadeWidget {
   private escapeHtml(text: string): string {
     const div = document.createElement('div');
     div.textContent = text;
-    return div.innerHTML as string;
+    return div.innerHTML;
   }
 
   public mount(target?: HTMLElement): void {

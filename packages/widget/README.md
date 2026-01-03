@@ -84,12 +84,33 @@ window.JadeWidget.init({
 window.JadeWidget.init();
 ```
 
-**With Custom Branding:**
+**event-flow.co.uk Brand Match:**
 ```javascript
 window.JadeWidget.init({
-  assistantName: 'Event Assistant',
-  primaryColor: '#FF6B6B',
-  greetingText: 'Welcome! How can I help with your event?',
+  apiBaseUrl: 'https://api.event-flow.co.uk',
+  assistantName: 'Jade',
+  primaryColor: '#8B5CF6',      // Match your brand color
+  accentColor: '#6d28d9',       // Slightly darker shade
+  fontFamily: '"Your Font", -apple-system, sans-serif',
+  greetingText: '✨ Hi! I\'m Jade, your event planning assistant. Ready to plan something amazing?',
+});
+```
+
+**Wedding Theme (Romantic):**
+```javascript
+window.JadeWidget.init({
+  primaryColor: '#EC4899',      // Pink
+  accentColor: '#BE185D',       // Deep pink
+  greetingText: '💕 Hi there! I\'m Jade. Let\'s plan your dream wedding together!',
+});
+```
+
+**Corporate Events Theme (Professional):**
+```javascript
+window.JadeWidget.init({
+  primaryColor: '#3B82F6',      // Blue
+  accentColor: '#1E40AF',       // Navy
+  greetingText: 'Hello! I\'m Jade, your corporate event specialist. How can I assist you today?',
 });
 ```
 
@@ -99,6 +120,7 @@ window.JadeWidget.init({
   apiBaseUrl: 'https://api.jadeassist.com',
   assistantName: 'Jade',
   primaryColor: '#8B5CF6',
+  accentColor: '#6d28d9',
 });
 ```
 

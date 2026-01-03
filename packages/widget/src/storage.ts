@@ -53,7 +53,7 @@ export class StorageManager {
 
   static loadConversationId(): string | null {
     try {
-      return localStorage.getItem(STORAGE_KEYS.CONVERSATION_ID) as string | null;
+      return localStorage.getItem(STORAGE_KEYS.CONVERSATION_ID);
     } catch (error) {
       console.warn('Failed to load conversation ID:', error);
       return null;
