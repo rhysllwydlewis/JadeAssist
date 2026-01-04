@@ -74,6 +74,21 @@ window.JadeWidget.init({
   
   // Primary brand color (default: '#8B5CF6' - purple)
   primaryColor: '#8B5CF6',
+  
+  // Position widget from bottom of screen (default: '80px')
+  offsetBottom: '80px',
+  
+  // Position widget from right of screen (default: '24px')
+  // Note: Use either offsetRight OR offsetLeft, not both
+  offsetRight: '24px',
+  
+  // Position widget from left of screen (optional, default: '')
+  // When set, overrides offsetRight positioning
+  offsetLeft: '24px',
+  
+  // Scale the entire widget (default: 1)
+  // Example: 0.85 makes widget 15% smaller, 1.2 makes it 20% larger
+  scale: 0.85,
 });
 ```
 
@@ -82,6 +97,19 @@ window.JadeWidget.init({
 **Basic (Demo Mode):**
 ```javascript
 window.JadeWidget.init();
+```
+
+**Left-aligned with scaling (e.g., for EventFlow):**
+```javascript
+window.JadeWidget.init({
+  apiBaseUrl: 'https://api.event-flow.co.uk',
+  assistantName: 'Jade',
+  primaryColor: '#8B5CF6',
+  offsetLeft: '24px',     // Position on left side instead of right
+  offsetBottom: '80px',
+  scale: 0.85,            // Make widget 15% smaller
+  avatarUrl: 'https://example.com/custom-icon.png',
+});
 ```
 
 **event-flow.co.uk Brand Match:**

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>JadeAssist Widget - Positioning & Scaling Test</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .demo-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    h1 {
+      color: #1f2937;
+      margin-bottom: 16px;
+      font-size: 32px;
+    }
+
+    .subtitle {
+      color: #6b7280;
+      margin-bottom: 32px;
+      font-size: 18px;
+    }
+
+    .test-section {
+      margin-bottom: 24px;
+      padding: 20px;
+      background: #f3f4f6;
+      border-radius: 8px;
+    }
+
+    h2 {
+      color: #374151;
+      margin-bottom: 12px;
+      font-size: 24px;
+    }
+
+    .config-display {
+      background: #1f2937;
+      color: #10b981;
+      padding: 16px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      overflow-x: auto;
+      margin-bottom: 16px;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    button {
+      padding: 12px 24px;
+      background: #8B5CF6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    button:hover {
+      background: #7c3aed;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+    }
+
+    .warning {
+      background: #fef3c7;
+      color: #92400e;
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+
+    .info {
+      background: #dbeafe;
+      color: #1e40af;
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-container">
+    <h1>🧪 Widget Positioning & Scaling Test</h1>
+    <p class="subtitle">Test the new offsetLeft and scale configuration options</p>
+
+    <div class="test-section">
+      <h2>Current Configuration</h2>
+      <div class="config-display" id="config-display">
+        // Widget not initialized yet
+      </div>
+      <div class="info">
+        ℹ️ Click one of the test buttons below to initialize the widget with different configurations.
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Scenarios</h2>
+      
+      <div class="button-group">
+        <button onclick="testDefault()">Default (Right, Normal Size)</button>
+        <button onclick="testLeftPosition()">Left Position</button>
+        <button onclick="testLeftScaled()">Left + 15% Smaller</button>
+        <button onclick="testRightScaled()">Right + 20% Larger</button>
+        <button onclick="testEventFlow()">EventFlow Config</button>
+        <button onclick="resetWidget()">Reset Widget</button>
+      </div>
+
+      <div class="warning">
+        ⚠️ After clicking a test button, you'll need to reload the page to test another configuration.
+        The widget can only be initialized once per page load.
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>Mobile Testing</h2>
+      <p>To test mobile viewport fixes:</p>
+      <ul style="margin-left: 20px; margin-top: 12px; line-height: 1.8;">
+        <li>Open DevTools (F12)</li>
+        <li>Toggle device toolbar (Ctrl+Shift+M)</li>
+        <li>Select a mobile device (e.g., iPhone 12 Pro)</li>
+        <li>Open the chat popup and verify it doesn't get cut off at the top</li>
+        <li>The chat should use dvh units and safe-area-inset for proper mobile viewport handling</li>
+      </ul>
+    </div>
+
+    <div class="test-section">
+      <h2>Features Tested</h2>
+      <ul style="margin-left: 20px; line-height: 1.8;">
+        <li><strong>offsetLeft:</strong> Position widget on left side of screen</li>
+        <li><strong>scale:</strong> Make widget larger or smaller (0.85 = 15% smaller, 1.2 = 20% larger)</li>
+        <li><strong>Mobile viewport:</strong> Chat popup uses dvh units with fallback and safe-area-inset</li>
+        <li><strong>Transform origin:</strong> Widget scales from correct corner based on positioning</li>
+        <li><strong>Backwards compatibility:</strong> Default right positioning still works</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Widget Script -->
+  <script src="dist/jade-widget.js"></script>
+
+  <script>
+    let widgetInitialized = false;
+
+    function updateConfigDisplay(config) {
+      const display = document.getElementById('config-display');
+      display.textContent = `window.JadeWidget.init(${JSON.stringify(config, null, 2)});`;
+    }
+
+    function initWidget(config) {
+      if (widgetInitialized) {
+        alert('Widget already initialized. Please reload the page to test a different configuration.');
+        return;
+      }
+      
+      updateConfigDisplay(config);
+      window.JadeWidget.init(config);
+      widgetInitialized = true;
+      alert('Widget initialized! Check the bottom of the page.');
+    }
+
+    function testDefault() {
+      initWidget({
+        assistantName: 'Jade',
+        primaryColor: '#8B5CF6',
+        greetingText: '👋 Default configuration (right-aligned, normal size)',
+      });
+    }
+
+    function testLeftPosition() {
+      initWidget({
+        assistantName: 'Jade',
+        primaryColor: '#0B8073',
+        offsetLeft: '24px',
+        offsetBottom: '80px',
+        greetingText: '👈 I\'m on the LEFT side now!',
+      });
+    }
+
+    function testLeftScaled() {
+      initWidget({
+        assistantName: 'Jade',
+        primaryColor: '#EC4899',
+        offsetLeft: '24px',
+        offsetBottom: '80px',
+        scale: 0.85,
+        greetingText: '👈 Left side AND 15% smaller!',
+      });
+    }
+
+    function testRightScaled() {
+      initWidget({
+        assistantName: 'Jade',
+        primaryColor: '#3B82F6',
+        offsetRight: '24px',
+        offsetBottom: '80px',
+        scale: 1.2,
+        greetingText: '👉 Right side but 20% BIGGER!',
+      });
+    }
+
+    function testEventFlow() {
+      initWidget({
+        assistantName: 'Jade',
+        primaryColor: '#8B5CF6',
+        accentColor: '#6d28d9',
+        offsetLeft: '24px',
+        offsetBottom: '80px',
+        scale: 0.85,
+        greetingText: '✨ EventFlow configuration: left-aligned, 15% smaller',
+        avatarUrl: 'https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/assets/avatar-woman.png',
+      });
+    }
+
+    function resetWidget() {
+      location.reload();
+    }
+  </script>
+</body>
+</html>

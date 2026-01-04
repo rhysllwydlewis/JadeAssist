@@ -14,6 +14,8 @@ export interface WidgetConfig {
   showDelayMs?: number;
   offsetBottom?: string;
   offsetRight?: string;
+  offsetLeft?: string;
+  scale?: number;
 }
 
 export interface WidgetState {
@@ -51,6 +53,8 @@ export const DEFAULT_CONFIG: Required<WidgetConfig> = {
   showDelayMs: 1000,
   offsetBottom: '80px', // Increased from 24px to avoid back-to-top button overlap
   offsetRight: '24px',
+  offsetLeft: '',
+  scale: 1,
 };
 
 export const STORAGE_KEYS = {
