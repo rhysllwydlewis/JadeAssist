@@ -206,7 +206,58 @@ The widget uses Vite to bundle into a single IIFE (Immediately Invoked Function 
 
 ## Deployment
 
-### For event-flow.co.uk
+### Option 1: jsDelivr CDN (Recommended)
+
+The widget is automatically built and committed to the repository, making it available via jsDelivr CDN:
+
+**Basic usage:**
+```html
+<!-- Add widget script from jsDelivr -->
+<script src="https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/dist/jade-widget.js"></script>
+
+<!-- Initialize -->
+<script>
+  window.JadeWidget.init({
+    apiBaseUrl: 'https://api.jadeassist.com',
+    primaryColor: '#8B5CF6',
+  });
+</script>
+```
+
+**For event-flow.co.uk:**
+```html
+<script src="https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/dist/jade-widget.js"></script>
+<script>
+  window.JadeWidget.init({
+    apiBaseUrl: 'https://api.event-flow.co.uk',
+    assistantName: 'Jade',
+    primaryColor: '#8B5CF6',
+  });
+</script>
+```
+
+#### Purging jsDelivr Cache
+
+When you update the widget, jsDelivr caches the file for 7 days by default. To force an immediate update:
+
+1. **Purge via URL** (replace `main` with commit hash for instant updates):
+   ```
+   https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@<commit-hash>/packages/widget/dist/jade-widget.js
+   ```
+
+2. **Purge via API** (instant, requires authentication):
+   ```bash
+   curl -X POST https://purge.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/dist/jade-widget.js
+   ```
+
+3. **Check cache status:**
+   ```
+   https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/dist/jade-widget.js?debug=true
+   ```
+
+**Note:** The GitHub Actions workflow automatically builds and commits the widget when changes are pushed to the `main` branch.
+
+### Option 2: Self-Hosted
 
 1. **Build the widget:**
    ```bash
@@ -216,7 +267,7 @@ The widget uses Vite to bundle into a single IIFE (Immediately Invoked Function 
 2. **Upload to CDN or static hosting:**
    ```bash
    # Example: Upload dist/jade-widget.js to your CDN
-   # The file is ~50KB minified + gzipped
+   # The file is ~22KB minified (~6KB gzipped)
    ```
 
 3. **Add to website:**
@@ -232,7 +283,8 @@ The widget uses Vite to bundle into a single IIFE (Immediately Invoked Function 
 
 ### Hosting Options
 
-- **CDN** (Recommended): CloudFlare, AWS CloudFront, Fastly
+- **jsDelivr** (Recommended): Free, global CDN, serves directly from GitHub
+- **CDN**: CloudFlare, AWS CloudFront, Fastly
 - **Static hosting**: Netlify, Vercel, GitHub Pages
 - **Your server**: Any static file server (nginx, Apache)
 

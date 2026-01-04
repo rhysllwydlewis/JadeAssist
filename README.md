@@ -228,11 +228,11 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed architecture documentation
 
 ### Embeddable Chat Widget
 
-The widget provides an easy way to add JadeAssist to any website:
+The widget provides an easy way to add JadeAssist to any website via jsDelivr CDN:
 
 ```html
 <!-- Add to your website -->
-<script src="https://your-cdn.com/jade-widget.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/dist/jade-widget.js"></script>
 <script>
   window.JadeWidget.init({
     apiBaseUrl: 'https://api.jadeassist.com',
@@ -248,6 +248,7 @@ The widget provides an easy way to add JadeAssist to any website:
 - 🔒 Shadow DOM for style isolation
 - ♿ Accessible (ARIA labels, keyboard navigation)
 - 🚀 Works in demo mode without backend
+- 🌍 Served globally via jsDelivr CDN
 
 See [packages/widget/README.md](packages/widget/README.md) for full documentation.
 
