@@ -7,9 +7,16 @@ node_modules/
 coverage/
 
 # Production
+# Note: Widget's jade-widget.js is explicitly allowed below for jsDelivr CDN
 dist/
 build/
 *.tsbuildinfo
+
+# Widget build output - Exception: keep jade-widget.js for jsDelivr CDN
+!packages/widget/dist/
+!packages/widget/dist/jade-widget.js
+packages/widget/dist/*
+!packages/widget/dist/jade-widget.js
 
 # Environment Variables
 .env
@@ -43,6 +50,3 @@ tmp/
 # Debug
 .vscode-test/
 *.cpuprofile
-
-# Widget build output (example uses locally built version)
-packages/widget/dist/

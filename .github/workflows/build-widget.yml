@@ -1,0 +1,81 @@
+name: Build JadeAssist Widget
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/widget/**'
+      - 'packages/shared/**'
+  pull_request:
+    paths:
+      - 'packages/widget/**'
+      - 'packages/shared/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build widget
+        run: npm run build:widget
+
+      - name: Verify jade-widget.js is valid JavaScript
+        run: |
+          FILE="packages/widget/dist/jade-widget.js"
+
+          # Check if file exists
+          if [ ! -f "$FILE" ]; then
+            echo "Error: $FILE does not exist"
+            exit 1
+          fi
+
+          # Check if file starts with JavaScript (not YAML)
+          FIRST_LINE=$(head -n 1 "$FILE")
+          if echo "$FIRST_LINE" | grep -qE "^(name:|on:|jobs:|steps:)"; then
+            echo "Error: $FILE contains YAML instead of JavaScript"
+            echo "First line: $FIRST_LINE"
+            exit 1
+          fi
+
+          # Check for YAML-like patterns
+          if grep -qE "^(name|on|jobs|steps):" "$FILE"; then
+            echo "Error: $FILE appears to contain YAML workflow content"
+            exit 1
+          fi
+
+          # Verify it's JavaScript by checking for common JS patterns
+          if ! grep -qE "(function|const|var|let|=>|class)" "$FILE"; then
+            echo "Error: $FILE does not appear to be valid JavaScript"
+            exit 1
+          fi
+
+          echo "✓ $FILE is valid JavaScript"
+
+      - name: Commit and push if changed (main branch only)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          if [ -n "$(git status --porcelain packages/widget/dist/jade-widget.js)" ]; then
+            git add packages/widget/dist/jade-widget.js
+            git commit -m "chore: update built widget [skip ci]"
+            git push
+            echo "✓ Widget build committed and pushed"
+          else
+            echo "✓ No changes to widget build"
+          fi
