@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JadeAssist Widget Test - EventFlow Teal</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 900px;
+      margin: 50px auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    }
+    .container {
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+    h1 { 
+      color: #0B8073;
+      border-bottom: 3px solid #13B6A2;
+      padding-bottom: 10px;
+    }
+    .info-box {
+      background: #e7f5f4;
+      border-left: 4px solid #0B8073;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 4px;
+    }
+    .success {
+      background: #d4edda;
+      color: #155724;
+      padding: 15px;
+      border-radius: 4px;
+      margin: 20px 0;
+      border: 1px solid #c3e6cb;
+    }
+    code {
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: monospace;
+    }
+    .color-swatch {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      border-radius: 4px;
+      margin: 0 5px;
+      vertical-align: middle;
+      border: 2px solid #ddd;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎨 JadeAssist Widget Test - EventFlow Branding</h1>
+    
+    <div class="success">
+      ✅ Widget loaded successfully with EventFlow teal colors!
+    </div>
+    
+    <div class="info-box">
+      <h2>Brand Colors Applied:</h2>
+      <p>
+        <strong>Primary Color:</strong> 
+        <span class="color-swatch" style="background: #0B8073;"></span>
+        <code>#0B8073</code> (EventFlow Teal)
+      </p>
+      <p>
+        <strong>Accent Color:</strong> 
+        <span class="color-swatch" style="background: #13B6A2;"></span>
+        <code>#13B6A2</code> (EventFlow Accent Teal)
+      </p>
+    </div>
+
+    <h2>Test Instructions:</h2>
+    <ol>
+      <li>Look for the floating chat button in the bottom-right corner (teal gradient)</li>
+      <li>Click the button to open the chat popup</li>
+      <li>Verify the header has a teal-to-cyan gradient</li>
+      <li>Check that quick reply buttons have teal borders</li>
+      <li>Hover over the send button to see teal hover state</li>
+      <li>Open browser console (F12) - should have no errors</li>
+    </ol>
+
+    <h2>CDN Embed Code:</h2>
+    <pre style="background: #f4f4f4; padding: 15px; border-radius: 4px; overflow-x: auto;"><code>&lt;!-- Add before closing &lt;/body&gt; tag --&gt;
+&lt;script src="https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/dist/jade-widget.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  window.JadeWidget.init({
+    assistantName: 'Jade',
+    greetingText: 'Hi! 👋 I\'m Jade, your event planning assistant.',
+    primaryColor: '#0B8073',  // EventFlow teal (default)
+    accentColor: '#13B6A2',   // EventFlow accent (default)
+  });
+&lt;/script&gt;</code></pre>
+
+    <p style="color: #666; margin-top: 30px;">
+      <small>Built file size: ~21KB minified (~6KB gzipped)</small>
+    </p>
+  </div>
+
+  <!-- Load widget from local dist file -->
+  <script src="./dist/jade-widget.js"></script>
+  
+  <!-- Initialize with EventFlow colors (these are now defaults) -->
+  <script>
+    window.JadeWidget.init({
+      assistantName: 'Jade',
+      greetingText: 'Hi! 👋 I\'m Jade, your event planning assistant. Can I help you plan your special day?',
+    });
+  </script>
+</body>
+</html>
