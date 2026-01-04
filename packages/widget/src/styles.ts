@@ -2,7 +2,13 @@
  * Widget styles
  */
 
-export function getWidgetStyles(primaryColor: string, accentColor: string, fontFamily: string): string {
+export function getWidgetStyles(
+  primaryColor: string,
+  accentColor: string,
+  fontFamily: string,
+  offsetBottom: string,
+  offsetRight: string
+): string {
   return `
     * {
       box-sizing: border-box;
@@ -23,8 +29,8 @@ export function getWidgetStyles(primaryColor: string, accentColor: string, fontF
 
     .jade-widget-container {
       position: fixed;
-      bottom: 24px;
-      right: 24px;
+      bottom: ${offsetBottom};
+      right: ${offsetRight};
       z-index: 999999;
     }
 
@@ -43,6 +49,20 @@ export function getWidgetStyles(primaryColor: string, accentColor: string, fontF
       position: relative;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       animation: float 3s ease-in-out infinite;
+      /* Larger tap target using pseudo-element */
+      overflow: visible;
+    }
+
+    /* Larger invisible tap target */
+    .jade-avatar-button::before {
+      content: '';
+      position: absolute;
+      top: -12px;
+      left: -12px;
+      right: -12px;
+      bottom: -12px;
+      border-radius: 50%;
+      /* For debugging, you can add: background: rgba(255,0,0,0.1); */
     }
 
     .jade-avatar-button:hover {
@@ -64,21 +84,31 @@ export function getWidgetStyles(primaryColor: string, accentColor: string, fontF
     }
 
     .jade-avatar-icon {
-      width: 32px;
-      height: 32px;
+      width: 100%;
+      height: 100%;
       color: white;
       font-size: 32px;
+      border-radius: 50%;
+      object-fit: cover;
     }
 
     .jade-avatar-badge {
       position: absolute;
       top: -4px;
       right: -4px;
-      width: 20px;
+      min-width: 20px;
       height: 20px;
-      border-radius: 50%;
+      padding: 0 6px;
+      border-radius: 10px;
       background: #ef4444;
       border: 2px solid white;
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
     }
 
     /* Greeting Tooltip */
@@ -452,8 +482,8 @@ export function getWidgetStyles(primaryColor: string, accentColor: string, fontF
     /* Responsive */
     @media (max-width: 480px) {
       .jade-widget-container {
-        bottom: 16px;
-        right: 16px;
+        bottom: ${offsetBottom === '24px' ? '16px' : offsetBottom};
+        right: ${offsetRight === '24px' ? '16px' : offsetRight};
       }
 
       .jade-chat-popup {

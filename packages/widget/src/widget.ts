@@ -42,14 +42,6 @@ export class JadeWidget {
     // Initialize
     this.render();
     this.attachEventListeners();
-
-    // Show greeting after delay if not already shown and popup is closed
-    if (!this.state.isOpen && savedMessages.length === 1) {
-      this.greetingTimeout = window.setTimeout(() => {
-        this.state.showGreeting = true;
-        this.render();
-      }, 1000);
-    }
   }
 
   private getInitialMessages(): WidgetMessage[] {
@@ -68,7 +60,9 @@ export class JadeWidget {
     const styles = getWidgetStyles(
       this.config.primaryColor,
       this.config.accentColor,
-      this.config.fontFamily
+      this.config.fontFamily,
+      this.config.offsetBottom,
+      this.config.offsetRight
     );
 
     this.shadowRoot.innerHTML = `
@@ -86,9 +80,14 @@ export class JadeWidget {
       ? `<img src="${this.config.avatarUrl}" alt="Avatar" class="jade-avatar-icon" />`
       : '<span class="jade-avatar-icon">💬</span>';
 
+    const badgeHtml = this.state.showGreeting && !this.state.isOpen
+      ? '<span class="jade-avatar-badge">1</span>'
+      : '';
+
     return `
       <button class="jade-avatar-button" aria-label="Open chat" data-action="toggle-chat">
         ${avatarContent}
+        ${badgeHtml}
       </button>
     `;
   }
@@ -97,7 +96,7 @@ export class JadeWidget {
     return `
       <div class="jade-greeting-tooltip" data-action="open-chat">
         <button class="jade-greeting-close" aria-label="Close greeting" data-action="close-greeting">×</button>
-        <div class="jade-greeting-text">${this.config.greetingText}</div>
+        <div class="jade-greeting-text">${this.config.greetingTooltipText}</div>
       </div>
     `;
   }
@@ -263,6 +262,7 @@ export class JadeWidget {
     if (this.greetingTimeout) {
       clearTimeout(this.greetingTimeout);
     }
+    StorageManager.setGreetingDismissed();
     StorageManager.saveState({ isOpen: true, showGreeting: false });
     this.render();
     this.scrollToBottom();
@@ -277,6 +277,7 @@ export class JadeWidget {
 
   private closeGreeting(): void {
     this.state.showGreeting = false;
+    StorageManager.setGreetingDismissed();
     this.render();
   }
 
@@ -419,6 +420,15 @@ export class JadeWidget {
   public mount(target?: HTMLElement): void {
     const mountTarget = target || document.body;
     mountTarget.appendChild(this.container);
+    
+    // Show greeting after delay if not already shown and popup is closed
+    const savedMessages = StorageManager.loadMessages();
+    if (!this.state.isOpen && (savedMessages.length === 0 || savedMessages.length === 1) && !StorageManager.isGreetingDismissed()) {
+      this.greetingTimeout = window.setTimeout(() => {
+        this.state.showGreeting = true;
+        this.render();
+      }, 1000);
+    }
   }
 
   public unmount(): void {

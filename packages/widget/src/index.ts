@@ -26,14 +26,20 @@ function init(config?: WidgetConfig): void {
     window.JadeWidget.instance.unmount();
   }
 
-  // Create and mount new instance
-  const widget = new Widget(config);
-  widget.mount();
+  // Get delay configuration (default 1000ms)
+  const showDelayMs = config?.showDelayMs ?? 1000;
 
-  // Store instance
-  if (window.JadeWidget) {
-    window.JadeWidget.instance = widget;
-  }
+  // Delay widget initialization to allow page to render first
+  setTimeout(() => {
+    // Create and mount new instance
+    const widget = new Widget(config);
+    widget.mount();
+
+    // Store instance
+    if (window.JadeWidget) {
+      window.JadeWidget.instance = widget;
+    }
+  }, showDelayMs);
 }
 
 // Create and expose global API immediately
