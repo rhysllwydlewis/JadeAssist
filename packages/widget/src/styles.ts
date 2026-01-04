@@ -557,12 +557,12 @@ export function getWidgetStyles(
 
       .jade-chat-popup {
         width: calc(100vw - 32px);
+        /* Fallback for browsers without dvh or min() support */
+        max-height: 600px;
         /* Fallback for browsers without dvh support */
         height: min(600px, calc(100vh - 120px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)));
-        max-height: calc(100vh - 120px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-        /* Modern browsers with dvh support */
+        /* Modern browsers with dvh support - prevents cut-off on mobile */
         height: min(600px, calc(100dvh - 120px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)));
-        max-height: calc(100dvh - 120px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
       }
 
       .jade-greeting-tooltip {
