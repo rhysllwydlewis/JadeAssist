@@ -5,6 +5,7 @@
 
 import { JadeWidget as Widget } from './widget';
 import type { WidgetConfig } from './types';
+import { DEFAULT_CONFIG } from './types';
 
 // Extend window interface for our widget
 declare global {
@@ -26,8 +27,8 @@ function init(config?: WidgetConfig): void {
     window.JadeWidget.instance.unmount();
   }
 
-  // Get delay configuration (default 1000ms)
-  const showDelayMs = config?.showDelayMs ?? 1000;
+  // Get delay configuration (use default from config)
+  const showDelayMs = config?.showDelayMs ?? DEFAULT_CONFIG.showDelayMs;
 
   // Delay widget initialization to allow page to render first
   setTimeout(() => {

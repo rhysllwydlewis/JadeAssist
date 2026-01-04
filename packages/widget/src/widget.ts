@@ -417,17 +417,22 @@ export class JadeWidget {
     return div.innerHTML;
   }
 
+  private shouldShowGreeting(): boolean {
+    const savedMessages = StorageManager.loadMessages();
+    const hasNoOrOnlyInitialMessage = savedMessages.length === 0 || savedMessages.length === 1;
+    return !this.state.isOpen && hasNoOrOnlyInitialMessage && !StorageManager.isGreetingDismissed();
+  }
+
   public mount(target?: HTMLElement): void {
     const mountTarget = target || document.body;
     mountTarget.appendChild(this.container);
     
-    // Show greeting after delay if not already shown and popup is closed
-    const savedMessages = StorageManager.loadMessages();
-    if (!this.state.isOpen && (savedMessages.length === 0 || savedMessages.length === 1) && !StorageManager.isGreetingDismissed()) {
+    // Show greeting after delay if conditions are met
+    if (this.shouldShowGreeting()) {
       this.greetingTimeout = window.setTimeout(() => {
         this.state.showGreeting = true;
         this.render();
-      }, 1000);
+      }, 1000); // 1 second delay after widget is mounted
     }
   }
 
