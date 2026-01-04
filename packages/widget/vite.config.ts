@@ -11,7 +11,7 @@ export default defineConfig({
     },
     outDir: 'dist',
     emptyOutDir: true,
-    sourcemap: true,
+    sourcemap: false, // Disabled since .map is in .gitignore
     rollupOptions: {
       output: {
         inlineDynamicImports: true,

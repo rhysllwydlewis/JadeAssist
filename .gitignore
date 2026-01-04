@@ -14,7 +14,6 @@ build/
 
 # Widget build output - Exception: keep jade-widget.js for jsDelivr CDN
 !packages/widget/dist/
-!packages/widget/dist/jade-widget.js
 packages/widget/dist/*
 !packages/widget/dist/jade-widget.js
 
