@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JadeAssist Widget Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .demo-container {
+      max-width: 800px;
+      background: white;
+      border-radius: 16px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    h1 {
+      color: #1f2937;
+      margin-bottom: 16px;
+      font-size: 32px;
+    }
+
+    .subtitle {
+      color: #6b7280;
+      margin-bottom: 32px;
+      font-size: 18px;
+    }
+
+    .section {
+      margin-bottom: 32px;
+    }
+
+    h2 {
+      color: #374151;
+      margin-bottom: 12px;
+      font-size: 20px;
+    }
+
+    p {
+      color: #4b5563;
+      line-height: 1.6;
+      margin-bottom: 12px;
+    }
+
+    code {
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 14px;
+      color: #8b5cf6;
+    }
+
+    .code-block {
+      background: #1f2937;
+      color: #f9fafb;
+      padding: 20px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 16px 0;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+      background: #8b5cf6;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #7c3aed;
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .btn-secondary:hover {
+      background: #e5e7eb;
+    }
+
+    .feature-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .feature-list li {
+      padding: 8px 0;
+      color: #4b5563;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .feature-list li::before {
+      content: '✓';
+      color: #10b981;
+      font-weight: bold;
+      font-size: 18px;
+    }
+
+    .note {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      border-radius: 8px;
+      margin: 16px 0;
+    }
+
+    .note-title {
+      font-weight: 600;
+      color: #92400e;
+      margin-bottom: 8px;
+    }
+
+    .note-text {
+      color: #78350f;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-container">
+    <h1>🎉 JadeAssist Widget Demo</h1>
+    <p class="subtitle">Your AI-powered event planning assistant</p>
+
+    <div class="section">
+      <h2>About This Demo</h2>
+      <p>
+        This page demonstrates the JadeAssist chat widget running in <strong>demo mode</strong>.
+        Click the floating button in the bottom-right corner to start chatting with Jade!
+      </p>
+      <ul class="feature-list">
+        <li>Floating avatar with gentle animation</li>
+        <li>Auto-showing greeting tooltip</li>
+        <li>Interactive chat with quick reply buttons</li>
+        <li>Persistent conversation across page reloads</li>
+        <li>Accessible (ESC to close, ARIA labels)</li>
+        <li>Shadow DOM for style isolation</li>
+      </ul>
+    </div>
+
+    <div class="note">
+      <div class="note-title">💡 Demo Mode Active</div>
+      <div class="note-text">
+        The widget is currently running with mocked responses since no API backend is configured.
+        To connect to a real backend, initialize with an <code>apiBaseUrl</code> parameter.
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Quick Start</h2>
+      <p>Add the widget to any website with just two lines of code:</p>
+      <div class="code-block">&lt;!-- Add the widget script --&gt;
+&lt;script src="dist/jade-widget.js"&gt;&lt;/script&gt;
+
+&lt;!-- Initialize the widget --&gt;
+&lt;script&gt;
+  window.JadeWidget.init({
+    // Optional configuration
+    assistantName: 'Jade',
+    primaryColor: '#8B5CF6',
+    greetingText: 'Hi! 👋 Can I help you plan your event?'
+  });
+&lt;/script&gt;</div>
+    </div>
+
+    <div class="section">
+      <h2>Configuration Options</h2>
+      <p>Customize the widget to match your brand:</p>
+      <div class="code-block">window.JadeWidget.init({
+  // Backend API URL (omit for demo mode)
+  apiBaseUrl: 'https://api.yourdomain.com',
+  
+  // Customize appearance
+  assistantName: 'Jade',
+  greetingText: 'Hi! 👋 How can I help?',
+  avatarUrl: 'https://example.com/avatar.png',
+  primaryColor: '#8B5CF6',
+});</div>
+    </div>
+
+    <div class="section">
+      <h2>Try It Out</h2>
+      <p>Use the buttons below to interact with the widget programmatically:</p>
+      <div class="button-group">
+        <button class="btn-primary" onclick="openWidget()">Open Widget</button>
+        <button class="btn-secondary" onclick="resetWidget()">Reset Conversation</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Connecting to Backend</h2>
+      <p>
+        To connect to the JadeAssist backend API, you'll need to:
+      </p>
+      <ol style="margin-left: 20px; color: #4b5563; line-height: 1.8;">
+        <li>Deploy the backend API server (see packages/backend)</li>
+        <li>Ensure the <code>POST /api/chat</code> endpoint is accessible</li>
+        <li>Configure CORS to allow requests from your domain</li>
+        <li>Initialize the widget with <code>apiBaseUrl</code> pointing to your API</li>
+      </ol>
+      <p style="margin-top: 12px;">
+        See <code>packages/widget/README.md</code> for detailed deployment instructions.
+      </p>
+    </div>
+
+    <div class="section">
+      <h2>Features & Persistence</h2>
+      <p>
+        The widget automatically saves your conversation to localStorage. Try:
+      </p>
+      <ul style="margin-left: 20px; color: #4b5563; line-height: 1.8;">
+        <li>Start a conversation with the widget</li>
+        <li>Refresh the page or navigate to another page</li>
+        <li>The conversation will persist and you can continue where you left off</li>
+        <li>Widget open/closed state is also remembered</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Include the widget script -->
+  <script src="dist/jade-widget.js"></script>
+
+  <!-- Initialize the widget -->
+  <script>
+    // Initialize widget in demo mode (no apiBaseUrl)
+    window.JadeWidget.init({
+      assistantName: 'Jade',
+      greetingText: "Hi! 👋 I'm Jade, your event planning assistant. Can I help you plan your special day?",
+      primaryColor: '#8B5CF6',    // Main brand color
+      accentColor: '#6d28d9',     // Slightly darker shade
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    });
+
+    // Helper functions for demo buttons
+    function openWidget() {
+      const widget = window.JadeWidget.instance;
+      if (widget) {
+        widget.open();
+      }
+    }
+
+    function resetWidget() {
+      const widget = window.JadeWidget.instance;
+      if (widget) {
+        widget.reset();
+      }
+    }
+  </script>
+</body>
+</html>
