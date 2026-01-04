@@ -36,8 +36,8 @@ export function getWidgetStyles(
 
     /* Avatar Button */
     .jade-avatar-button {
-      width: 64px;
-      height: 64px;
+      width: 72px;
+      height: 72px;
       border-radius: 50%;
       background: linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%);
       border: 3px solid white;
@@ -53,16 +53,16 @@ export function getWidgetStyles(
       overflow: visible;
     }
 
-    /* Larger invisible tap target */
+    /* Larger invisible tap target for better mobile UX */
     .jade-avatar-button::before {
       content: '';
       position: absolute;
-      top: -12px;
-      left: -12px;
-      right: -12px;
-      bottom: -12px;
+      top: -20px;
+      left: -20px;
+      right: -20px;
+      bottom: -20px;
       border-radius: 50%;
-      /* For debugging, you can add: background: rgba(255,0,0,0.1); */
+      /* Ensures tap events are captured in the expanded area */
     }
 
     .jade-avatar-button:hover {
@@ -114,7 +114,7 @@ export function getWidgetStyles(
     /* Greeting Tooltip */
     .jade-greeting-tooltip {
       position: absolute;
-      bottom: 76px;
+      bottom: 84px;
       right: 0;
       background: white;
       padding: 18px 22px;
@@ -187,7 +187,7 @@ export function getWidgetStyles(
     /* Chat Popup */
     .jade-chat-popup {
       position: absolute;
-      bottom: 76px;
+      bottom: 84px;
       right: 0;
       width: 400px;
       height: 600px;
@@ -482,7 +482,7 @@ export function getWidgetStyles(
     /* Responsive */
     @media (max-width: 480px) {
       .jade-widget-container {
-        bottom: ${offsetBottom === '24px' ? '16px' : offsetBottom};
+        bottom: ${offsetBottom === '24px' ? '80px' : offsetBottom === '80px' ? '80px' : offsetBottom};
         right: ${offsetRight === '24px' ? '16px' : offsetRight};
       }
 
