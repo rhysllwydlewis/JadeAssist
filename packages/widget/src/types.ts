@@ -33,8 +33,8 @@ export const DEFAULT_CONFIG: Required<WidgetConfig> = {
   assistantName: 'Jade',
   greetingText: 'Hi! 👋 I\'m Jade, your event planning assistant. Can I help you plan your special day?',
   avatarUrl: '',
-  primaryColor: '#8B5CF6',
-  accentColor: '#6d28d9',
+  primaryColor: '#0B8073',
+  accentColor: '#13B6A2',
   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
 };
 
