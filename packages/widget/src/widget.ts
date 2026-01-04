@@ -14,10 +14,18 @@ export class JadeWidget {
   private shadowRoot: ShadowRoot;
   private apiClient: ApiClient;
   private greetingTimeout?: number;
+  private escapeKeyHandler: (e: KeyboardEvent) => void;
 
   constructor(config: WidgetConfig = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.apiClient = new ApiClient(this.config.apiBaseUrl);
+    
+    // Bind escape key handler for proper cleanup
+    this.escapeKeyHandler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && this.state.isOpen) {
+        this.closeChat();
+      }
+    };
 
     // Load persisted state
     const savedState = StorageManager.loadState();
@@ -77,15 +85,16 @@ export class JadeWidget {
 
   private renderAvatar(): string {
     const avatarContent = this.config.avatarUrl
-      ? `<img src="${this.config.avatarUrl}" alt="Avatar" class="jade-avatar-icon" />`
+      ? `<img src="${this.config.avatarUrl}" alt="Chat Assistant" class="jade-avatar-icon" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+         <span class="jade-avatar-icon jade-avatar-fallback" style="display:none;">💬</span>`
       : '<span class="jade-avatar-icon">💬</span>';
 
     const badgeHtml = this.state.showGreeting && !this.state.isOpen
-      ? '<span class="jade-avatar-badge">1</span>'
+      ? '<span class="jade-avatar-badge" aria-label="1 new notification">1</span>'
       : '';
 
     return `
-      <button class="jade-avatar-button" aria-label="Open chat" data-action="toggle-chat">
+      <button class="jade-avatar-button" aria-label="Toggle chat" data-action="toggle-chat">
         ${avatarContent}
         ${badgeHtml}
       </button>
@@ -94,9 +103,9 @@ export class JadeWidget {
 
   private renderGreeting(): string {
     return `
-      <div class="jade-greeting-tooltip" data-action="open-chat">
-        <button class="jade-greeting-close" aria-label="Close greeting" data-action="close-greeting">×</button>
-        <div class="jade-greeting-text">${this.config.greetingTooltipText}</div>
+      <div class="jade-greeting-tooltip" data-action="open-chat" role="tooltip" aria-live="polite">
+        <button class="jade-greeting-close" aria-label="Dismiss greeting" data-action="close-greeting">×</button>
+        <div class="jade-greeting-text">${this.escapeHtml(this.config.greetingTooltipText)}</div>
       </div>
     `;
   }
@@ -116,14 +125,17 @@ export class JadeWidget {
       <div class="jade-chat-header">
         <div class="jade-chat-header-left">
           <div class="jade-chat-avatar">
-            ${this.config.avatarUrl ? `<img src="${this.config.avatarUrl}" alt="Avatar" style="width:100%;height:100%;border-radius:50%;" />` : '💬'}
+            ${this.config.avatarUrl ? `<img src="${this.config.avatarUrl}" alt="${this.escapeHtml(this.config.assistantName)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.outerHTML='💬'" />` : '💬'}
           </div>
           <div>
-            <div class="jade-chat-title">${this.config.assistantName}</div>
-            <div class="jade-chat-status">Online</div>
+            <div class="jade-chat-title">${this.escapeHtml(this.config.assistantName)}</div>
+            <div class="jade-chat-status"><span class="jade-status-dot"></span>Online</div>
           </div>
         </div>
-        <button class="jade-chat-close" aria-label="Close chat" data-action="close-chat">×</button>
+        <div class="jade-chat-controls">
+          <button class="jade-chat-minimize" aria-label="Minimize chat" data-action="minimize-chat" title="Minimize">−</button>
+          <button class="jade-chat-close" aria-label="Close chat" data-action="close-chat" title="Close">×</button>
+        </div>
       </div>
     `;
   }
@@ -184,12 +196,16 @@ export class JadeWidget {
             placeholder="Type your message..."
             rows="1"
             aria-label="Message input"
+            maxlength="1000"
             data-input
           ></textarea>
-          <button class="jade-chat-send-btn" aria-label="Send message" data-action="send">
-            ➤
+          <button class="jade-chat-send-btn" aria-label="Send message" data-action="send" title="Send">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M15 1L7 9M15 1L10 15L7 9M15 1L1 6L7 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
           </button>
         </div>
+        <div class="jade-char-count" aria-live="polite" aria-atomic="true"></div>
       </div>
     `;
   }
@@ -206,6 +222,8 @@ export class JadeWidget {
         this.openChat();
       } else if (action === 'close-chat') {
         this.closeChat();
+      } else if (action === 'minimize-chat') {
+        this.minimizeChat();
       } else if (action === 'close-greeting') {
         e.stopPropagation();
         this.closeGreeting();
@@ -232,18 +250,29 @@ export class JadeWidget {
     });
 
     // ESC to close
-    document.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && this.state.isOpen) {
-        this.closeChat();
-      }
-    });
+    document.addEventListener('keydown', this.escapeKeyHandler);
 
-    // Auto-resize textarea
+    // Auto-resize textarea and update character count
     this.shadowRoot.addEventListener('input', (e) => {
       const target = e.target as HTMLTextAreaElement;
       if (target.hasAttribute('data-input')) {
+        // Auto-resize
         target.style.height = 'auto';
         target.style.height = Math.min(target.scrollHeight, 100) + 'px';
+        
+        // Update character count
+        const charCount = this.shadowRoot.querySelector('.jade-char-count');
+        if (charCount) {
+          const length = target.value.length;
+          const maxLength = 1000;
+          if (length > maxLength * 0.8) {
+            charCount.textContent = `${length}/${maxLength}`;
+            charCount.classList.add('jade-char-count-visible');
+          } else {
+            charCount.textContent = '';
+            charCount.classList.remove('jade-char-count-visible');
+          }
+        }
       }
     });
   }
@@ -272,6 +301,13 @@ export class JadeWidget {
   private closeChat(): void {
     this.state.isOpen = false;
     StorageManager.saveState({ isOpen: false });
+    this.render();
+  }
+
+  private minimizeChat(): void {
+    this.state.isMinimized = true;
+    this.state.isOpen = false;
+    StorageManager.saveState({ isOpen: false, isMinimized: true });
     this.render();
   }
 
@@ -441,6 +477,8 @@ export class JadeWidget {
     if (this.greetingTimeout) {
       clearTimeout(this.greetingTimeout);
     }
+    // Clean up event listener to prevent memory leaks
+    document.removeEventListener('keydown', this.escapeKeyHandler);
   }
 
   public open(): void {

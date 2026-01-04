@@ -92,6 +92,13 @@ export function getWidgetStyles(
       object-fit: cover;
     }
 
+    .jade-avatar-fallback {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%);
+    }
+
     .jade-avatar-badge {
       position: absolute;
       top: -4px;
@@ -109,6 +116,16 @@ export function getWidgetStyles(
       align-items: center;
       justify-content: center;
       z-index: 1;
+      animation: badgePulse 2s ease-in-out infinite;
+    }
+
+    @keyframes badgePulse {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.1);
+      }
     }
 
     /* Greeting Tooltip */
@@ -249,8 +266,35 @@ export function getWidgetStyles(
       font-size: 13px;
       opacity: 0.95;
       font-weight: 400;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
+    .jade-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      display: inline-block;
+      animation: statusPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes statusPulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.6;
+      }
+    }
+
+    .jade-chat-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .jade-chat-minimize,
     .jade-chat-close {
       width: 32px;
       height: 32px;
@@ -262,8 +306,12 @@ export function getWidgetStyles(
       font-size: 20px;
       line-height: 1;
       transition: background 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
+    .jade-chat-minimize:hover,
     .jade-chat-close:hover {
       background: rgba(255, 255, 255, 0.3);
     }
@@ -417,6 +465,21 @@ export function getWidgetStyles(
 
     .jade-chat-input:focus {
       border-color: ${primaryColor};
+      box-shadow: 0 0 0 3px rgba(11, 128, 115, 0.1);
+    }
+
+    .jade-char-count {
+      font-size: 11px;
+      color: #9ca3af;
+      text-align: right;
+      margin-top: 4px;
+      height: 16px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .jade-char-count-visible {
+      opacity: 1;
     }
 
     .jade-chat-send-btn {
