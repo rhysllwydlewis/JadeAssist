@@ -295,7 +295,7 @@ export function getWidgetStyles(primaryColor: string, accentColor: string, fontF
     }
 
     .jade-message-avatar.assistant {
-      background: linear-gradient(135deg, ${primaryColor} 0%, #6d28d9 100%);
+      background: linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%);
       color: white;
     }
 
@@ -406,7 +406,7 @@ export function getWidgetStyles(primaryColor: string, accentColor: string, fontF
     }
 
     .jade-chat-send-btn:hover:not(:disabled) {
-      background: #6d28d9;
+      background: ${accentColor};
       transform: scale(1.05);
     }
 
