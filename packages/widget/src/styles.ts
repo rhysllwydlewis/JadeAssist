@@ -7,7 +7,9 @@ export function getWidgetStyles(
   accentColor: string,
   fontFamily: string,
   offsetBottom: string,
-  offsetRight: string
+  offsetRight: string,
+  offsetLeft: string,
+  scale: number
 ): string {
   return `
     * {
@@ -30,8 +32,11 @@ export function getWidgetStyles(
     .jade-widget-container {
       position: fixed;
       bottom: ${offsetBottom};
-      right: ${offsetRight};
+      ${offsetLeft ? `left: ${offsetLeft};` : `right: ${offsetRight};`}
+      ${offsetLeft ? 'right: auto;' : ''}
       z-index: 999999;
+      transform: scale(${scale});
+      transform-origin: ${offsetLeft ? 'left' : 'right'} bottom;
     }
 
     /* Avatar Button */
@@ -132,7 +137,7 @@ export function getWidgetStyles(
     .jade-greeting-tooltip {
       position: absolute;
       bottom: 84px;
-      right: 0;
+      ${offsetLeft ? 'left: 0;' : 'right: 0;'}
       background: white;
       padding: 18px 22px;
       border-radius: 16px;
@@ -162,7 +167,7 @@ export function getWidgetStyles(
       content: '';
       position: absolute;
       bottom: -8px;
-      right: 24px;
+      ${offsetLeft ? 'left: 24px;' : 'right: 24px;'}
       width: 16px;
       height: 16px;
       background: white;
@@ -205,7 +210,7 @@ export function getWidgetStyles(
     .jade-chat-popup {
       position: absolute;
       bottom: 84px;
-      right: 0;
+      ${offsetLeft ? 'left: 0;' : 'right: 0;'}
       width: 400px;
       height: 600px;
       background: white;
@@ -546,13 +551,16 @@ export function getWidgetStyles(
     @media (max-width: 480px) {
       .jade-widget-container {
         bottom: ${offsetBottom === '24px' ? '80px' : offsetBottom === '80px' ? '80px' : offsetBottom};
-        right: ${offsetRight === '24px' ? '16px' : offsetRight};
+        ${offsetLeft ? `left: ${offsetLeft === '24px' ? '16px' : offsetLeft};` : `right: ${offsetRight === '24px' ? '16px' : offsetRight};`}
+        ${offsetLeft ? 'right: auto;' : ''}
       }
 
       .jade-chat-popup {
         width: calc(100vw - 32px);
-        height: calc(100vh - 120px);
-        max-height: 600px;
+        height: min(600px, calc(100dvh - 120px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+        height: min(600px, calc(100vh - 120px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+        max-height: calc(100dvh - 120px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+        max-height: calc(100vh - 120px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
       }
 
       .jade-greeting-tooltip {

@@ -70,7 +70,9 @@ export class JadeWidget {
       this.config.accentColor,
       this.config.fontFamily,
       this.config.offsetBottom,
-      this.config.offsetRight
+      this.config.offsetRight,
+      this.config.offsetLeft,
+      this.config.scale
     );
 
     this.shadowRoot.innerHTML = `
