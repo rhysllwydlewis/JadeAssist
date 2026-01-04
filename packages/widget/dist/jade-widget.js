@@ -1,4 +1,4 @@
-(function(d){"use strict";const c={apiBaseUrl:"",assistantName:"Jade",greetingText:"Hi! 👋 I'm Jade, your event planning assistant. Can I help you plan your special day?",avatarUrl:"",primaryColor:"#0B8073",accentColor:"#13B6A2",fontFamily:'-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'},r={STATE:"jade-widget-state",MESSAGES:"jade-widget-messages",CONVERSATION_ID:"jade-widget-conversation-id"};class n{static saveState(e){try{const a={...this.loadState(),...e};localStorage.setItem(r.STATE,JSON.stringify(a))}catch(t){console.warn("Failed to save widget state:",t)}}static loadState(){try{const e=localStorage.getItem(r.STATE);return e?JSON.parse(e):{}}catch(e){return console.warn("Failed to load widget state:",e),{}}}static saveMessages(e){try{localStorage.setItem(r.MESSAGES,JSON.stringify(e))}catch(t){console.warn("Failed to save messages:",t)}}static loadMessages(){try{const e=localStorage.getItem(r.MESSAGES);return e?JSON.parse(e):[]}catch(e){return console.warn("Failed to load messages:",e),[]}}static saveConversationId(e){try{localStorage.setItem(r.CONVERSATION_ID,e)}catch(t){console.warn("Failed to save conversation ID:",t)}}static loadConversationId(){try{return localStorage.getItem(r.CONVERSATION_ID)}catch(e){return console.warn("Failed to load conversation ID:",e),null}}static clearAll(){try{localStorage.removeItem(r.STATE),localStorage.removeItem(r.MESSAGES),localStorage.removeItem(r.CONVERSATION_ID)}catch(e){console.warn("Failed to clear storage:",e)}}}class p{constructor(e){this.baseUrl=e||"",this.demoMode=!e}async sendMessage(e,t){var a;if(this.demoMode)return this.mockResponse(e);try{const s=await fetch(`${this.baseUrl}/api/chat`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:e,conversationId:t,userId:"anonymous"})});if(!s.ok)throw new Error(`API error: ${s.status}`);const i=await s.json();if(!i.success||!i.data)throw new Error(((a=i.error)==null?void 0:a.message)||"API request failed");return{conversationId:i.data.conversationId,message:{id:i.data.message.id,role:"assistant",content:i.data.message.content,timestamp:Date.now(),quickReplies:i.data.suggestions}}}catch(s){console.error("API request failed, falling back to demo mode:",s);const i=await this.mockResponse(e);return i.message.content=`⚠️ (Demo Mode) ${i.message.content}`,i}}async mockResponse(e){await new Promise(m=>setTimeout(m,800));const t="demo-"+Date.now(),a=e.toLowerCase();let s="",i;return a.includes("yes")&&a.includes("please")?(s="Wonderful! I'd love to help you plan your event. What type of event are you planning? 🎉",i=["Wedding","Birthday Party","Corporate Event","Other"]):a.includes("wedding")?(s="Exciting! A wedding is such a special occasion. Do you have a date in mind? 💍",i=["Yes, I do","Not yet","Need help choosing"]):a.includes("no")&&a.includes("thanks")?s="No problem! If you change your mind or need any event planning help, I'm always here. Have a great day! 😊":a.includes("budget")?(s="I can help you create a realistic budget! What's your approximate total budget for the event? 💷",i=["Under £5k","£5k-£10k","£10k-£20k","£20k+"]):a.includes("venue")?(s="Great question! I can help you find the perfect venue. What region are you looking in? 📍",i=["London","Scotland","Wales","Other UK"]):(s="I'm here to help with all aspects of event planning! I can assist with budget planning, venue selection, supplier recommendations, timelines, and more. What would you like to know? 😊",i=["Budget Planning","Find Venues","Get Timeline","Talk to Expert"]),{conversationId:t,message:{id:"msg-"+Date.now(),role:"assistant",content:s,timestamp:Date.now(),quickReplies:i}}}}function g(o,e,t){return`
+(function(l){"use strict";const c={apiBaseUrl:"",assistantName:"Jade",greetingText:"Hi! 👋 I'm Jade, your event planning assistant. Can I help you plan your special day?",greetingTooltipText:"👋 Hi! Need help planning your event?",avatarUrl:"https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/assets/avatar-woman.png",primaryColor:"#0B8073",accentColor:"#13B6A2",fontFamily:'-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',showDelayMs:1e3,offsetBottom:"80px",offsetRight:"24px"},r={STATE:"jade-widget-state",MESSAGES:"jade-widget-messages",CONVERSATION_ID:"jade-widget-conversation-id",GREETING_DISMISSED:"jade-widget-greeting-dismissed"};class n{static saveState(e){try{const a={...this.loadState(),...e};localStorage.setItem(r.STATE,JSON.stringify(a))}catch(t){console.warn("Failed to save widget state:",t)}}static loadState(){try{const e=localStorage.getItem(r.STATE);return e?JSON.parse(e):{}}catch(e){return console.warn("Failed to load widget state:",e),{}}}static saveMessages(e){try{localStorage.setItem(r.MESSAGES,JSON.stringify(e))}catch(t){console.warn("Failed to save messages:",t)}}static loadMessages(){try{const e=localStorage.getItem(r.MESSAGES);return e?JSON.parse(e):[]}catch(e){return console.warn("Failed to load messages:",e),[]}}static saveConversationId(e){try{localStorage.setItem(r.CONVERSATION_ID,e)}catch(t){console.warn("Failed to save conversation ID:",t)}}static loadConversationId(){try{return localStorage.getItem(r.CONVERSATION_ID)}catch(e){return console.warn("Failed to load conversation ID:",e),null}}static clearAll(){try{localStorage.removeItem(r.STATE),localStorage.removeItem(r.MESSAGES),localStorage.removeItem(r.CONVERSATION_ID),localStorage.removeItem(r.GREETING_DISMISSED)}catch(e){console.warn("Failed to clear storage:",e)}}static isGreetingDismissed(){try{return localStorage.getItem(r.GREETING_DISMISSED)==="true"}catch(e){return console.warn("Failed to check greeting dismissed state:",e),!1}}static setGreetingDismissed(){try{localStorage.setItem(r.GREETING_DISMISSED,"true")}catch(e){console.warn("Failed to save greeting dismissed state:",e)}}}class p{constructor(e){this.baseUrl=e||"",this.demoMode=!e}async sendMessage(e,t){var a;if(this.demoMode)return this.mockResponse(e);try{const i=await fetch(`${this.baseUrl}/api/chat`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:e,conversationId:t,userId:"anonymous"})});if(!i.ok)throw new Error(`API error: ${i.status}`);const s=await i.json();if(!s.success||!s.data)throw new Error(((a=s.error)==null?void 0:a.message)||"API request failed");return{conversationId:s.data.conversationId,message:{id:s.data.message.id,role:"assistant",content:s.data.message.content,timestamp:Date.now(),quickReplies:s.data.suggestions}}}catch(i){console.error("API request failed, falling back to demo mode:",i);const s=await this.mockResponse(e);return s.message.content=`⚠️ (Demo Mode) ${s.message.content}`,s}}async mockResponse(e){await new Promise(d=>setTimeout(d,800));const t="demo-"+Date.now(),a=e.toLowerCase();let i="",s;return a.includes("yes")&&a.includes("please")?(i="Wonderful! I'd love to help you plan your event. What type of event are you planning? 🎉",s=["Wedding","Birthday Party","Corporate Event","Other"]):a.includes("wedding")?(i="Exciting! A wedding is such a special occasion. Do you have a date in mind? 💍",s=["Yes, I do","Not yet","Need help choosing"]):a.includes("no")&&a.includes("thanks")?i="No problem! If you change your mind or need any event planning help, I'm always here. Have a great day! 😊":a.includes("budget")?(i="I can help you create a realistic budget! What's your approximate total budget for the event? 💷",s=["Under £5k","£5k-£10k","£10k-£20k","£20k+"]):a.includes("venue")?(i="Great question! I can help you find the perfect venue. What region are you looking in? 📍",s=["London","Scotland","Wales","Other UK"]):(i="I'm here to help with all aspects of event planning! I can assist with budget planning, venue selection, supplier recommendations, timelines, and more. What would you like to know? 😊",s=["Budget Planning","Find Venues","Get Timeline","Talk to Expert"]),{conversationId:t,message:{id:"msg-"+Date.now(),role:"assistant",content:i,timestamp:Date.now(),quickReplies:s}}}}function g(o,e,t,a,i){return`
     * {
       box-sizing: border-box;
       margin: 0;
@@ -18,15 +18,15 @@
 
     .jade-widget-container {
       position: fixed;
-      bottom: 24px;
-      right: 24px;
+      bottom: ${a};
+      right: ${i};
       z-index: 999999;
     }
 
     /* Avatar Button */
     .jade-avatar-button {
-      width: 64px;
-      height: 64px;
+      width: 72px;
+      height: 72px;
       border-radius: 50%;
       background: linear-gradient(135deg, ${o} 0%, ${e} 100%);
       border: 3px solid white;
@@ -38,6 +38,20 @@
       position: relative;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       animation: float 3s ease-in-out infinite;
+      /* Larger tap target using pseudo-element */
+      overflow: visible;
+    }
+
+    /* Larger invisible tap target for better mobile UX */
+    .jade-avatar-button::before {
+      content: '';
+      position: absolute;
+      top: -20px;
+      left: -20px;
+      right: -20px;
+      bottom: -20px;
+      border-radius: 50%;
+      /* Ensures tap events are captured in the expanded area */
     }
 
     .jade-avatar-button:hover {
@@ -59,27 +73,54 @@
     }
 
     .jade-avatar-icon {
-      width: 32px;
-      height: 32px;
+      width: 100%;
+      height: 100%;
       color: white;
       font-size: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .jade-avatar-fallback {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, ${o} 0%, ${e} 100%);
     }
 
     .jade-avatar-badge {
       position: absolute;
       top: -4px;
       right: -4px;
-      width: 20px;
+      min-width: 20px;
       height: 20px;
-      border-radius: 50%;
+      padding: 0 6px;
+      border-radius: 10px;
       background: #ef4444;
       border: 2px solid white;
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
+      animation: badgePulse 2s ease-in-out infinite;
+    }
+
+    @keyframes badgePulse {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.1);
+      }
     }
 
     /* Greeting Tooltip */
     .jade-greeting-tooltip {
       position: absolute;
-      bottom: 76px;
+      bottom: 84px;
       right: 0;
       background: white;
       padding: 18px 22px;
@@ -152,7 +193,7 @@
     /* Chat Popup */
     .jade-chat-popup {
       position: absolute;
-      bottom: 76px;
+      bottom: 84px;
       right: 0;
       width: 400px;
       height: 600px;
@@ -214,8 +255,35 @@
       font-size: 13px;
       opacity: 0.95;
       font-weight: 400;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
+    .jade-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      display: inline-block;
+      animation: statusPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes statusPulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.6;
+      }
+    }
+
+    .jade-chat-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .jade-chat-minimize,
     .jade-chat-close {
       width: 32px;
       height: 32px;
@@ -227,8 +295,12 @@
       font-size: 20px;
       line-height: 1;
       transition: background 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
+    .jade-chat-minimize:hover,
     .jade-chat-close:hover {
       background: rgba(255, 255, 255, 0.3);
     }
@@ -382,6 +454,21 @@
 
     .jade-chat-input:focus {
       border-color: ${o};
+      box-shadow: 0 0 0 3px rgba(11, 128, 115, 0.1);
+    }
+
+    .jade-char-count {
+      font-size: 11px;
+      color: #9ca3af;
+      text-align: right;
+      margin-top: 4px;
+      height: 16px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .jade-char-count-visible {
+      opacity: 1;
     }
 
     .jade-chat-send-btn {
@@ -447,8 +534,8 @@
     /* Responsive */
     @media (max-width: 480px) {
       .jade-widget-container {
-        bottom: 16px;
-        right: 16px;
+        bottom: ${a==="24px"||a==="80px"?"80px":a};
+        right: ${i==="24px"?"16px":i};
       }
 
       .jade-chat-popup {
@@ -466,21 +553,23 @@
     .jade-hidden {
       display: none !important;
     }
-  `}class h{constructor(e={}){this.config={...c,...e},this.apiClient=new p(this.config.apiBaseUrl);const t=n.loadState(),a=n.loadMessages(),s=n.loadConversationId();this.state={isOpen:t.isOpen||!1,isMinimized:t.isMinimized||!1,showGreeting:!1,conversationId:s||void 0,messages:a.length>0?a:this.getInitialMessages()},this.container=document.createElement("div"),this.container.className="jade-widget-root",this.shadowRoot=this.container.attachShadow({mode:"open"}),this.render(),this.attachEventListeners(),!this.state.isOpen&&a.length===1&&(this.greetingTimeout=window.setTimeout(()=>{this.state.showGreeting=!0,this.render()},1e3))}getInitialMessages(){return[{id:"initial",role:"assistant",content:this.config.greetingText,timestamp:Date.now(),quickReplies:["Yes, please","No, thanks"]}]}render(){const e=g(this.config.primaryColor,this.config.accentColor,this.config.fontFamily);this.shadowRoot.innerHTML=`
+  `}class u{constructor(e={}){this.config={...c,...e},this.apiClient=new p(this.config.apiBaseUrl),this.escapeKeyHandler=s=>{s.key==="Escape"&&this.state.isOpen&&this.closeChat()};const t=n.loadState(),a=n.loadMessages(),i=n.loadConversationId();this.state={isOpen:t.isOpen||!1,isMinimized:t.isMinimized||!1,showGreeting:!1,conversationId:i||void 0,messages:a.length>0?a:this.getInitialMessages()},this.container=document.createElement("div"),this.container.className="jade-widget-root",this.shadowRoot=this.container.attachShadow({mode:"open"}),this.render(),this.attachEventListeners()}getInitialMessages(){return[{id:"initial",role:"assistant",content:this.config.greetingText,timestamp:Date.now(),quickReplies:["Yes, please","No, thanks"]}]}render(){const e=g(this.config.primaryColor,this.config.accentColor,this.config.fontFamily,this.config.offsetBottom,this.config.offsetRight);this.shadowRoot.innerHTML=`
       <style>${e}</style>
       <div class="jade-widget-container">
         ${this.renderAvatar()}
         ${this.state.showGreeting&&!this.state.isOpen?this.renderGreeting():""}
         ${this.state.isOpen?this.renderChatPopup():""}
       </div>
-    `}renderAvatar(){return`
-      <button class="jade-avatar-button" aria-label="Open chat" data-action="toggle-chat">
-        ${this.config.avatarUrl?`<img src="${this.config.avatarUrl}" alt="Avatar" class="jade-avatar-icon" />`:'<span class="jade-avatar-icon">💬</span>'}
+    `}renderAvatar(){const e=this.config.avatarUrl?`<img src="${this.escapeHtml(this.config.avatarUrl)}" alt="Chat Assistant" class="jade-avatar-icon jade-avatar-img" />
+         <span class="jade-avatar-icon jade-avatar-fallback" style="display:none;">💬</span>`:'<span class="jade-avatar-icon">💬</span>',t=this.state.showGreeting&&!this.state.isOpen?'<span class="jade-avatar-badge" aria-label="1 new notification">1</span>':"";return`
+      <button class="jade-avatar-button" aria-label="Toggle chat" data-action="toggle-chat">
+        ${e}
+        ${t}
       </button>
     `}renderGreeting(){return`
-      <div class="jade-greeting-tooltip" data-action="open-chat">
-        <button class="jade-greeting-close" aria-label="Close greeting" data-action="close-greeting">×</button>
-        <div class="jade-greeting-text">${this.config.greetingText}</div>
+      <div class="jade-greeting-tooltip" data-action="open-chat" role="tooltip" aria-live="polite">
+        <button class="jade-greeting-close" aria-label="Dismiss greeting" data-action="close-greeting">×</button>
+        <div class="jade-greeting-text">${this.escapeHtml(this.config.greetingTooltipText)}</div>
       </div>
     `}renderChatPopup(){return`
       <div class="jade-chat-popup" role="dialog" aria-label="Chat">
@@ -492,22 +581,25 @@
       <div class="jade-chat-header">
         <div class="jade-chat-header-left">
           <div class="jade-chat-avatar">
-            ${this.config.avatarUrl?`<img src="${this.config.avatarUrl}" alt="Avatar" style="width:100%;height:100%;border-radius:50%;" />`:"💬"}
+            ${this.config.avatarUrl?`<img src="${this.escapeHtml(this.config.avatarUrl)}" alt="${this.escapeHtml(this.config.assistantName)}" class="jade-header-avatar-img" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`:"💬"}
           </div>
           <div>
-            <div class="jade-chat-title">${this.config.assistantName}</div>
-            <div class="jade-chat-status">Online</div>
+            <div class="jade-chat-title">${this.escapeHtml(this.config.assistantName)}</div>
+            <div class="jade-chat-status"><span class="jade-status-dot"></span>Online</div>
           </div>
         </div>
-        <button class="jade-chat-close" aria-label="Close chat" data-action="close-chat">×</button>
+        <div class="jade-chat-controls">
+          <button class="jade-chat-minimize" aria-label="Minimize chat" data-action="minimize-chat" title="Minimize">−</button>
+          <button class="jade-chat-close" aria-label="Close chat" data-action="close-chat" title="Close">×</button>
+        </div>
       </div>
     `}renderMessages(){return`
       <div class="jade-chat-messages" data-messages-container>
         ${this.state.messages.map(t=>this.renderMessage(t)).join("")}
       </div>
-    `}renderMessage(e){const t=e.role==="user",a=new Date(e.timestamp).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),s=!t&&e.quickReplies?`
+    `}renderMessage(e){const t=e.role==="user",a=new Date(e.timestamp).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),i=!t&&e.quickReplies?`
       <div class="jade-quick-replies">
-        ${e.quickReplies.map(i=>`<button class="jade-quick-reply-btn" data-action="quick-reply" data-reply="${this.escapeHtml(i)}">${this.escapeHtml(i)}</button>`).join("")}
+        ${e.quickReplies.map(s=>`<button class="jade-quick-reply-btn" data-action="quick-reply" data-reply="${this.escapeHtml(s)}">${this.escapeHtml(s)}</button>`).join("")}
       </div>
     `:"";return`
       <div class="jade-message jade-message-${e.role}" data-message-id="${e.id}">
@@ -517,7 +609,7 @@
         <div class="jade-message-content">
           <div class="jade-message-bubble">${this.escapeHtml(e.content)}</div>
           <div class="jade-message-time">${a}</div>
-          ${s}
+          ${i}
         </div>
       </div>
     `}renderInputArea(){return`
@@ -528,14 +620,18 @@
             placeholder="Type your message..."
             rows="1"
             aria-label="Message input"
+            maxlength="1000"
             data-input
           ></textarea>
-          <button class="jade-chat-send-btn" aria-label="Send message" data-action="send">
-            ➤
+          <button class="jade-chat-send-btn" aria-label="Send message" data-action="send" title="Send">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M15 1L7 9M15 1L10 15L7 9M15 1L1 6L7 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
           </button>
         </div>
+        <div class="jade-char-count" aria-live="polite" aria-atomic="true"></div>
       </div>
-    `}attachEventListeners(){this.shadowRoot.addEventListener("click",e=>{const t=e.target,a=t.getAttribute("data-action");if(a==="toggle-chat")this.toggleChat();else if(a==="open-chat")this.openChat();else if(a==="close-chat")this.closeChat();else if(a==="close-greeting")e.stopPropagation(),this.closeGreeting();else if(a==="send")this.handleSend();else if(a==="quick-reply"){const s=t.getAttribute("data-reply");s&&this.handleQuickReply(s)}}),this.shadowRoot.addEventListener("keydown",e=>{const t=e;e.target.hasAttribute("data-input")&&t.key==="Enter"&&!t.shiftKey&&(e.preventDefault(),this.handleSend())}),document.addEventListener("keydown",e=>{e.key==="Escape"&&this.state.isOpen&&this.closeChat()}),this.shadowRoot.addEventListener("input",e=>{const t=e.target;t.hasAttribute("data-input")&&(t.style.height="auto",t.style.height=Math.min(t.scrollHeight,100)+"px")})}toggleChat(){this.state.isOpen?this.closeChat():this.openChat()}openChat(){this.state.isOpen=!0,this.state.showGreeting=!1,this.greetingTimeout&&clearTimeout(this.greetingTimeout),n.saveState({isOpen:!0,showGreeting:!1}),this.render(),this.scrollToBottom(),this.focusInput()}closeChat(){this.state.isOpen=!1,n.saveState({isOpen:!1}),this.render()}closeGreeting(){this.state.showGreeting=!1,this.render()}async handleSend(){const e=this.shadowRoot.querySelector("[data-input]");if(!e)return;const t=e.value.trim();if(!t)return;const a={id:"user-"+Date.now(),role:"user",content:t,timestamp:Date.now()};this.state.messages.push(a),n.saveMessages(this.state.messages),e.value="",e.style.height="auto",this.render(),this.scrollToBottom(),this.showTypingIndicator();try{const s=await this.apiClient.sendMessage(t,this.state.conversationId);this.state.conversationId||(this.state.conversationId=s.conversationId,n.saveConversationId(s.conversationId)),this.state.messages.push(s.message),n.saveMessages(this.state.messages),this.removeTypingIndicator(),this.render(),this.scrollToBottom(),this.focusInput()}catch(s){console.error("Failed to send message:",s),this.removeTypingIndicator();const i={id:"error-"+Date.now(),role:"assistant",content:"I'm sorry, I'm having trouble connecting. Please try again.",timestamp:Date.now()};this.state.messages.push(i),n.saveMessages(this.state.messages),this.render(),this.scrollToBottom()}}handleQuickReply(e){const t=this.shadowRoot.querySelector("[data-input]");t&&(t.value=e,this.handleSend())}showTypingIndicator(){this.removeTypingIndicator();const e=this.shadowRoot.querySelector("[data-messages-container]");if(e){const t=document.createElement("div");t.className="jade-message jade-message-assistant",t.setAttribute("data-typing-indicator",""),t.innerHTML=`
+    `}attachEventListeners(){this.shadowRoot.addEventListener("click",a=>{const i=a.target,s=i.getAttribute("data-action");if(s==="toggle-chat")this.toggleChat();else if(s==="open-chat")this.openChat();else if(s==="close-chat")this.closeChat();else if(s==="minimize-chat")this.minimizeChat();else if(s==="close-greeting")a.stopPropagation(),this.closeGreeting();else if(s==="send")this.handleSend();else if(s==="quick-reply"){const d=i.getAttribute("data-reply");d&&this.handleQuickReply(d)}}),this.shadowRoot.addEventListener("keydown",a=>{const i=a;a.target.hasAttribute("data-input")&&i.key==="Enter"&&!i.shiftKey&&(a.preventDefault(),this.handleSend())}),document.addEventListener("keydown",this.escapeKeyHandler),this.shadowRoot.addEventListener("input",a=>{const i=a.target;if(i.hasAttribute("data-input")){i.style.height="auto",i.style.height=Math.min(i.scrollHeight,100)+"px";const s=this.shadowRoot.querySelector(".jade-char-count");if(s){const d=i.value.length;d>1e3*.8?(s.textContent=`${d}/1000`,s.classList.add("jade-char-count-visible")):(s.textContent="",s.classList.remove("jade-char-count-visible"))}}});const e=this.shadowRoot.querySelector(".jade-avatar-img");e&&e.addEventListener("error",()=>{e.setAttribute("style","display:none;");const a=this.shadowRoot.querySelector(".jade-avatar-fallback");a&&a.setAttribute("style","display:flex;")});const t=this.shadowRoot.querySelector(".jade-header-avatar-img");t&&t.addEventListener("error",()=>{const a=t.parentElement;a&&(a.innerHTML="💬")})}toggleChat(){this.state.isOpen?this.closeChat():this.openChat()}openChat(){this.state.isOpen=!0,this.state.showGreeting=!1,this.greetingTimeout&&clearTimeout(this.greetingTimeout),n.setGreetingDismissed(),n.saveState({isOpen:!0,showGreeting:!1}),this.render(),this.scrollToBottom(),this.focusInput()}closeChat(){this.state.isOpen=!1,n.saveState({isOpen:!1}),this.render()}minimizeChat(){this.state.isMinimized=!0,this.state.isOpen=!1,n.saveState({isOpen:!1,isMinimized:!0}),this.render()}closeGreeting(){this.state.showGreeting=!1,n.setGreetingDismissed(),this.render()}async handleSend(){const e=this.shadowRoot.querySelector("[data-input]");if(!e)return;const t=e.value.trim();if(!t)return;const a={id:"user-"+Date.now(),role:"user",content:t,timestamp:Date.now()};this.state.messages.push(a),n.saveMessages(this.state.messages),e.value="",e.style.height="auto",this.render(),this.scrollToBottom(),this.showTypingIndicator();try{const i=await this.apiClient.sendMessage(t,this.state.conversationId);this.state.conversationId||(this.state.conversationId=i.conversationId,n.saveConversationId(i.conversationId)),this.state.messages.push(i.message),n.saveMessages(this.state.messages),this.removeTypingIndicator(),this.render(),this.scrollToBottom(),this.focusInput()}catch(i){console.error("Failed to send message:",i),this.removeTypingIndicator();const s={id:"error-"+Date.now(),role:"assistant",content:"I'm sorry, I'm having trouble connecting. Please try again.",timestamp:Date.now()};this.state.messages.push(s),n.saveMessages(this.state.messages),this.render(),this.scrollToBottom()}}handleQuickReply(e){const t=this.shadowRoot.querySelector("[data-input]");t&&(t.value=e,this.handleSend())}showTypingIndicator(){this.removeTypingIndicator();const e=this.shadowRoot.querySelector("[data-messages-container]");if(e){const t=document.createElement("div");t.className="jade-message jade-message-assistant",t.setAttribute("data-typing-indicator",""),t.innerHTML=`
         <div class="jade-message-avatar assistant">💬</div>
         <div class="jade-message-content">
           <div class="jade-message-bubble">
@@ -546,4 +642,4 @@
             </div>
           </div>
         </div>
-      `,e.appendChild(t),this.scrollToBottom()}}removeTypingIndicator(){const e=this.shadowRoot.querySelector("[data-typing-indicator]");e&&e.remove()}scrollToBottom(){setTimeout(()=>{const e=this.shadowRoot.querySelector("[data-messages-container]");e&&(e.scrollTop=e.scrollHeight)},100)}focusInput(){setTimeout(()=>{const e=this.shadowRoot.querySelector("[data-input]");e&&e.focus()},100)}escapeHtml(e){const t=document.createElement("div");return t.textContent=e,t.innerHTML}mount(e){(e||document.body).appendChild(this.container)}unmount(){this.container.remove(),this.greetingTimeout&&clearTimeout(this.greetingTimeout)}open(){this.openChat()}close(){this.closeChat()}toggle(){this.toggleChat()}reset(){n.clearAll(),this.state={isOpen:!1,isMinimized:!1,showGreeting:!1,messages:this.getInitialMessages()},this.render()}}function u(o){var t;(t=window.JadeWidget)!=null&&t.instance&&window.JadeWidget.instance.unmount();const e=new h(o);e.mount(),window.JadeWidget&&(window.JadeWidget.instance=e)}const l={init:u};typeof window<"u"&&(window.JadeWidget=l),d.default=l,Object.defineProperties(d,{__esModule:{value:!0},[Symbol.toStringTag]:{value:"Module"}})})(this.JadeWidget=this.JadeWidget||{});
+      `,e.appendChild(t),this.scrollToBottom()}}removeTypingIndicator(){const e=this.shadowRoot.querySelector("[data-typing-indicator]");e&&e.remove()}scrollToBottom(){setTimeout(()=>{const e=this.shadowRoot.querySelector("[data-messages-container]");e&&(e.scrollTop=e.scrollHeight)},100)}focusInput(){setTimeout(()=>{const e=this.shadowRoot.querySelector("[data-input]");e&&e.focus()},100)}escapeHtml(e){const t=document.createElement("div");return t.textContent=e,t.innerHTML}shouldShowGreeting(){const e=n.loadMessages(),t=e.length===0||e.length===1;return!this.state.isOpen&&t&&!n.isGreetingDismissed()}mount(e){(e||document.body).appendChild(this.container),this.shouldShowGreeting()&&(this.greetingTimeout=window.setTimeout(()=>{this.state.showGreeting=!0,this.render()},1e3))}unmount(){this.container.remove(),this.greetingTimeout&&clearTimeout(this.greetingTimeout),document.removeEventListener("keydown",this.escapeKeyHandler)}open(){this.openChat()}close(){this.closeChat()}toggle(){this.toggleChat()}reset(){n.clearAll(),this.state={isOpen:!1,isMinimized:!1,showGreeting:!1,messages:this.getInitialMessages()},this.render()}}function m(o){var t;(t=window.JadeWidget)!=null&&t.instance&&window.JadeWidget.instance.unmount();const e=(o==null?void 0:o.showDelayMs)??c.showDelayMs;setTimeout(()=>{const a=new u(o);a.mount(),window.JadeWidget&&(window.JadeWidget.instance=a)},e)}const h={init:m};typeof window<"u"&&(window.JadeWidget=h),l.default=h,Object.defineProperties(l,{__esModule:{value:!0},[Symbol.toStringTag]:{value:"Module"}})})(this.JadeWidget=this.JadeWidget||{});

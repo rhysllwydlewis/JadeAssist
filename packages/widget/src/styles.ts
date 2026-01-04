@@ -2,7 +2,13 @@
  * Widget styles
  */
 
-export function getWidgetStyles(primaryColor: string, accentColor: string, fontFamily: string): string {
+export function getWidgetStyles(
+  primaryColor: string,
+  accentColor: string,
+  fontFamily: string,
+  offsetBottom: string,
+  offsetRight: string
+): string {
   return `
     * {
       box-sizing: border-box;
@@ -23,15 +29,15 @@ export function getWidgetStyles(primaryColor: string, accentColor: string, fontF
 
     .jade-widget-container {
       position: fixed;
-      bottom: 24px;
-      right: 24px;
+      bottom: ${offsetBottom};
+      right: ${offsetRight};
       z-index: 999999;
     }
 
     /* Avatar Button */
     .jade-avatar-button {
-      width: 64px;
-      height: 64px;
+      width: 72px;
+      height: 72px;
       border-radius: 50%;
       background: linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%);
       border: 3px solid white;
@@ -43,6 +49,20 @@ export function getWidgetStyles(primaryColor: string, accentColor: string, fontF
       position: relative;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       animation: float 3s ease-in-out infinite;
+      /* Larger tap target using pseudo-element */
+      overflow: visible;
+    }
+
+    /* Larger invisible tap target for better mobile UX */
+    .jade-avatar-button::before {
+      content: '';
+      position: absolute;
+      top: -20px;
+      left: -20px;
+      right: -20px;
+      bottom: -20px;
+      border-radius: 50%;
+      /* Ensures tap events are captured in the expanded area */
     }
 
     .jade-avatar-button:hover {
@@ -64,27 +84,54 @@ export function getWidgetStyles(primaryColor: string, accentColor: string, fontF
     }
 
     .jade-avatar-icon {
-      width: 32px;
-      height: 32px;
+      width: 100%;
+      height: 100%;
       color: white;
       font-size: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .jade-avatar-fallback {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%);
     }
 
     .jade-avatar-badge {
       position: absolute;
       top: -4px;
       right: -4px;
-      width: 20px;
+      min-width: 20px;
       height: 20px;
-      border-radius: 50%;
+      padding: 0 6px;
+      border-radius: 10px;
       background: #ef4444;
       border: 2px solid white;
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
+      animation: badgePulse 2s ease-in-out infinite;
+    }
+
+    @keyframes badgePulse {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.1);
+      }
     }
 
     /* Greeting Tooltip */
     .jade-greeting-tooltip {
       position: absolute;
-      bottom: 76px;
+      bottom: 84px;
       right: 0;
       background: white;
       padding: 18px 22px;
@@ -157,7 +204,7 @@ export function getWidgetStyles(primaryColor: string, accentColor: string, fontF
     /* Chat Popup */
     .jade-chat-popup {
       position: absolute;
-      bottom: 76px;
+      bottom: 84px;
       right: 0;
       width: 400px;
       height: 600px;
@@ -219,8 +266,35 @@ export function getWidgetStyles(primaryColor: string, accentColor: string, fontF
       font-size: 13px;
       opacity: 0.95;
       font-weight: 400;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
+    .jade-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      display: inline-block;
+      animation: statusPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes statusPulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.6;
+      }
+    }
+
+    .jade-chat-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .jade-chat-minimize,
     .jade-chat-close {
       width: 32px;
       height: 32px;
@@ -232,8 +306,12 @@ export function getWidgetStyles(primaryColor: string, accentColor: string, fontF
       font-size: 20px;
       line-height: 1;
       transition: background 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
+    .jade-chat-minimize:hover,
     .jade-chat-close:hover {
       background: rgba(255, 255, 255, 0.3);
     }
@@ -387,6 +465,21 @@ export function getWidgetStyles(primaryColor: string, accentColor: string, fontF
 
     .jade-chat-input:focus {
       border-color: ${primaryColor};
+      box-shadow: 0 0 0 3px rgba(11, 128, 115, 0.1);
+    }
+
+    .jade-char-count {
+      font-size: 11px;
+      color: #9ca3af;
+      text-align: right;
+      margin-top: 4px;
+      height: 16px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .jade-char-count-visible {
+      opacity: 1;
     }
 
     .jade-chat-send-btn {
@@ -452,8 +545,8 @@ export function getWidgetStyles(primaryColor: string, accentColor: string, fontF
     /* Responsive */
     @media (max-width: 480px) {
       .jade-widget-container {
-        bottom: 16px;
-        right: 16px;
+        bottom: ${offsetBottom === '24px' ? '80px' : offsetBottom === '80px' ? '80px' : offsetBottom};
+        right: ${offsetRight === '24px' ? '16px' : offsetRight};
       }
 
       .jade-chat-popup {

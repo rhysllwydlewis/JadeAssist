@@ -5,6 +5,7 @@
 
 import { JadeWidget as Widget } from './widget';
 import type { WidgetConfig } from './types';
+import { DEFAULT_CONFIG } from './types';
 
 // Extend window interface for our widget
 declare global {
@@ -26,14 +27,20 @@ function init(config?: WidgetConfig): void {
     window.JadeWidget.instance.unmount();
   }
 
-  // Create and mount new instance
-  const widget = new Widget(config);
-  widget.mount();
+  // Get delay configuration (use default from config)
+  const showDelayMs = config?.showDelayMs ?? DEFAULT_CONFIG.showDelayMs;
 
-  // Store instance
-  if (window.JadeWidget) {
-    window.JadeWidget.instance = widget;
-  }
+  // Delay widget initialization to allow page to render first
+  setTimeout(() => {
+    // Create and mount new instance
+    const widget = new Widget(config);
+    widget.mount();
+
+    // Store instance
+    if (window.JadeWidget) {
+      window.JadeWidget.instance = widget;
+    }
+  }, showDelayMs);
 }
 
 // Create and expose global API immediately

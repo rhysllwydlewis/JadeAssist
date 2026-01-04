@@ -6,10 +6,14 @@ export interface WidgetConfig {
   apiBaseUrl?: string;
   assistantName?: string;
   greetingText?: string;
+  greetingTooltipText?: string;
   avatarUrl?: string;
   primaryColor?: string;
   accentColor?: string;
   fontFamily?: string;
+  showDelayMs?: number;
+  offsetBottom?: string;
+  offsetRight?: string;
 }
 
 export interface WidgetState {
@@ -28,18 +32,30 @@ export interface WidgetMessage {
   quickReplies?: string[];
 }
 
+// Constants
+export const MAX_MESSAGE_LENGTH = 1000;
+
+// Default woman avatar URL - uses the provided avatar image
+// Place your avatar image as 'avatar-woman.png' in the assets/ folder
+const DEFAULT_AVATAR_URL = 'https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/assets/avatar-woman.png';
+
 export const DEFAULT_CONFIG: Required<WidgetConfig> = {
   apiBaseUrl: '',
   assistantName: 'Jade',
   greetingText: 'Hi! 👋 I\'m Jade, your event planning assistant. Can I help you plan your special day?',
-  avatarUrl: '',
+  greetingTooltipText: '👋 Hi! Need help planning your event?',
+  avatarUrl: DEFAULT_AVATAR_URL,
   primaryColor: '#0B8073',
   accentColor: '#13B6A2',
   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+  showDelayMs: 1000,
+  offsetBottom: '80px', // Increased from 24px to avoid back-to-top button overlap
+  offsetRight: '24px',
 };
 
 export const STORAGE_KEYS = {
   STATE: 'jade-widget-state',
   MESSAGES: 'jade-widget-messages',
   CONVERSATION_ID: 'jade-widget-conversation-id',
+  GREETING_DISMISSED: 'jade-widget-greeting-dismissed',
 } as const;

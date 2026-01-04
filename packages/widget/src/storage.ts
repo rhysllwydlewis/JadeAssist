@@ -65,8 +65,26 @@ export class StorageManager {
       localStorage.removeItem(STORAGE_KEYS.STATE);
       localStorage.removeItem(STORAGE_KEYS.MESSAGES);
       localStorage.removeItem(STORAGE_KEYS.CONVERSATION_ID);
+      localStorage.removeItem(STORAGE_KEYS.GREETING_DISMISSED);
     } catch (error) {
       console.warn('Failed to clear storage:', error);
+    }
+  }
+
+  static isGreetingDismissed(): boolean {
+    try {
+      return localStorage.getItem(STORAGE_KEYS.GREETING_DISMISSED) === 'true';
+    } catch (error) {
+      console.warn('Failed to check greeting dismissed state:', error);
+      return false;
+    }
+  }
+
+  static setGreetingDismissed(): void {
+    try {
+      localStorage.setItem(STORAGE_KEYS.GREETING_DISMISSED, 'true');
+    } catch (error) {
+      console.warn('Failed to save greeting dismissed state:', error);
     }
   }
 }
