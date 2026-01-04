@@ -52,13 +52,17 @@ try {
     window: {},
     document: {
       createElement: () => ({ 
-        attachShadow: () => ({}),
+        attachShadow: () => ({
+          innerHTML: '',
+          querySelector: () => null,
+          querySelectorAll: () => [],
+          addEventListener: () => {}
+        }),
         appendChild: () => {},
         remove: () => {},
         className: '',
         innerHTML: '',
         style: {},
-        shadowRoot: {},
         setAttribute: () => {},
         getAttribute: () => null,
         hasAttribute: () => false,
@@ -117,11 +121,17 @@ try {
 }
 
 // Check that CSS is properly embedded (not bare CSS rules at the start)
-const firstLines = code.split('\n').slice(0, 5).join('\n');
-if (/^\s*\*\s*\{/.test(firstLines) || /^\s*:host\s*\{/.test(firstLines)) {
+// Only check the very beginning before any function definitions
+const firstChunk = code.substring(0, 500);
+if (/^\s*\*\s*\{/.test(firstChunk) || /^\s*:host\s*\{/.test(firstChunk)) {
   console.error('❌ Build appears to contain bare CSS rules at the start');
   console.error('   CSS should be inside template literals, not at the top level');
   process.exit(1);
+}
+
+// Verify CSS is inside template literals by checking for template literal markers
+if (!code.includes('`') || !code.includes('return`')) {
+  console.warn('⚠️  Warning: No template literals detected - CSS embedding cannot be verified');
 }
 
 console.log('✅ CSS is properly embedded (not bare)');
