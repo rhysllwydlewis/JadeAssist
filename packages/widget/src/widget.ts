@@ -2,7 +2,7 @@
  * Main JadeWidget class
  */
 
-import { WidgetConfig, WidgetState, WidgetMessage, DEFAULT_CONFIG } from './types';
+import { WidgetConfig, WidgetState, WidgetMessage, DEFAULT_CONFIG, MAX_MESSAGE_LENGTH } from './types';
 import { StorageManager } from './storage';
 import { ApiClient } from './api';
 import { getWidgetStyles } from './styles';
@@ -85,7 +85,7 @@ export class JadeWidget {
 
   private renderAvatar(): string {
     const avatarContent = this.config.avatarUrl
-      ? `<img src="${this.config.avatarUrl}" alt="Chat Assistant" class="jade-avatar-icon" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+      ? `<img src="${this.escapeHtml(this.config.avatarUrl)}" alt="Chat Assistant" class="jade-avatar-icon jade-avatar-img" />
          <span class="jade-avatar-icon jade-avatar-fallback" style="display:none;">💬</span>`
       : '<span class="jade-avatar-icon">💬</span>';
 
@@ -125,7 +125,7 @@ export class JadeWidget {
       <div class="jade-chat-header">
         <div class="jade-chat-header-left">
           <div class="jade-chat-avatar">
-            ${this.config.avatarUrl ? `<img src="${this.config.avatarUrl}" alt="${this.escapeHtml(this.config.assistantName)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.outerHTML='💬'" />` : '💬'}
+            ${this.config.avatarUrl ? `<img src="${this.escapeHtml(this.config.avatarUrl)}" alt="${this.escapeHtml(this.config.assistantName)}" class="jade-header-avatar-img" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />` : '💬'}
           </div>
           <div>
             <div class="jade-chat-title">${this.escapeHtml(this.config.assistantName)}</div>
@@ -196,7 +196,7 @@ export class JadeWidget {
             placeholder="Type your message..."
             rows="1"
             aria-label="Message input"
-            maxlength="1000"
+            maxlength="${MAX_MESSAGE_LENGTH}"
             data-input
           ></textarea>
           <button class="jade-chat-send-btn" aria-label="Send message" data-action="send" title="Send">
@@ -264,9 +264,8 @@ export class JadeWidget {
         const charCount = this.shadowRoot.querySelector('.jade-char-count');
         if (charCount) {
           const length = target.value.length;
-          const maxLength = 1000;
-          if (length > maxLength * 0.8) {
-            charCount.textContent = `${length}/${maxLength}`;
+          if (length > MAX_MESSAGE_LENGTH * 0.8) {
+            charCount.textContent = `${length}/${MAX_MESSAGE_LENGTH}`;
             charCount.classList.add('jade-char-count-visible');
           } else {
             charCount.textContent = '';
@@ -275,6 +274,29 @@ export class JadeWidget {
         }
       }
     });
+
+    // Handle avatar image errors with fallback
+    const avatarImg = this.shadowRoot.querySelector('.jade-avatar-img');
+    if (avatarImg) {
+      avatarImg.addEventListener('error', () => {
+        avatarImg.setAttribute('style', 'display:none;');
+        const fallback = this.shadowRoot.querySelector('.jade-avatar-fallback');
+        if (fallback) {
+          fallback.setAttribute('style', 'display:flex;');
+        }
+      });
+    }
+
+    // Handle header avatar errors with fallback
+    const headerAvatar = this.shadowRoot.querySelector('.jade-header-avatar-img');
+    if (headerAvatar) {
+      headerAvatar.addEventListener('error', () => {
+        const parent = headerAvatar.parentElement;
+        if (parent) {
+          parent.innerHTML = '💬';
+        }
+      });
+    }
   }
 
   private toggleChat(): void {

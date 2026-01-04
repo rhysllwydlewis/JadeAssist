@@ -32,6 +32,9 @@ export interface WidgetMessage {
   quickReplies?: string[];
 }
 
+// Constants
+export const MAX_MESSAGE_LENGTH = 1000;
+
 // Default woman avatar URL - uses the provided avatar image
 // Place your avatar image as 'avatar-woman.png' in the assets/ folder
 const DEFAULT_AVATAR_URL = 'https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/assets/avatar-woman.png';
