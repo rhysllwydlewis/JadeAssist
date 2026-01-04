@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CDN Test - JadeAssist Widget</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .test-container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 { color: #333; }
+    .status { 
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    pre {
+      background: #f4f4f4;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🧪 CDN Loading Test</h1>
+    <p>Testing if JadeAssist widget loads correctly from a script tag...</p>
+    
+    <div id="status" class="status">⏳ Loading widget...</div>
+    
+    <h2>Test Results:</h2>
+    <pre id="results">Running tests...</pre>
+    
+    <div id="instructions" style="margin-top: 20px; padding: 15px; background: #e7f3ff; border-radius: 4px;">
+      <strong>Expected behavior:</strong>
+      <ul>
+        <li>✅ No JavaScript syntax errors in console</li>
+        <li>✅ window.JadeWidget object is defined</li>
+        <li>✅ window.JadeWidget.init function exists</li>
+        <li>✅ Floating chat button appears in bottom-right corner</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Load widget from local file (simulating CDN) -->
+  <script src="http://localhost:8080/dist/jade-widget.js"></script>
+
+  <!-- Test script -->
+  <script>
+    const results = [];
+    const statusEl = document.getElementById('status');
+    const resultsEl = document.getElementById('results');
+    
+    function log(message, pass = true) {
+      const icon = pass ? '✅' : '❌';
+      results.push(`${icon} ${message}`);
+      resultsEl.textContent = results.join('\n');
+    }
+    
+    function runTests() {
+      try {
+        // Test 1: Check if window.JadeWidget exists
+        if (typeof window.JadeWidget !== 'undefined') {
+          log('window.JadeWidget is defined');
+        } else {
+          log('window.JadeWidget is NOT defined', false);
+          statusEl.className = 'status error';
+          statusEl.textContent = '❌ Failed: window.JadeWidget not found';
+          return;
+        }
+        
+        // Test 2: Check if init function exists
+        if (typeof window.JadeWidget.init === 'function') {
+          log('window.JadeWidget.init is a function');
+        } else {
+          log('window.JadeWidget.init is NOT a function', false);
+          statusEl.className = 'status error';
+          statusEl.textContent = '❌ Failed: init function not found';
+          return;
+        }
+        
+        // Test 3: Initialize the widget
+        try {
+          window.JadeWidget.init({
+            assistantName: 'Jade',
+            primaryColor: '#8B5CF6',
+            greetingText: 'Hi! 👋 Testing from CDN'
+          });
+          log('Widget initialized successfully');
+        } catch (e) {
+          log(`Widget initialization failed: ${e.message}`, false);
+          statusEl.className = 'status error';
+          statusEl.textContent = '❌ Failed: ' + e.message;
+          return;
+        }
+        
+        // Test 4: Check if widget instance exists
+        setTimeout(() => {
+          if (window.JadeWidget.instance) {
+            log('Widget instance created');
+            
+            // Test 5: Check if widget is mounted in DOM
+            const widgetRoot = document.querySelector('.jade-widget-root');
+            if (widgetRoot) {
+              log('Widget element found in DOM');
+              log('Widget has shadow root: ' + (widgetRoot.shadowRoot ? 'yes' : 'no'));
+              
+              statusEl.className = 'status success';
+              statusEl.textContent = '✅ All tests passed! Widget loaded successfully.';
+            } else {
+              log('Widget element NOT found in DOM', false);
+              statusEl.className = 'status error';
+              statusEl.textContent = '❌ Widget not mounted';
+            }
+          } else {
+            log('Widget instance NOT created', false);
+            statusEl.className = 'status error';
+            statusEl.textContent = '❌ Instance not created';
+          }
+        }, 500);
+        
+      } catch (error) {
+        log(`Unexpected error: ${error.message}`, false);
+        statusEl.className = 'status error';
+        statusEl.textContent = '❌ Error: ' + error.message;
+      }
+    }
+    
+    // Run tests after a short delay to ensure script is fully loaded
+    setTimeout(runTests, 100);
+  </script>
+</body>
+</html>
