@@ -69,28 +69,66 @@ window.JadeWidget.init({
   // Initial greeting message (default: provided in types.ts)
   greetingText: 'Hi! 👋 Can I help you plan your event?',
   
-  // Avatar image URL (default: emoji icon)
+  // Greeting tooltip text (default: '👋 Hi! Need help planning your event?')
+  greetingTooltipText: '👋 Hi! Need help planning your event?',
+  
+  // Avatar image URL (default: cartoon woman avatar via CDN)
   avatarUrl: 'https://example.com/avatar.png',
   
-  // Primary brand color (default: '#8B5CF6' - purple)
-  primaryColor: '#8B5CF6',
+  // Primary brand color (default: '#0B8073' - teal)
+  primaryColor: '#0B8073',
   
-  // Position widget from bottom of screen (default: '80px')
-  offsetBottom: '80px',
+  // Accent color (default: '#13B6A2' - lighter teal)
+  accentColor: '#13B6A2',
   
-  // Position widget from right of screen (default: '24px')
-  // Note: Use either offsetRight OR offsetLeft, not both
-  offsetRight: '24px',
+  // Font family (default: system fonts)
+  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   
-  // Position widget from left of screen (optional, default: '')
-  // When set, overrides offsetRight positioning
-  offsetLeft: '24px',
+  // Desktop positioning
+  offsetBottom: '80px',        // Distance from bottom (default: '80px')
+  offsetRight: '24px',         // Distance from right (default: '24px')
+  offsetLeft: '',              // Distance from left (default: '', use offsetRight)
+  
+  // Mobile positioning (optional - defaults to desktop values with adjustments)
+  offsetBottomMobile: '80px',  // Mobile bottom offset (default: uses offsetBottom)
+  offsetRightMobile: '16px',   // Mobile right offset (default: '16px' if offsetRight='24px')
+  offsetLeftMobile: '16px',    // Mobile left offset (default: '16px' if offsetLeft='24px')
   
   // Scale the entire widget (default: 1)
   // Example: 0.85 makes widget 15% smaller, 1.2 makes it 20% larger
   scale: 0.85,
+  
+  // Show delay in milliseconds (default: 1000)
+  showDelayMs: 1000,
+  
+  // Debug mode - enables detailed logging (default: false)
+  debug: false,
 });
 ```
+
+### Positioning with CSS Custom Properties
+
+The widget now exposes CSS custom properties that can be overridden for advanced positioning control:
+
+```javascript
+// Set via configuration (recommended)
+window.JadeWidget.init({
+  offsetLeft: '24px',
+  offsetBottom: '80px',
+});
+
+// Or override via CSS (advanced)
+document.querySelector('.jade-widget-root').style.setProperty('--jade-offset-left', '24px');
+document.querySelector('.jade-widget-root').style.setProperty('--jade-offset-bottom', '80px');
+```
+
+Available CSS custom properties:
+- `--jade-offset-bottom` - Bottom position
+- `--jade-offset-right` - Right position  
+- `--jade-offset-left` - Left position
+- `--jade-scale` - Widget scale
+- `--jade-primary-color` - Primary brand color
+- `--jade-accent-color` - Accent color
 
 ### Configuration Examples
 
@@ -99,16 +137,35 @@ window.JadeWidget.init({
 window.JadeWidget.init();
 ```
 
+**With Debug Mode:**
+```javascript
+window.JadeWidget.init({
+  debug: true,  // Enable detailed logging for troubleshooting
+});
+```
+
+**Align with Back-to-Top Button (Left Side, Same Baseline):**
+```javascript
+window.JadeWidget.init({
+  offsetLeft: '24px',              // Left side (back-to-top on right)
+  offsetBottom: '80px',            // Match back-to-top baseline
+  offsetLeftMobile: '16px',        // Smaller margin on mobile
+  offsetBottomMobile: '80px',      // Keep same baseline on mobile
+  scale: 0.85,                     // Slightly smaller to avoid overlap
+});
+```
+
 **Left-aligned with scaling (e.g., for EventFlow):**
 ```javascript
 window.JadeWidget.init({
   apiBaseUrl: 'https://api.event-flow.co.uk',
   assistantName: 'Jade',
   primaryColor: '#8B5CF6',
-  offsetLeft: '24px',     // Position on left side instead of right
+  offsetLeft: '24px',              // Position on left side instead of right
   offsetBottom: '80px',
-  scale: 0.85,            // Make widget 15% smaller
+  scale: 0.85,                     // Make widget 15% smaller
   avatarUrl: 'https://example.com/custom-icon.png',
+  debug: false,                    // Disable debug logs in production
 });
 ```
 
@@ -236,9 +293,12 @@ The widget uses Vite to bundle into a single IIFE (Immediately Invoked Function 
 
 ### Option 1: jsDelivr CDN (Recommended)
 
-The widget is automatically built and committed to the repository, making it available via jsDelivr CDN:
+The widget is automatically built and committed to the repository, making it available via jsDelivr CDN.
 
-**Basic usage:**
+#### For Development/Testing (Latest Version)
+
+Uses `@main` branch - automatically gets updates but subject to CDN caching:
+
 ```html
 <!-- Add widget script from jsDelivr -->
 <script src="https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/dist/jade-widget.js"></script>
@@ -252,36 +312,76 @@ The widget is automatically built and committed to the repository, making it ava
 </script>
 ```
 
-**For event-flow.co.uk:**
+#### For Production (Version Pinning) ⭐ RECOMMENDED
+
+Use a specific commit SHA for stability and predictability:
+
 ```html
-<script src="https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/dist/jade-widget.js"></script>
+<!-- Pin to specific commit SHA for production -->
+<script src="https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@50eeb32/packages/widget/dist/jade-widget.js"></script>
+
 <script>
   window.JadeWidget.init({
     apiBaseUrl: 'https://api.event-flow.co.uk',
     assistantName: 'Jade',
     primaryColor: '#8B5CF6',
+    offsetLeft: '24px',
+    offsetBottom: '80px',
+    scale: 0.85,
   });
 </script>
 ```
 
-#### Purging jsDelivr Cache
+**Benefits of commit SHA pinning:**
+- ✅ No unexpected updates
+- ✅ No cache-busting needed
+- ✅ Full version control
+- ✅ Rollback capability
+- ✅ Immediate CDN availability (no purge delay)
 
-When you update the widget, jsDelivr caches the file for 7 days by default. To force an immediate update:
+**How to update:**
+1. Get latest commit SHA from GitHub: `git rev-parse HEAD` or GitHub UI
+2. Update the script `src` URL with new SHA
+3. Test on staging before production
+4. Deploy consumer site update
 
-1. **Purge via URL** (replace `main` with commit hash for instant updates):
-   ```
-   https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@<commit-hash>/packages/widget/dist/jade-widget.js
-   ```
+#### Cache-Busting Strategies
 
-2. **Purge via API** (instant, requires authentication):
-   ```bash
-   curl -X POST https://purge.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/dist/jade-widget.js
-   ```
+When you update the widget, jsDelivr caches files for 7 days by default. Choose a strategy:
 
-3. **Check cache status:**
-   ```
-   https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/dist/jade-widget.js?debug=true
-   ```
+**Strategy 1: Commit SHA Pinning** (Recommended for production)
+```html
+<!-- Update SHA when you want to update widget -->
+<script src="https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@abc1234/packages/widget/dist/jade-widget.js"></script>
+```
+- No cache issues
+- Explicit version control
+- Consumer controls when to update
+
+**Strategy 2: Purge CDN Cache** (Good for development)
+```bash
+# Purge jsDelivr cache immediately
+curl -X POST https://purge.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/dist/jade-widget.js
+```
+- Takes ~1 minute to propagate
+- No consumer code changes needed
+- Works with `@main` URLs
+
+**Strategy 3: Query Parameter** (Simple but requires coordination)
+```html
+<!-- Update version parameter when widget updates -->
+<script src="https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/dist/jade-widget.js?v=1.0.1"></script>
+```
+- Consumer must update parameter
+- Simple to understand
+- No purge needed
+
+**Strategy 4: Check Cache Status**
+```
+https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/dist/jade-widget.js?debug=true
+```
+- View cache headers and status
+- Useful for debugging
 
 **Note:** The GitHub Actions workflow automatically builds and commits the widget when changes are pushed to the `main` branch.
 
@@ -441,6 +541,109 @@ Requirements:
 1. Check browser console for errors
 2. Verify script is loaded: `console.log(window.JadeWidget)`
 3. Ensure `init()` is called after script loads
+4. Enable debug mode to see detailed logs: `window.JadeWidget.init({ debug: true })`
+
+### Changes not appearing in production (CDN caching)
+
+**Problem:** You've updated the widget but consumer sites still show the old version.
+
+**Cause:** CDN caching (jsDelivr caches for 7 days by default)
+
+**Solutions:**
+
+1. **Use commit SHA pinning (Recommended for production):**
+   ```html
+   <!-- Instead of @main, use specific commit SHA -->
+   <script src="https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@50eeb32/packages/widget/dist/jade-widget.js"></script>
+   ```
+   - Get latest commit SHA from GitHub
+   - Update consumers to point to new SHA after deployments
+   - No cache issues, full version control
+
+2. **Purge jsDelivr cache (Immediate update):**
+   ```bash
+   # Purge specific file from CDN
+   curl -X POST https://purge.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/dist/jade-widget.js
+   ```
+   - Takes ~1 minute to propagate globally
+   - Requires no consumer code changes
+
+3. **Add query parameter versioning:**
+   ```html
+   <!-- Add version or timestamp to bust cache -->
+   <script src="https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/dist/jade-widget.js?v=1.0.1"></script>
+   ```
+   - Consumers must update the version parameter
+   - Simple but requires consumer action
+
+4. **Self-host for full control:**
+   - Build and deploy to your own CDN/server
+   - No third-party cache dependencies
+   - More control but more infrastructure
+
+**Best Practice:**
+- **Development:** Use `@main` with cache purge
+- **Production:** Use commit SHA pinning (`@<sha>`) for stability
+
+### Avatar image not loading
+
+1. **Enable debug mode** to see detailed error messages:
+   ```javascript
+   window.JadeWidget.init({ debug: true });
+   ```
+
+2. **Check the browser console** for avatar load errors like:
+   ```
+   [JadeWidget] Failed to load avatar image: https://...
+   ```
+
+3. **Verify the avatar URL** is accessible:
+   - Open the URL directly in browser
+   - Check for CORS errors
+   - Ensure HTTPS if page is HTTPS
+
+4. **Test with a different avatar** to isolate the issue:
+   ```javascript
+   window.JadeWidget.init({
+     avatarUrl: 'https://via.placeholder.com/150',
+     debug: true
+   });
+   ```
+
+5. **Default fallback:** Widget shows emoji (💬) if avatar fails to load
+
+### Widget positioning issues
+
+1. **Check for conflicting CSS:**
+   - Inspect `.jade-widget-root` element
+   - Look for overriding `position` or `z-index` styles
+
+2. **Use CSS custom properties for dynamic control:**
+   ```javascript
+   // After widget initialization
+   const widget = document.querySelector('.jade-widget-root');
+   widget.style.setProperty('--jade-offset-bottom', '100px');
+   widget.style.setProperty('--jade-offset-left', '30px');
+   ```
+
+3. **Test responsive behavior:**
+   - Check mobile positioning separately
+   - Use `offsetBottomMobile` and `offsetLeftMobile` config options
+   - Test with browser dev tools device emulation
+
+4. **Verify no conflicting elements:**
+   - Check z-index of other fixed/sticky elements
+   - Widget uses `z-index: 999999`
+   - Ensure nothing blocks or overlaps the widget
+
+5. **Enable debug mode** to log positioning values:
+   ```javascript
+   window.JadeWidget.init({
+     offsetLeft: '24px',
+     offsetBottom: '80px',
+     debug: true  // Logs initialization config
+   });
+   ```
 
 ### Styles conflict with site
 
@@ -448,6 +651,7 @@ The widget uses Shadow DOM specifically to prevent this. If conflicts occur:
 1. Ensure widget script is loaded correctly
 2. Check browser support for Shadow DOM
 3. Verify no global CSS overrides with `!important`
+4. Check that widget mounts to `<body>` (default) not inside other styled containers
 
 ### API connection fails
 
@@ -455,12 +659,39 @@ The widget uses Shadow DOM specifically to prevent this. If conflicts occur:
 2. Verify CORS is configured on backend
 3. Check network tab for failed requests
 4. Widget falls back to demo mode on error
+5. Enable debug mode: `window.JadeWidget.init({ apiBaseUrl: '...', debug: true })`
 
 ### localStorage not persisting
 
 1. Check browser allows localStorage (not in private mode)
 2. Verify localStorage quota not exceeded
 3. Check console for storage errors
+4. Test: `localStorage.setItem('test', 'value')`
+
+### Widget starts in wrong state (open instead of closed)
+
+1. Clear localStorage: `localStorage.clear()` or widget API: `window.JadeWidget.instance?.reset()`
+2. Check if previous session left it open
+3. Widget should start closed by default unless previously opened by user
+
+## Manual Verification Checklist
+
+After deployment or configuration changes, verify:
+
+- [ ] Widget appears on page after ~1 second
+- [ ] Avatar image loads correctly (check debug logs if `debug: true`)
+- [ ] Widget is positioned correctly on desktop
+- [ ] Widget is positioned correctly on mobile (test with dev tools)
+- [ ] Clicking avatar opens chat popup
+- [ ] Chat popup has correct branding colors
+- [ ] Messages persist across page reloads
+- [ ] ESC key closes the widget
+- [ ] Greeting tooltip appears for new users (first visit)
+- [ ] Quick reply buttons work
+- [ ] Text input and send button work
+- [ ] Widget responds with demo or API messages
+- [ ] Console has no errors (check with debug mode enabled)
+- [ ] Avatar fallback works if image fails to load
 
 ## Future Enhancements
 
