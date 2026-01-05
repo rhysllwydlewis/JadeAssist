@@ -15,7 +15,11 @@ export interface WidgetConfig {
   offsetBottom?: string;
   offsetRight?: string;
   offsetLeft?: string;
+  offsetBottomMobile?: string;
+  offsetRightMobile?: string;
+  offsetLeftMobile?: string;
   scale?: number;
+  debug?: boolean;
 }
 
 export interface WidgetState {
@@ -54,7 +58,11 @@ export const DEFAULT_CONFIG: Required<WidgetConfig> = {
   offsetBottom: '80px', // Increased from 24px to avoid back-to-top button overlap
   offsetRight: '24px',
   offsetLeft: '',
+  offsetBottomMobile: '', // Empty string means use offsetBottom
+  offsetRightMobile: '', // Empty string means use offsetRight
+  offsetLeftMobile: '', // Empty string means use offsetLeft
   scale: 1,
+  debug: false,
 };
 
 export const STORAGE_KEYS = {
