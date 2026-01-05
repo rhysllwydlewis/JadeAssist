@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Local Avatar Test - JadeAssist Widget</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+    
+    .info-box {
+      background: #e0f2fe;
+      border: 2px solid #0ea5e9;
+      color: #075985;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    
+    .info-box h2 {
+      margin-top: 0;
+      color: #0c4a6e;
+    }
+    
+    .status {
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      font-weight: 500;
+    }
+    
+    .status.success {
+      background: #d1fae5;
+      color: #065f46;
+      border: 2px solid #10b981;
+    }
+    
+    code {
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    
+    .back-to-top {
+      position: fixed;
+      bottom: 80px;
+      right: 24px;
+      width: 60px;
+      height: 60px;
+      background: #dc2626;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 24px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      z-index: 999998;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>✅ Local Avatar Test</h1>
+    <p>Testing widget with local avatar file to verify it loads correctly</p>
+    
+    <div class="info-box">
+      <h2>📋 Configuration</h2>
+      <p>Using <strong>local avatar</strong> from: <code>./assets/avatar-woman.png</code></p>
+      <ul>
+        <li>Position: Left side, 24px from edge, 80px from bottom</li>
+        <li>Scale: 0.85</li>
+        <li>Debug mode: <strong>ENABLED</strong></li>
+      </ul>
+    </div>
+    
+    <div class="status success" id="avatar-status">
+      ⏳ Waiting for avatar to load... Check console for debug output.
+    </div>
+    
+    <div class="info-box">
+      <h2>🔍 Expected Console Output</h2>
+      <p>With debug mode enabled, you should see:</p>
+      <ol>
+        <li><code>[JadeWidget] Initializing with config:</code></li>
+        <li><code>[JadeWidget] Avatar URL: ./assets/avatar-woman.png</code></li>
+        <li><code>[JadeWidget] Avatar image loaded successfully: ./assets/avatar-woman.png</code></li>
+        <li><code>[JadeWidget] Header avatar image loaded successfully: ./assets/avatar-woman.png</code></li>
+      </ol>
+      <p><strong>If you see errors instead:</strong> The avatar failed to load (check file path)</p>
+    </div>
+  </div>
+  
+  <!-- Back to top button for positioning comparison -->
+  <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top">
+    ↑
+  </button>
+  
+  <!-- Load widget from local dist -->
+  <script src="./dist/jade-widget.js"></script>
+  
+  <!-- Initialize widget with LOCAL avatar -->
+  <script>
+    console.log('%c🧪 Local Avatar Test Started', 'font-size: 16px; font-weight: bold; color: #0ea5e9');
+    
+    window.JadeWidget.init({
+      assistantName: 'Jade',
+      primaryColor: '#0B8073',
+      accentColor: '#13B6A2',
+      
+      // Use LOCAL avatar path (relative to this HTML file)
+      avatarUrl: './assets/avatar-woman.png',
+      
+      // Left-side positioning
+      offsetLeft: '24px',
+      offsetBottom: '80px',
+      scale: 0.85,
+      
+      // Debug mode to verify avatar loads
+      debug: true,
+    });
+    
+    // Monitor avatar load status
+    setTimeout(() => {
+      const statusEl = document.getElementById('avatar-status');
+      const messages = [];
+      
+      // Check if we got success messages in console
+      // (In a real implementation, we'd listen for custom events)
+      statusEl.innerHTML = '✅ Widget initialized! Check browser console (F12) for avatar load status.';
+    }, 2000);
+  </script>
+</body>
+</html>

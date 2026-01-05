@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Debug Mode & Positioning Test - JadeAssist Widget</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+    
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+    }
+    
+    .test-section {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      border-left: 4px solid #0B8073;
+    }
+    
+    .test-section h2 {
+      color: #0B8073;
+      margin-top: 0;
+      font-size: 18px;
+    }
+    
+    .config-display {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 15px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      overflow-x: auto;
+      margin-top: 10px;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+      flex-wrap: wrap;
+    }
+    
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: #0B8073;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #0a6b5f;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(11, 128, 115, 0.3);
+    }
+    
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #374151;
+    }
+    
+    .btn-secondary:hover {
+      background: #d1d5db;
+    }
+    
+    .status {
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 15px;
+      font-size: 14px;
+    }
+    
+    .status.info {
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #bfdbfe;
+    }
+    
+    .status.success {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+    }
+    
+    .info-box {
+      background: #fff3cd;
+      border: 1px solid #ffd900;
+      color: #856404;
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 20px;
+    }
+    
+    .info-box strong {
+      display: block;
+      margin-bottom: 8px;
+    }
+    
+    .back-to-top {
+      position: fixed;
+      bottom: 80px;
+      right: 24px;
+      width: 60px;
+      height: 60px;
+      background: #e11d48;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 24px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      transition: all 0.3s;
+      z-index: 999998;
+    }
+    
+    .back-to-top:hover {
+      background: #be123c;
+      transform: translateY(-4px);
+    }
+    
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+      
+      .container {
+        padding: 20px;
+      }
+      
+      .button-group {
+        flex-direction: column;
+      }
+      
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 JadeAssist Widget - Debug & Positioning Test</h1>
+    <p class="subtitle">Testing debug mode, avatar loading, and left-side positioning with back-to-top button</p>
+    
+    <!-- Test 1: Current Configuration -->
+    <div class="test-section">
+      <h2>📋 Current Configuration</h2>
+      <p>The widget is configured with:</p>
+      <div class="config-display" id="config-display">Loading configuration...</div>
+    </div>
+    
+    <!-- Test 2: Debug Mode -->
+    <div class="test-section">
+      <h2>🐛 Debug Mode</h2>
+      <p>Debug mode is <strong>enabled</strong>. Check browser console (F12) for detailed logs:</p>
+      <ul>
+        <li>Widget initialization logs</li>
+        <li>Avatar load success/failure messages</li>
+        <li>Configuration values being used</li>
+      </ul>
+      <div class="status info">
+        💡 Open the browser console (F12) to see debug output
+      </div>
+    </div>
+    
+    <!-- Test 3: Positioning -->
+    <div class="test-section">
+      <h2>📍 Positioning Test</h2>
+      <p>Widget is positioned on the <strong>left</strong> side at the same baseline as the back-to-top button (right side).</p>
+      <ul>
+        <li>Desktop: Left 24px, Bottom 80px</li>
+        <li>Mobile: Left 16px, Bottom 80px</li>
+        <li>Scale: 0.85 (slightly smaller)</li>
+      </ul>
+      <div class="info-box">
+        <strong>🎯 What to verify:</strong>
+        <ul style="margin: 5px 0 0 20px;">
+          <li>Widget appears on the LEFT side</li>
+          <li>Back-to-top button appears on the RIGHT side</li>
+          <li>Both buttons have the SAME bottom offset (aligned baseline)</li>
+          <li>Widget is slightly smaller (85% scale)</li>
+          <li>Test on different screen sizes (resize browser)</li>
+        </ul>
+      </div>
+    </div>
+    
+    <!-- Test 4: Avatar -->
+    <div class="test-section">
+      <h2>👤 Avatar Image Test</h2>
+      <p>The widget uses a custom cartoon avatar (blonde woman, short hair).</p>
+      <p>Check console for avatar load status:</p>
+      <ul>
+        <li>✅ Success: <code>[JadeWidget] Avatar image loaded successfully</code></li>
+        <li>❌ Failure: <code>[JadeWidget] Failed to load avatar image</code></li>
+      </ul>
+      <p>If avatar fails, widget automatically shows emoji fallback (💬).</p>
+    </div>
+    
+    <!-- Test 5: Interactive Controls -->
+    <div class="test-section">
+      <h2>🎮 Interactive Controls</h2>
+      <div class="button-group">
+        <button class="btn-primary" onclick="openWidget()">Open Widget</button>
+        <button class="btn-primary" onclick="closeWidget()">Close Widget</button>
+        <button class="btn-primary" onclick="toggleWidget()">Toggle Widget</button>
+        <button class="btn-secondary" onclick="resetWidget()">Reset Widget</button>
+        <button class="btn-secondary" onclick="showConfig()">Show Config in Console</button>
+        <button class="btn-secondary" onclick="testCSsProps()">Test CSS Custom Properties</button>
+      </div>
+      <div id="status-message"></div>
+    </div>
+    
+    <!-- Test 6: CSS Custom Properties -->
+    <div class="test-section">
+      <h2>🎨 CSS Custom Properties</h2>
+      <p>The widget exposes CSS variables that can be overridden:</p>
+      <div class="config-display">
+--jade-offset-bottom: 80px
+--jade-offset-left: 24px
+--jade-scale: 0.85
+--jade-primary-color: #0B8073
+--jade-accent-color: #13B6A2
+      </div>
+      <p>Click "Test CSS Custom Properties" button above to dynamically change the position.</p>
+    </div>
+  </div>
+  
+  <!-- Back to top button for positioning comparison -->
+  <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top">
+    ↑
+  </button>
+  
+  <!-- Load widget from local dist -->
+  <script src="./dist/jade-widget.js"></script>
+  
+  <!-- Initialize widget with test configuration -->
+  <script>
+    const widgetConfig = {
+      assistantName: 'Jade',
+      primaryColor: '#0B8073',
+      accentColor: '#13B6A2',
+      greetingText: 'Hi! 👋 I\'m Jade, your event planning assistant. Can I help you plan your special day?',
+      greetingTooltipText: '👋 Hi! Need help planning your event?',
+      
+      // Left-side positioning (opposite of back-to-top button)
+      offsetLeft: '24px',
+      offsetBottom: '80px',
+      
+      // Mobile positioning
+      offsetLeftMobile: '16px',
+      offsetBottomMobile: '80px',
+      
+      // Scale
+      scale: 0.85,
+      
+      // Debug mode - ENABLED for testing
+      debug: true,
+    };
+    
+    // Display configuration
+    document.getElementById('config-display').textContent = JSON.stringify(widgetConfig, null, 2);
+    
+    // Initialize widget
+    window.JadeWidget.init(widgetConfig);
+    
+    // Helper functions
+    function showStatus(message, type = 'info') {
+      const statusEl = document.getElementById('status-message');
+      statusEl.className = `status ${type}`;
+      statusEl.textContent = message;
+    }
+    
+    function openWidget() {
+      if (window.JadeWidget?.instance) {
+        window.JadeWidget.instance.open();
+        showStatus('✅ Widget opened', 'success');
+      }
+    }
+    
+    function closeWidget() {
+      if (window.JadeWidget?.instance) {
+        window.JadeWidget.instance.close();
+        showStatus('✅ Widget closed', 'success');
+      }
+    }
+    
+    function toggleWidget() {
+      if (window.JadeWidget?.instance) {
+        window.JadeWidget.instance.toggle();
+        showStatus('✅ Widget toggled', 'success');
+      }
+    }
+    
+    function resetWidget() {
+      if (window.JadeWidget?.instance) {
+        window.JadeWidget.instance.reset();
+        showStatus('✅ Widget reset (localStorage cleared)', 'success');
+      }
+    }
+    
+    function showConfig() {
+      console.log('=== Widget Configuration ===');
+      console.log(widgetConfig);
+      console.log('=== Widget Instance ===');
+      console.log(window.JadeWidget?.instance);
+      showStatus('✅ Configuration logged to console', 'success');
+    }
+    
+    function testCSSProps() {
+      const widget = document.querySelector('.jade-widget-root');
+      if (widget) {
+        // Change position dynamically using CSS custom properties
+        widget.style.setProperty('--jade-offset-bottom', '120px');
+        widget.style.setProperty('--jade-offset-left', '40px');
+        widget.style.setProperty('--jade-scale', '1');
+        showStatus('✅ CSS properties changed! Widget should move.', 'success');
+        
+        // Reset after 3 seconds
+        setTimeout(() => {
+          widget.style.setProperty('--jade-offset-bottom', '80px');
+          widget.style.setProperty('--jade-offset-left', '24px');
+          widget.style.setProperty('--jade-scale', '0.85');
+          showStatus('✅ CSS properties reset to original', 'success');
+        }, 3000);
+      } else {
+        showStatus('❌ Widget not found', 'info');
+      }
+    }
+    
+    // Log test start
+    console.log('%c🔧 JadeAssist Widget Debug Test Started', 'font-size: 16px; font-weight: bold; color: #0B8073');
+    console.log('Debug mode is enabled. Watch for avatar load messages and other diagnostic output.');
+  </script>
+</body>
+</html>

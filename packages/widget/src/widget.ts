@@ -20,6 +20,12 @@ export class JadeWidget {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.apiClient = new ApiClient(this.config.apiBaseUrl);
     
+    // Debug logging
+    if (this.config.debug) {
+      console.log('[JadeWidget] Initializing with config:', this.config);
+      console.log('[JadeWidget] Avatar URL:', this.config.avatarUrl);
+    }
+    
     // Bind escape key handler for proper cleanup
     this.escapeKeyHandler = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && this.state.isOpen) {
@@ -72,6 +78,9 @@ export class JadeWidget {
       this.config.offsetBottom,
       this.config.offsetRight,
       this.config.offsetLeft,
+      this.config.offsetBottomMobile,
+      this.config.offsetRightMobile,
+      this.config.offsetLeftMobile,
       this.config.scale
     );
 
@@ -281,10 +290,18 @@ export class JadeWidget {
     const avatarImg = this.shadowRoot.querySelector('.jade-avatar-img');
     if (avatarImg) {
       avatarImg.addEventListener('error', () => {
+        if (this.config.debug) {
+          console.error('[JadeWidget] Failed to load avatar image:', this.config.avatarUrl);
+        }
         avatarImg.setAttribute('style', 'display:none;');
         const fallback = this.shadowRoot.querySelector('.jade-avatar-fallback');
         if (fallback) {
           fallback.setAttribute('style', 'display:flex;');
+        }
+      });
+      avatarImg.addEventListener('load', () => {
+        if (this.config.debug) {
+          console.log('[JadeWidget] Avatar image loaded successfully:', this.config.avatarUrl);
         }
       });
     }
@@ -293,9 +310,17 @@ export class JadeWidget {
     const headerAvatar = this.shadowRoot.querySelector('.jade-header-avatar-img');
     if (headerAvatar) {
       headerAvatar.addEventListener('error', () => {
+        if (this.config.debug) {
+          console.error('[JadeWidget] Failed to load header avatar image:', this.config.avatarUrl);
+        }
         const parent = headerAvatar.parentElement;
         if (parent) {
           parent.innerHTML = '💬';
+        }
+      });
+      headerAvatar.addEventListener('load', () => {
+        if (this.config.debug) {
+          console.log('[JadeWidget] Header avatar image loaded successfully:', this.config.avatarUrl);
         }
       });
     }

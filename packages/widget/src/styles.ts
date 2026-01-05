@@ -9,6 +9,9 @@ export function getWidgetStyles(
   offsetBottom: string,
   offsetRight: string,
   offsetLeft: string,
+  offsetBottomMobile: string,
+  offsetRightMobile: string,
+  offsetLeftMobile: string,
   scale: number
 ): string {
   return `
@@ -27,15 +30,23 @@ export function getWidgetStyles(
       color: #1f2937;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
+      
+      /* CSS Custom Properties for positioning - can be overridden by consumers */
+      --jade-offset-bottom: ${offsetBottom};
+      --jade-offset-right: ${offsetRight};
+      --jade-offset-left: ${offsetLeft};
+      --jade-scale: ${scale};
+      --jade-primary-color: ${primaryColor};
+      --jade-accent-color: ${accentColor};
     }
 
     .jade-widget-container {
       position: fixed;
-      bottom: ${offsetBottom};
-      ${offsetLeft ? `left: ${offsetLeft};` : `right: ${offsetRight};`}
+      bottom: var(--jade-offset-bottom, ${offsetBottom});
+      ${offsetLeft ? `left: var(--jade-offset-left, ${offsetLeft});` : `right: var(--jade-offset-right, ${offsetRight});`}
       ${offsetLeft ? 'right: auto;' : ''}
       z-index: 999999;
-      transform: scale(${scale});
+      transform: scale(var(--jade-scale, ${scale}));
       transform-origin: ${offsetLeft ? 'left' : 'right'} bottom;
     }
 
@@ -44,7 +55,7 @@ export function getWidgetStyles(
       width: 72px;
       height: 72px;
       border-radius: 50%;
-      background: linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%);
+      background: linear-gradient(135deg, var(--jade-primary-color, ${primaryColor}) 0%, var(--jade-accent-color, ${accentColor}) 100%);
       border: 3px solid white;
       cursor: pointer;
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15), 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -549,9 +560,16 @@ export function getWidgetStyles(
 
     /* Responsive */
     @media (max-width: 480px) {
+      :host {
+        /* Mobile-specific CSS custom properties */
+        --jade-offset-bottom: ${offsetBottomMobile || offsetBottom};
+        --jade-offset-right: ${offsetRightMobile || (offsetRight === '24px' ? '16px' : offsetRight)};
+        --jade-offset-left: ${offsetLeftMobile || (offsetLeft && offsetLeft === '24px' ? '16px' : offsetLeft)};
+      }
+      
       .jade-widget-container {
-        bottom: ${offsetBottom === '24px' ? '80px' : offsetBottom === '80px' ? '80px' : offsetBottom};
-        ${offsetLeft ? `left: ${offsetLeft === '24px' ? '16px' : offsetLeft};` : `right: ${offsetRight === '24px' ? '16px' : offsetRight};`}
+        bottom: var(--jade-offset-bottom);
+        ${offsetLeft ? `left: var(--jade-offset-left);` : `right: var(--jade-offset-right);`}
         ${offsetLeft ? 'right: auto;' : ''}
       }
 
