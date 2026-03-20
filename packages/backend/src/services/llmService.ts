@@ -25,14 +25,23 @@ export interface LLMOptions {
 }
 
 class LLMService {
-  private client: OpenAI;
+  private _client: OpenAI | null = null;
   private model: string;
 
   constructor() {
-    this.client = new OpenAI({
-      apiKey: env.llm.apiKey,
-    });
     this.model = env.llm.model;
+  }
+
+  /** Lazily initialize the OpenAI client so startup never crashes when the
+   *  API key is absent (minimal mode).  Throws at call-time if not configured. */
+  private get client(): OpenAI {
+    if (!this._client) {
+      if (!env.llm.apiKey) {
+        throw new Error('OPENAI_API_KEY is not configured');
+      }
+      this._client = new OpenAI({ apiKey: env.llm.apiKey });
+    }
+    return this._client;
   }
 
   /**
@@ -96,9 +105,13 @@ class LLMService {
   }
 
   /**
-   * Check if LLM service is available
+   * Returns false (not healthy) when OPENAI_API_KEY is not configured rather
+   * than throwing, so health checks remain non-fatal in minimal mode.
    */
   async healthCheck(): Promise<boolean> {
+    if (!env.llm.apiKey) {
+      return false;
+    }
     try {
       await this.client.models.list();
       return true;

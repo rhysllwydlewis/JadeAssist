@@ -11,6 +11,9 @@ let pool: Pool | null = null;
 
 export const getPool = (): Pool => {
   if (!pool) {
+    if (!env.databaseUrl) {
+      throw new Error('DATABASE_URL is not configured');
+    }
     pool = new Pool({
       connectionString: env.databaseUrl,
       max: 20,
@@ -85,6 +88,9 @@ export const getSupabaseClient = (): SupabaseClient | null => {
 
 // Health check
 export const checkDatabaseHealth = async (): Promise<boolean> => {
+  if (!env.databaseUrl) {
+    return false;
+  }
   try {
     await query('SELECT 1');
     return true;

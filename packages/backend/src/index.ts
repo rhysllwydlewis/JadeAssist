@@ -2,7 +2,7 @@
  * JadeAssist Backend Server
  * Main entry point
  */
-import express, { Application } from 'express';
+import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -68,26 +68,55 @@ app.use((req, res, next) => {
   next();
 });
 
-// Mount routes
+// ── Health routes — always mounted ────────────────────────────────────────────
 app.use('/health', healthRouter);
-app.use('/api/chat', chatRouter);
-app.use('/api/planning', planningRouter);
-app.use('/api/v1/assist', assistRouter);
 
-// Railway / k8s health probe — lightweight, no DB check
+// Railway / k8s health probe — lightweight, no DB check, always up
 app.get('/healthz', (_req, res) => {
-  res.status(200).json({ ok: true });
+  res.status(200).json({ ok: true, minimalMode: env.minimalMode });
 });
 
-// Root endpoint
+// Root endpoint — always mounted
 app.get('/', (_req, res) => {
   res.json({
     name: 'JadeAssist API',
     version: '1.0.0',
-    status: 'running',
+    status: env.minimalMode ? 'minimal' : 'running',
+    minimalMode: env.minimalMode,
     documentation: '/health',
   });
 });
+
+// ── Feature routes ─────────────────────────────────────────────────────────────
+// In minimal mode the service may be missing DATABASE_URL / OPENAI_API_KEY /
+// JWT_SECRET.  Rather than not mounting these routes at all (which makes
+// misconfiguration hard to debug) we return a clear 503 with guidance.
+if (env.minimalMode) {
+  const REQUIRED = ['DATABASE_URL', 'OPENAI_API_KEY', 'JWT_SECRET'];
+  const missingVars = REQUIRED.filter((v) => !process.env[v]);
+
+  const unconfiguredHandler = (_req: Request, res: Response): void => {
+    res.status(503).json({
+      success: false,
+      error: {
+        code: 'SERVICE_NOT_CONFIGURED',
+        message:
+          'This endpoint requires DATABASE_URL, OPENAI_API_KEY, and JWT_SECRET. ' +
+          'Configure the missing variables and set JADEASSIST_MINIMAL_MODE=false (or remove it) to enable full functionality.',
+        missingVars,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  };
+
+  app.use('/api/chat', unconfiguredHandler);
+  app.use('/api/planning', unconfiguredHandler);
+  app.use('/api/v1/assist', unconfiguredHandler);
+} else {
+  app.use('/api/chat', chatRouter);
+  app.use('/api/planning', planningRouter);
+  app.use('/api/v1/assist', assistRouter);
+}
 
 // 404 handler
 app.use(notFoundHandler);
@@ -95,8 +124,12 @@ app.use(notFoundHandler);
 // Error handler (must be last)
 app.use(errorHandler);
 
-// Initialize database pool
-getPool();
+// ── Database initialisation ───────────────────────────────────────────────────
+// Only create the pool when DATABASE_URL is present and we are not in minimal
+// mode (avoids a throw/crash on startup).
+if (!env.minimalMode && env.databaseUrl) {
+  getPool();
+}
 
 // Graceful shutdown
 const gracefulShutdown = async (signal: string) => {
@@ -136,8 +169,11 @@ const server = app.listen(env.port, () => {
       port: env.port,
       nodeEnv: env.nodeEnv,
       version: '1.0.0',
+      minimalMode: env.minimalMode,
     },
-    '🚀 JadeAssist API server started'
+    env.minimalMode
+      ? '🚀 JadeAssist API server started (minimal mode — feature routes return 503 until secrets are configured)'
+      : '🚀 JadeAssist API server started'
   );
 
   logger.info(
@@ -151,4 +187,3 @@ const server = app.listen(env.port, () => {
 });
 
 export default app;
-
