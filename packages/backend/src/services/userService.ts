@@ -67,7 +67,7 @@ class UserService {
       email: user.email,
     };
 
-    return jwt.sign(payload, env.auth.jwtSecret, {
+    return jwt.sign(payload, env.auth.jwtSecret as string, {
       expiresIn: '7d',
     });
   }
@@ -94,7 +94,7 @@ class UserService {
    */
   async verifyToken(token: string): Promise<User | null> {
     try {
-      const decoded = jwt.verify(token, env.auth.jwtSecret) as {
+      const decoded = jwt.verify(token, env.auth.jwtSecret as string) as {
         userId: string;
       };
 

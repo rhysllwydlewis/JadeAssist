@@ -34,7 +34,7 @@ export interface PaginatedResponse<T> {
 
 // Health check
 export interface HealthCheckResponse {
-  status: 'healthy' | 'unhealthy';
+  status: 'healthy' | 'unhealthy' | 'degraded';
   timestamp: string;
   uptime: number;
   version: string;

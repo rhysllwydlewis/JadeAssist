@@ -35,7 +35,7 @@ export const authenticateJWT = (req: AuthRequest, res: Response, next: NextFunct
 
     const token = authHeader.substring(7);
 
-    const decoded = jwt.verify(token, env.auth.jwtSecret) as {
+    const decoded = jwt.verify(token, env.auth.jwtSecret as string) as {
       userId: string;
       email?: string;
     };
@@ -68,7 +68,7 @@ export const optionalAuth = (req: AuthRequest, _res: Response, next: NextFunctio
 
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
-      const decoded = jwt.verify(token, env.auth.jwtSecret) as {
+      const decoded = jwt.verify(token, env.auth.jwtSecret as string) as {
         userId: string;
         email?: string;
       };

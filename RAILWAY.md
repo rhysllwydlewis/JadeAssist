@@ -11,46 +11,90 @@ Once deployed, Railway will give you a public URL that EventFlow (or any other c
 
 ---
 
-## Prerequisites
+## Deployment modes
 
-- A [Railway](https://railway.app) account
-- A PostgreSQL database (Railway Postgres add-on, or Supabase)
-- An OpenAI API key
+JadeAssist supports two operating modes to make Railway deployment as smooth as possible.
+
+### Strict mode (default — recommended for production)
+
+The server **requires** `DATABASE_URL`, `OPENAI_API_KEY`, and `JWT_SECRET` at startup.  
+If any are missing the process exits with a clear error message.  
+This is the safe default: misconfiguration is surfaced immediately rather than silently.
+
+### Minimal mode (opt-in — for first-time Railway setup)
+
+Activated by setting `JADEASSIST_MINIMAL_MODE=true`.
+
+In minimal mode:
+- The server **always starts** and binds to `PORT` so Railway health checks pass.
+- `/healthz` returns `{ "ok": true, "minimalMode": true }`.
+- `/health` returns status `"degraded"` (HTTP 200) and lists which checks were skipped.
+- Feature routes (`/api/chat`, `/api/planning`, `/api/v1/assist`) return **HTTP 503** with a clear message explaining which variables are missing.
+- A warning is printed to the log listing missing variables.
+
+Use minimal mode during initial setup, then disable it once all secrets are configured.
 
 ---
 
-## Quick Deploy
+## Recommended Railway setup sequence
 
-### 1. Create a new Railway project
+Follow these steps for a smooth first deploy:
 
-1. Log in to Railway → **New Project** → **Deploy from GitHub repo**.
-2. Connect this repository (`rhysllwydlewis/JadeAssist`).
-3. Railway auto-detects Node.js. Confirm the build and start commands:
-   - **Build command:** `npm run build`
-   - **Start command:** `npm start`
+### Step 1 — Deploy with minimal mode enabled
 
-### 2. Provision a PostgreSQL database (optional)
+In your Railway service **Variables** tab, set:
 
-If you are not using Supabase:
+| Variable | Value |
+|---|---|
+| `JADEASSIST_MINIMAL_MODE` | `true` |
+| `NODE_ENV` | `production` |
+
+Deploy. The service should start and stay healthy (Railway health check passes).
+
+### Step 2 — Add a PostgreSQL database
+
 1. Inside your Railway project, click **+ New** → **Database** → **PostgreSQL**.
-2. After it provisions, copy the `DATABASE_URL` from the "Connect" tab.
+2. Railway automatically injects `DATABASE_URL` into your backend service.
 
-### 3. Set environment variables
+### Step 3 — Set the remaining secrets
 
-In your Railway service **Variables** tab set **at minimum**:
+In your Railway service **Variables** tab, add:
 
-| Variable | Required | Description |
-|---|---|---|
-| `PORT` | auto-set by Railway | Railway injects this automatically |
-| `NODE_ENV` | ✅ | `production` |
-| `DATABASE_URL` | ✅ | Full PostgreSQL connection string |
-| `OPENAI_API_KEY` | ✅ | Your OpenAI API key |
-| `JWT_SECRET` | ✅ | A long random string for JWT signing |
+| Variable | Value |
+|---|---|
+| `OPENAI_API_KEY` | Your OpenAI API key (starts with `sk-…`) |
+| `JWT_SECRET` | A long random string — generate one with `openssl rand -base64 48` |
 
-#### Optional variables
+### Step 4 — Disable minimal mode
+
+Remove `JADEASSIST_MINIMAL_MODE` (or set it to `false`).  
+Railway redeploys automatically. The service now runs in strict mode with all features enabled.
+
+### Step 5 — Generate a public domain
+
+1. Go to your Railway service → **Settings** → **Networking** → **Generate Domain**.
+2. Copy the generated URL (e.g. `https://jadeassist-production.up.railway.app`).
+3. That URL is your `JADEASSIST_URL` for EventFlow.
+
+---
+
+## Environment variable reference
+
+### Required in strict mode (the production default)
+
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | Full PostgreSQL connection string (auto-set when using Railway Postgres plugin) |
+| `OPENAI_API_KEY` | Your OpenAI API key |
+| `JWT_SECRET` | A long random secret for JWT signing (32+ chars) |
+
+### Always optional
 
 | Variable | Default | Description |
 |---|---|---|
+| `PORT` | auto-set by Railway | Railway injects this automatically — do not set manually |
+| `NODE_ENV` | `development` | Set to `production` on Railway |
+| `JADEASSIST_MINIMAL_MODE` | `false` | Set to `true` to start without DB / OpenAI / JWT |
 | `LLM_MODEL` | `gpt-4-turbo` | OpenAI model to use |
 | `LLM_TOKEN_LIMIT` | `4000` | Max tokens per LLM request |
 | `AUTH_PROVIDER` | `jwt` | `jwt` \| `supabase` \| `eventflow` |
@@ -60,27 +104,49 @@ In your Railway service **Variables** tab set **at minimum**:
 | `SUPABASE_ANON_KEY` | — | Only required when `AUTH_PROVIDER=supabase` |
 | `EVENTFLOW_API_URL` | — | EventFlow base URL (optional, for callback integrations) |
 | `EVENTFLOW_API_KEY` | — | EventFlow API key (optional) |
-
-### 4. Generate a public domain
-
-1. Go to your Railway service → **Settings** → **Networking** → **Generate Domain**.
-2. Copy the generated URL (e.g. `https://jadeassist-production.up.railway.app`).
-3. That URL is your `JADEASSIST_URL` for EventFlow.
+| `API_URL` | `http://localhost:3001` | Public base URL of this service |
 
 ---
 
 ## Health checks
 
-Railway uses `/healthz` to determine if the service is healthy.
+Configure the Railway health check in **Settings → Health Check Path**: `/healthz`
 
-Configure it in **Settings → Health Check Path**: `/healthz`
+### `/healthz` — lightweight probe (always up)
 
-It returns:
 ```json
-{ "ok": true }
+{ "ok": true, "minimalMode": false }
 ```
 
-A more detailed health check (includes database and LLM status) is available at `/health`.
+In minimal mode:
+```json
+{ "ok": true, "minimalMode": true }
+```
+
+### `/health` — detailed check
+
+In full (strict) mode returns `"healthy"` or `"unhealthy"` (HTTP 503 when unhealthy).
+
+In minimal mode returns `"degraded"` (HTTP 200 always, so Railway does not restart the container):
+
+```json
+{
+  "success": true,
+  "data": {
+    "status": "degraded",
+    "minimalMode": true,
+    "skippedChecks": [
+      "database (DATABASE_URL not set)",
+      "llm (OPENAI_API_KEY not set)"
+    ],
+    "services": { "database": "down", "llm": "down" },
+    "uptime": 12.3,
+    "version": "1.0.0",
+    "timestamp": "2026-03-20T15:00:00.000Z"
+  },
+  "timestamp": "2026-03-20T15:00:00.000Z"
+}
+```
 
 ---
 
@@ -128,6 +194,18 @@ The main endpoint for EventFlow to call.
 }
 ```
 
+**In minimal mode** (before secrets are configured) this returns:
+```json
+{
+  "success": false,
+  "error": {
+    "code": "SERVICE_NOT_CONFIGURED",
+    "message": "This endpoint requires DATABASE_URL, OPENAI_API_KEY, and JWT_SECRET. Configure the missing variables and set JADEASSIST_MINIMAL_MODE=false (or remove it) to enable full functionality.",
+    "missingVars": ["DATABASE_URL", "OPENAI_API_KEY", "JWT_SECRET"]
+  }
+}
+```
+
 ---
 
 ## Running locally
@@ -139,10 +217,13 @@ npm install
 # 2. Copy and fill in env vars
 cp .env.example .env
 
-# 3. Build TypeScript
+# 3. (Optional) start in minimal mode without secrets
+#    JADEASSIST_MINIMAL_MODE=true npm run dev
+
+# 4. Build TypeScript
 npm run build
 
-# 4. Start production server
+# 5. Start production server
 npm start
 
 # — OR — run in dev mode with hot-reload
@@ -153,6 +234,7 @@ npm run dev
 
 ## Notes
 
-- Railway injects `PORT` automatically — JadeAssist reads it from `process.env.PORT`.
+- Railway injects `PORT` automatically — JadeAssist reads it from `process.env.PORT`. No start command changes are needed.
 - The service is stateless; all state lives in PostgreSQL.
 - Graceful shutdown handles `SIGTERM` from Railway.
+- Strict fail-fast (the default) means misconfiguration is caught at startup — not silently at request time.
