@@ -5,6 +5,13 @@ import { llmService, LLMMessage } from './llmService';
 import { ConversationModel } from '../models/Conversation';
 import { EventType, TimelineItem, ChecklistItem, EVENT_TYPE_METADATA } from '@jadeassist/shared';
 import { logger } from '../utils/logger';
+import {
+  buildDynamicSystemPrompt,
+  buildEnrichedUserMessage,
+  detectInformationGaps,
+  extractContextualSuggestions,
+  getMissingDetails,
+} from '../utils/planningPrompts';
 
 export interface PlanningContext {
   conversationId: string;
@@ -39,18 +46,20 @@ class PlanningEngineService {
         content: msg.content,
       }));
 
-      // Add current user message
+      // Add current user message with enriched context appended
+      const enrichedMessage = buildEnrichedUserMessage(context, userMessage);
       llmMessages.push({
         role: 'user',
-        content: userMessage,
+        content: enrichedMessage,
       });
 
-      // Enhance prompt with context
-      const enhancedPrompt = this.buildEnhancedPrompt(context, userMessage);
-      llmMessages[llmMessages.length - 1].content = enhancedPrompt;
+      // Build dynamic system prompt that reflects known context
+      const dynamicSystemPrompt = buildDynamicSystemPrompt(context);
 
       // Get LLM response
-      const response = await llmService.chat(llmMessages);
+      const response = await llmService.chat(llmMessages, {
+        systemPrompt: dynamicSystemPrompt,
+      });
 
       // Store the assistant's response
       await ConversationModel.addMessage(
@@ -95,7 +104,6 @@ class PlanningEngineService {
     const response = await llmService.generate(prompt);
 
     // Parse timeline from response
-    // This is a simplified version - in production, you'd use more robust parsing
     try {
       const timelineData = JSON.parse(response.content) as TimelineItem[];
       return timelineData.map((item, index) => ({
@@ -147,46 +155,11 @@ class PlanningEngineService {
   }
 
   /**
-   * Build an enhanced prompt with context
-   */
-  private buildEnhancedPrompt(context: PlanningContext, userMessage: string): string {
-    const contextParts: string[] = [];
-
-    if (context.eventType) {
-      const metadata = EVENT_TYPE_METADATA[context.eventType];
-      contextParts.push(`Event Type: ${metadata.displayName}`);
-    }
-
-    if (context.budget) {
-      contextParts.push(`Budget: £${context.budget}`);
-    }
-
-    if (context.guestCount) {
-      contextParts.push(`Guest Count: ${context.guestCount}`);
-    }
-
-    if (context.eventDate) {
-      contextParts.push(`Event Date: ${context.eventDate.toDateString()}`);
-    }
-
-    if (context.location) {
-      contextParts.push(`Location: ${context.location}`);
-    }
-
-    const contextString = contextParts.length > 0 ? `\n\nContext:\n${contextParts.join('\n')}` : '';
-
-    return `${userMessage}${contextString}`;
-  }
-
-  /**
    * Parse LLM response and extract structured data
    */
   private parseResponse(content: string, context: PlanningContext): PlanningResponse {
-    // Check if more information is needed
-    const needsMoreInfo = this.detectInformationGaps(content, context);
-
-    // Extract suggestions if present
-    const suggestions = this.extractSuggestions(content);
+    const needsMoreInfo = detectInformationGaps(content, context);
+    const suggestions = extractContextualSuggestions(content, context);
 
     return {
       message: content,
@@ -196,50 +169,10 @@ class PlanningEngineService {
   }
 
   /**
-   * Detect if more information is needed
+   * Expose gap detection for external testing / diagnostics
    */
-  private detectInformationGaps(content: string, context: PlanningContext): boolean {
-    const lowerContent = content.toLowerCase();
-
-    // Check for questions or requests for information
-    const questionIndicators = [
-      'what is',
-      'when is',
-      'where is',
-      'how many',
-      'could you tell me',
-      'can you provide',
-      'need to know',
-    ];
-
-    const hasQuestions = questionIndicators.some((indicator) => lowerContent.includes(indicator));
-
-    // Check if essential information is missing
-    const missingEssentials = !context.eventType || !context.budget || !context.guestCount;
-
-    return hasQuestions || missingEssentials;
-  }
-
-  /**
-   * Extract suggestions from response
-   */
-  private extractSuggestions(content: string): string[] | undefined {
-    // Look for bulleted lists or numbered items
-    const lines = content.split('\n');
-    const suggestions: string[] = [];
-
-    lines.forEach((line) => {
-      const trimmed = line.trim();
-      // Match bullet points or numbers
-      if (trimmed.match(/^[-*•]\s+/) || trimmed.match(/^\d+\.\s+/)) {
-        const suggestion = trimmed.replace(/^[-*•]\s+/, '').replace(/^\d+\.\s+/, '');
-        if (suggestion.length > 0) {
-          suggestions.push(suggestion);
-        }
-      }
-    });
-
-    return suggestions.length > 0 ? suggestions.slice(0, 5) : undefined;
+  public getMissingContextDetails(context: PlanningContext): string[] {
+    return getMissingDetails(context);
   }
 }
 

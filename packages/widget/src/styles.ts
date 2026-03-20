@@ -427,6 +427,20 @@ export function getWidgetStyles(
       padding: 0 4px;
     }
 
+    /* Markdown rendering styles */
+    .jade-md-list {
+      margin: .25em 0 .25em 1.2em;
+      padding: 0;
+    }
+
+    .jade-inline-code {
+      background: rgba(0,0,0,.08);
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: .9em;
+      font-family: monospace;
+    }
+
     /* Quick Replies */
     .jade-quick-replies {
       display: flex;
