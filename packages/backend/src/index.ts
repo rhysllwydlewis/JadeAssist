@@ -10,28 +10,36 @@ import { env } from './config/env';
 import { getPool, closeDatabaseConnections } from './config/database';
 import { logger } from './utils/logger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { requestId } from './middleware/requestId';
 import { RATE_LIMITS } from './utils/constants';
 
 // Import routes
 import healthRouter from './routes/health';
 import chatRouter from './routes/chat';
 import planningRouter from './routes/planning';
+import assistRouter from './routes/assist';
 
 // Create Express app
 const app: Application = express();
 
 // Security middleware
 app.use(helmet());
+
+// Parse CORS_ORIGIN: '*' means allow all; otherwise treat as comma-separated list
+const corsOrigins = env.corsOrigin.trim();
 app.use(
   cors({
-    origin: env.isDevelopment ? '*' : env.apiUrl,
-    credentials: true,
+    origin: corsOrigins === '*' ? '*' : corsOrigins.split(',').map((o) => o.trim()).filter((o) => o.length > 0),
+    credentials: corsOrigins !== '*',
   })
 );
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Request-ID — must come before logging so the ID is available in logs
+app.use(requestId);
 
 // Global rate limiting
 const globalLimiter = rateLimit({
@@ -45,9 +53,11 @@ const globalLimiter = rateLimit({
 app.use(globalLimiter);
 
 // Request logging
-app.use((req, _res, next) => {
+app.use((req, res, next) => {
+  const reqId = String(res.locals['requestId'] ?? '');
   logger.info(
     {
+      requestId: reqId,
       method: req.method,
       path: req.path,
       query: req.query,
@@ -62,6 +72,12 @@ app.use((req, _res, next) => {
 app.use('/health', healthRouter);
 app.use('/api/chat', chatRouter);
 app.use('/api/planning', planningRouter);
+app.use('/api/v1/assist', assistRouter);
+
+// Railway / k8s health probe — lightweight, no DB check
+app.get('/healthz', (_req, res) => {
+  res.status(200).json({ ok: true });
+});
 
 // Root endpoint
 app.get('/', (_req, res) => {
@@ -127,10 +143,12 @@ const server = app.listen(env.port, () => {
   logger.info(
     {
       health: `http://localhost:${env.port}/health`,
-      api: `http://localhost:${env.port}/api`,
+      healthz: `http://localhost:${env.port}/healthz`,
+      assist: `http://localhost:${env.port}/api/v1/assist`,
     },
     '📍 API endpoints'
   );
 });
 
 export default app;
+

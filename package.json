@@ -7,6 +7,7 @@
     "packages/*"
   ],
   "scripts": {
+    "start": "npm run start --workspace=packages/backend",
     "dev": "npm run dev --workspace=packages/backend",
     "dev:widget": "npm run dev --workspace=packages/widget",
     "build": "npm run build --workspaces --if-present",
