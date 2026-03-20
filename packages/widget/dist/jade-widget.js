@@ -1,4 +1,4 @@
-(function(h){"use strict";const p={apiBaseUrl:"",authToken:"",assistantName:"Jade",greetingText:"Hi! 👋 I'm Jade, your event planning assistant. Can I help you plan your special day?",greetingTooltipText:"👋 Hi! Need help planning your event?",avatarUrl:"https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/assets/avatar-woman.png",primaryColor:"#0B8073",accentColor:"#13B6A2",fontFamily:'-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',showDelayMs:1e3,offsetBottom:"80px",offsetRight:"24px",offsetLeft:"",offsetBottomMobile:"",offsetRightMobile:"",offsetLeftMobile:"",scale:1,debug:!1},l={STATE:"jade-widget-state",MESSAGES:"jade-widget-messages",CONVERSATION_ID:"jade-widget-conversation-id",GREETING_DISMISSED:"jade-widget-greeting-dismissed",SOUND_ENABLED:"jade-widget-sound-enabled",SOUND_VOLUME:"jade-widget-sound-volume"};class d{static saveState(e){try{const n={...this.loadState(),...e};localStorage.setItem(l.STATE,JSON.stringify(n))}catch(t){console.warn("Failed to save widget state:",t)}}static loadState(){try{const e=localStorage.getItem(l.STATE);return e?JSON.parse(e):{}}catch(e){return console.warn("Failed to load widget state:",e),{}}}static saveMessages(e){try{localStorage.setItem(l.MESSAGES,JSON.stringify(e))}catch(t){console.warn("Failed to save messages:",t)}}static loadMessages(){try{const e=localStorage.getItem(l.MESSAGES);return e?JSON.parse(e):[]}catch(e){return console.warn("Failed to load messages:",e),[]}}static saveConversationId(e){try{localStorage.setItem(l.CONVERSATION_ID,e)}catch(t){console.warn("Failed to save conversation ID:",t)}}static loadConversationId(){try{return localStorage.getItem(l.CONVERSATION_ID)}catch(e){return console.warn("Failed to load conversation ID:",e),null}}static clearAll(){try{localStorage.removeItem(l.STATE),localStorage.removeItem(l.MESSAGES),localStorage.removeItem(l.CONVERSATION_ID),localStorage.removeItem(l.GREETING_DISMISSED)}catch(e){console.warn("Failed to clear storage:",e)}}static isGreetingDismissed(){try{return localStorage.getItem(l.GREETING_DISMISSED)==="true"}catch(e){return console.warn("Failed to check greeting dismissed state:",e),!1}}static setGreetingDismissed(){try{localStorage.setItem(l.GREETING_DISMISSED,"true")}catch(e){console.warn("Failed to save greeting dismissed state:",e)}}static loadSoundEnabled(){try{const e=localStorage.getItem(l.SOUND_ENABLED);return e===null?!1:e==="true"}catch(e){return console.warn("Failed to load sound enabled state:",e),!1}}static saveSoundEnabled(e){try{localStorage.setItem(l.SOUND_ENABLED,String(e))}catch(t){console.warn("Failed to save sound enabled state:",t)}}static loadSoundVolume(){try{const e=localStorage.getItem(l.SOUND_VOLUME);if(e===null)return .5;const t=parseFloat(e);return isNaN(t)?.5:Math.min(1,Math.max(0,t))}catch(e){return console.warn("Failed to load sound volume:",e),.5}}static saveSoundVolume(e){try{localStorage.setItem(l.SOUND_VOLUME,String(e))}catch(t){console.warn("Failed to save sound volume:",t)}}}class b{constructor(e,t){this.demoState={},this.baseUrl=e||"",this.authToken=t||"",this.demoMode=!e}async sendMessage(e,t){var i;if(this.demoMode)return this.mockResponse(e);const n={"Content-Type":"application/json"};this.authToken&&(n.Authorization=`Bearer ${this.authToken}`);const s=await fetch(`${this.baseUrl}/api/chat`,{method:"POST",headers:n,body:JSON.stringify({message:e,conversationId:t,userId:"anonymous"})});if(s.status===429)throw new Error("429: Rate limit exceeded. Please wait and try again.");if(s.status===401||s.status===403)throw new Error(`${s.status}: Authentication failed.`);if(!s.ok)throw new Error(`API error: ${s.status}`);const a=await s.json();if(!a.success||!a.data)throw new Error(((i=a.error)==null?void 0:i.message)||"API request failed");return{conversationId:a.data.conversationId,message:{id:a.data.message.id,role:"assistant",content:a.data.message.content,timestamp:Date.now(),quickReplies:a.data.suggestions}}}async mockResponse(e){await new Promise(i=>setTimeout(i,700+Math.random()*400));const t="demo-"+Date.now(),n=e.toLowerCase();this.updateDemoState(n);const{content:s,quickReplies:a}=this.buildDemoResponse(n);return{conversationId:t,message:{id:"msg-"+Date.now(),role:"assistant",content:s,timestamp:Date.now(),quickReplies:a}}}updateDemoState(e){e.includes("wedding")||e.includes("civil partnership")?this.demoState.eventType="wedding":e.includes("birthday")?this.demoState.eventType="birthday":e.includes("corporate")||e.includes("away day")||e.includes("away-day")||e.includes("work event")?this.demoState.eventType="corporate":e.includes("conference")||e.includes("seminar")?this.demoState.eventType="conference":e.includes("anniversary")?this.demoState.eventType="anniversary":(e.includes("party")||e.includes("celebration"))&&(this.demoState.eventType="party"),/under\s*[£$]?5k\b/i.test(e)||/under\s*£?5,000\b/.test(e)?this.demoState.budget="under £5,000":/\b[£$]?50k\b|\b50,000\b/.test(e)?this.demoState.budget="£50,000+":/\b[£$]?20k\b|\b20,000\b/.test(e)?this.demoState.budget="£20,000–£50,000":/\b[£$]?10k\b|\b10,000\b/.test(e)?this.demoState.budget="£10,000–£20,000":/\b[£$]?5k\b|\b5,000\b/.test(e)&&(this.demoState.budget="£5,000–£10,000");const t=/\b(\d{1,3}(?:,\d{3})*|\d+)\s*(guests?|people|attendees?|pax)\b/.exec(e);t?this.demoState.guestCount=t[1].replace(/,/g,""):e.includes("under 30")||e.includes("intimate")?this.demoState.guestCount="20–30":(e.includes("150+")||e.includes("large"))&&(this.demoState.guestCount="150+"),e.includes("london")?this.demoState.location="London":e.includes("scotland")||e.includes("edinburgh")||e.includes("glasgow")?this.demoState.location="Scotland":e.includes("wales")||e.includes("cardiff")?this.demoState.location="Wales":e.includes("north west")||e.includes("manchester")||e.includes("liverpool")?this.demoState.location="North West":e.includes("yorkshire")||e.includes("leeds")||e.includes("sheffield")?this.demoState.location="Yorkshire":e.includes("south east")||e.includes("surrey")||e.includes("kent")||e.includes("sussex")?this.demoState.location="South East":e.includes("midlands")||e.includes("birmingham")?this.demoState.location="Midlands":(e.includes("south west")||e.includes("bristol")||e.includes("cornwall")||e.includes("devon"))&&(this.demoState.location="South West"),e.includes("this year")?this.demoState.eventDate="this year":e.includes("next year")&&(this.demoState.eventDate="next year")}buildDemoResponse(e){const t=this.demoState;if((e.includes("yes")&&e.includes("please")||e==="help"||e==="start"||e==="hi"||e==="hello"||e==="hey")&&!t.eventType)return{content:"I'd love to help you plan your event! What type of event are you organising? 🎉",quickReplies:["Wedding","Birthday Party","Corporate Event","Anniversary","Other"]};if(e.includes("no")&&e.includes("thanks"))return{content:"No problem — I'm here whenever you're ready. Feel free to come back any time! 😊"};if(e.includes("wedding")||t.eventType==="wedding")return e.includes("cost")||e.includes("price")||e.includes("budget")||e.includes("expensive")||e.includes("afford")?{content:`Here's a realistic cost breakdown for a wedding in ${t.location||"the UK"}:
+(function(h){"use strict";const p={apiBaseUrl:"",authToken:"",assistantName:"Jade",greetingText:"Hi! 👋 I'm Jade, your event planning assistant. Can I help you plan your special day?",greetingTooltipText:"👋 Hi! Need help planning your event?",avatarUrl:"https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/assets/avatar-woman.png",primaryColor:"#0B8073",accentColor:"#13B6A2",fontFamily:'-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',showDelayMs:1e3,offsetBottom:"80px",offsetRight:"24px",offsetLeft:"",offsetBottomMobile:"",offsetRightMobile:"",offsetLeftMobile:"",scale:1,debug:!1},l={STATE:"jade-widget-state",MESSAGES:"jade-widget-messages",CONVERSATION_ID:"jade-widget-conversation-id",GREETING_DISMISSED:"jade-widget-greeting-dismissed",SOUND_ENABLED:"jade-widget-sound-enabled",SOUND_VOLUME:"jade-widget-sound-volume"};class d{static saveState(e){try{const s={...this.loadState(),...e};localStorage.setItem(l.STATE,JSON.stringify(s))}catch(t){console.warn("Failed to save widget state:",t)}}static loadState(){try{const e=localStorage.getItem(l.STATE);return e?JSON.parse(e):{}}catch(e){return console.warn("Failed to load widget state:",e),{}}}static saveMessages(e){try{localStorage.setItem(l.MESSAGES,JSON.stringify(e))}catch(t){console.warn("Failed to save messages:",t)}}static loadMessages(){try{const e=localStorage.getItem(l.MESSAGES);return e?JSON.parse(e):[]}catch(e){return console.warn("Failed to load messages:",e),[]}}static saveConversationId(e){try{localStorage.setItem(l.CONVERSATION_ID,e)}catch(t){console.warn("Failed to save conversation ID:",t)}}static loadConversationId(){try{return localStorage.getItem(l.CONVERSATION_ID)}catch(e){return console.warn("Failed to load conversation ID:",e),null}}static clearAll(){try{localStorage.removeItem(l.STATE),localStorage.removeItem(l.MESSAGES),localStorage.removeItem(l.CONVERSATION_ID),localStorage.removeItem(l.GREETING_DISMISSED)}catch(e){console.warn("Failed to clear storage:",e)}}static isGreetingDismissed(){try{return localStorage.getItem(l.GREETING_DISMISSED)==="true"}catch(e){return console.warn("Failed to check greeting dismissed state:",e),!1}}static setGreetingDismissed(){try{localStorage.setItem(l.GREETING_DISMISSED,"true")}catch(e){console.warn("Failed to save greeting dismissed state:",e)}}static loadSoundEnabled(){try{const e=localStorage.getItem(l.SOUND_ENABLED);return e===null?!1:e==="true"}catch(e){return console.warn("Failed to load sound enabled state:",e),!1}}static saveSoundEnabled(e){try{localStorage.setItem(l.SOUND_ENABLED,String(e))}catch(t){console.warn("Failed to save sound enabled state:",t)}}static loadSoundVolume(){try{const e=localStorage.getItem(l.SOUND_VOLUME);if(e===null)return .5;const t=parseFloat(e);return isNaN(t)?.5:Math.min(1,Math.max(0,t))}catch(e){return console.warn("Failed to load sound volume:",e),.5}}static saveSoundVolume(e){try{localStorage.setItem(l.SOUND_VOLUME,String(e))}catch(t){console.warn("Failed to save sound volume:",t)}}}class b{constructor(e,t){this.demoState={},this.baseUrl=e||"",this.authToken=t||"",this.demoMode=!e}async sendMessage(e,t){var i;if(this.demoMode)return this.mockResponse(e);const s={"Content-Type":"application/json"};this.authToken&&(s.Authorization=`Bearer ${this.authToken}`);const n=await fetch(`${this.baseUrl}/api/chat`,{method:"POST",headers:s,body:JSON.stringify({message:e,conversationId:t,userId:"anonymous"})});if(n.status===429)throw new Error("429: Rate limit exceeded. Please wait and try again.");if(n.status===401||n.status===403)throw new Error(`${n.status}: Authentication failed.`);if(!n.ok)throw new Error(`API error: ${n.status}`);const a=await n.json();if(!a.success||!a.data)throw new Error(((i=a.error)==null?void 0:i.message)||"API request failed");return{conversationId:a.data.conversationId,message:{id:a.data.message.id,role:"assistant",content:a.data.message.content,timestamp:Date.now(),quickReplies:a.data.suggestions}}}async mockResponse(e){await new Promise(i=>setTimeout(i,700+Math.random()*400));const t="demo-"+Date.now(),s=e.toLowerCase();this.updateDemoState(s);const{content:n,quickReplies:a}=this.buildDemoResponse(s);return{conversationId:t,message:{id:"msg-"+Date.now(),role:"assistant",content:n,timestamp:Date.now(),quickReplies:a}}}updateDemoState(e){e.includes("wedding")||e.includes("civil partnership")?this.demoState.eventType="wedding":e.includes("birthday")?this.demoState.eventType="birthday":e.includes("corporate")||e.includes("away day")||e.includes("away-day")||e.includes("work event")?this.demoState.eventType="corporate":e.includes("conference")||e.includes("seminar")?this.demoState.eventType="conference":e.includes("anniversary")?this.demoState.eventType="anniversary":(e.includes("party")||e.includes("celebration"))&&(this.demoState.eventType="party"),/under\s*[£$]?5k\b/i.test(e)||/under\s*£?5,000\b/.test(e)?this.demoState.budget="under £5,000":/\b[£$]?50k\b|\b50,000\b/.test(e)?this.demoState.budget="£50,000+":/\b[£$]?20k\b|\b20,000\b/.test(e)?this.demoState.budget="£20,000–£50,000":/\b[£$]?10k\b|\b10,000\b/.test(e)?this.demoState.budget="£10,000–£20,000":/\b[£$]?5k\b|\b5,000\b/.test(e)&&(this.demoState.budget="£5,000–£10,000");const t=/\b(\d{1,3}(?:,\d{3})*|\d+)\s*(guests?|people|attendees?|pax)\b/.exec(e);t?this.demoState.guestCount=t[1].replace(/,/g,""):e.includes("under 30")||e.includes("intimate")?this.demoState.guestCount="20–30":(e.includes("150+")||e.includes("large"))&&(this.demoState.guestCount="150+"),e.includes("london")?this.demoState.location="London":e.includes("scotland")||e.includes("edinburgh")||e.includes("glasgow")?this.demoState.location="Scotland":e.includes("wales")||e.includes("cardiff")?this.demoState.location="Wales":e.includes("north west")||e.includes("manchester")||e.includes("liverpool")?this.demoState.location="North West":e.includes("yorkshire")||e.includes("leeds")||e.includes("sheffield")?this.demoState.location="Yorkshire":e.includes("south east")||e.includes("surrey")||e.includes("kent")||e.includes("sussex")?this.demoState.location="South East":e.includes("midlands")||e.includes("birmingham")?this.demoState.location="Midlands":(e.includes("south west")||e.includes("bristol")||e.includes("cornwall")||e.includes("devon"))&&(this.demoState.location="South West"),e.includes("this year")?this.demoState.eventDate="this year":e.includes("next year")&&(this.demoState.eventDate="next year")}buildDemoResponse(e){const t=this.demoState;if((e.includes("yes")&&e.includes("please")||e==="help"||e==="start"||e==="hi"||e==="hello"||e==="hey")&&!t.eventType)return{content:"I'd love to help you plan your event! What type of event are you organising? 🎉",quickReplies:["Wedding","Birthday Party","Corporate Event","Anniversary","Other"]};if(e.includes("no")&&e.includes("thanks"))return{content:"No problem — I'm here whenever you're ready. Feel free to come back any time! 😊"};if(e.includes("wedding")||t.eventType==="wedding")return e.includes("cost")||e.includes("price")||e.includes("budget")||e.includes("expensive")||e.includes("afford")?{content:`Here's a realistic cost breakdown for a wedding in ${t.location||"the UK"}:
 
 **Average UK wedding: £30,000** (range: £8,000 to £100,000+)
 
@@ -298,7 +298,7 @@ Is this a milestone anniversary? And are you thinking intimate or a larger gathe
 2. **Day of week** — Friday/Sunday vs. Saturday saves 20–30% on the venue
 3. **Catering style** — buffet vs. silver service differs by £30–£50/head
 
-What's your approximate budget for ${t.eventType||"an event"}?`,quickReplies:["Under £5k","£5k–£10k","£10k–£20k","£20k–£50k","£50k+"]};if(e.includes("venue")||e.includes("where")&&(e.includes("hold")||e.includes("host"))){const n=t.location||"the UK",s=t.eventType||"your event";return{content:`Finding the right venue is the most critical early decision.
+What's your approximate budget for ${t.eventType||"an event"}?`,quickReplies:["Under £5k","£5k–£10k","£10k–£20k","£20k–£50k","£50k+"]};if(e.includes("venue")||e.includes("where")&&(e.includes("hold")||e.includes("host"))){const s=t.location||"the UK",n=t.eventType||"your event";return{content:`Finding the right venue is the most critical early decision.
 
 **Key questions to ask every venue:**
 - Maximum capacity (seated vs. standing)?
@@ -309,14 +309,14 @@ What's your approximate budget for ${t.eventType||"an event"}?`,quickReplies:["U
 - Parking / nearby transport?
 - Fully accessible?
 
-**Venue styles in ${n}:**
+**Venue styles in ${s}:**
 - **Hotels** — convenient, often all-inclusive
 - **Country houses / estates** — beautiful settings
 - **Barns & agricultural spaces** — character, usually dry hire
 - **Civic / heritage buildings** — unique, often great value
 - **Restaurants with private rooms** — great for smaller events
 
-**For ${s}:** Visit at least 3 venues before committing. Always get a full written quote including extras. Check the cancellation policy carefully.
+**For ${n}:** Visit at least 3 venues before committing. Always get a full written quote including extras. Check the cancellation policy carefully.
 
 How many guests are you planning for?`,quickReplies:["Under 50","50–100","100–150","150+"]}}return e.includes("catering")||e.includes("caterer")||e.includes("food")||e.includes("menu")||e.includes("buffet")?{content:`Food is what guests remember — it's worth getting right.
 
@@ -606,7 +606,7 @@ Do you need help wording the dress code on your invitations?`,quickReplies:["Wor
 - Currency and cards
 - Any required vaccinations
 
-Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","Italy / Greece","City break","UK staycation"]}:t.eventType?t.budget?t.location?{content:`I can help with many aspects of planning your ${t.eventType||"event"}${t.location?` in ${t.location}`:""}. What would you like to focus on?`,quickReplies:["Venue advice","Budget breakdown","Supplier search","Planning timeline","Legal requirements"]}:{content:`Almost there! Where will your ${t.eventType} be held? Knowing the region lets me give you location-specific venue suggestions and help you find local suppliers.`,quickReplies:["London","South East","North West","Yorkshire","Midlands","Scotland"]}:{content:`To give you the most specific advice for your ${t.eventType}, it really helps to know your budget range. What's your approximate total budget?`,quickReplies:["Under £5k","£5k–£10k","£10k–£20k","£20k–£50k","£50k+"]}:{content:"I'm here to help with every aspect of event planning — venues, budgets, suppliers, timelines, legal requirements, and more. To get started with the most relevant advice, what type of event are you planning?",quickReplies:["Wedding","Birthday Party","Corporate Event","Anniversary","Other"]}}}function y(r,e,t,n,s,a,i,o,u,c){return`
+Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","Italy / Greece","City break","UK staycation"]}:t.eventType?t.budget?t.location?{content:`I can help with many aspects of planning your ${t.eventType||"event"}${t.location?` in ${t.location}`:""}. What would you like to focus on?`,quickReplies:["Venue advice","Budget breakdown","Supplier search","Planning timeline","Legal requirements"]}:{content:`Almost there! Where will your ${t.eventType} be held? Knowing the region lets me give you location-specific venue suggestions and help you find local suppliers.`,quickReplies:["London","South East","North West","Yorkshire","Midlands","Scotland"]}:{content:`To give you the most specific advice for your ${t.eventType}, it really helps to know your budget range. What's your approximate total budget?`,quickReplies:["Under £5k","£5k–£10k","£10k–£20k","£20k–£50k","£50k+"]}:{content:"I'm here to help with every aspect of event planning — venues, budgets, suppliers, timelines, legal requirements, and more. To get started with the most relevant advice, what type of event are you planning?",quickReplies:["Wedding","Birthday Party","Corporate Event","Anniversary","Other"]}}}function y(r,e,t,s,n,a,i,o,u,c){return`
     * {
       box-sizing: border-box;
       margin: 0;
@@ -624,8 +624,8 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
       -moz-osx-font-smoothing: grayscale;
       
       /* CSS Custom Properties for positioning - can be overridden by consumers */
-      --jade-offset-bottom: ${n};
-      --jade-offset-right: ${s};
+      --jade-offset-bottom: ${s};
+      --jade-offset-right: ${n};
       --jade-offset-left: ${a};
       --jade-scale: ${c};
       --jade-primary-color: ${r};
@@ -634,8 +634,8 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
 
     .jade-widget-container {
       position: fixed;
-      bottom: var(--jade-offset-bottom, ${n});
-      ${a?`left: var(--jade-offset-left, ${a});`:`right: var(--jade-offset-right, ${s});`}
+      bottom: var(--jade-offset-bottom, ${s});
+      ${a?`left: var(--jade-offset-left, ${a});`:`right: var(--jade-offset-right, ${n});`}
       ${a?"right: auto;":""}
       z-index: 999999;
       transform: scale(var(--jade-scale, ${c}));
@@ -929,11 +929,11 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
       width: 32px;
       height: 32px;
       border: none;
-      background: rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.15);
       border-radius: 8px;
       color: white;
       cursor: pointer;
-      transition: background 0.2s ease;
+      transition: background 0.2s ease, box-shadow 0.2s ease;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -941,40 +941,45 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
     }
 
     .jade-menu-btn:hover {
+      background: rgba(255, 255, 255, 0.28);
+    }
+
+    .jade-menu-btn--open {
       background: rgba(255, 255, 255, 0.3);
+      box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.5);
     }
 
     .jade-menu-btn:focus-visible {
-      outline: 2px solid rgba(255,255,255,0.8);
+      outline: 2px solid rgba(255,255,255,0.85);
       outline-offset: 2px;
     }
 
     /* Settings menu panel */
     .jade-menu-panel {
       position: absolute;
-      top: 60px;
+      top: 68px;
       right: 14px;
       background: white;
-      border: 1px solid rgba(0,0,0,0.1);
-      border-radius: 12px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08);
-      z-index: 10;
-      min-width: 220px;
+      border: 1px solid rgba(0,0,0,0.09);
+      border-radius: 14px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.14), 0 3px 10px rgba(0,0,0,0.08);
+      z-index: 30;
+      min-width: 232px;
       padding: 6px 0;
-      animation: jade-menu-enter 0.15s cubic-bezier(0.4,0,0.2,1);
+      animation: jade-menu-enter 0.17s cubic-bezier(0.2, 0, 0, 1.2);
     }
 
     @keyframes jade-menu-enter {
-      from { opacity: 0; transform: translateY(-6px) scale(0.97); }
-      to   { opacity: 1; transform: translateY(0)   scale(1); }
+      from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
     }
 
     .jade-menu-item {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 11px;
       width: 100%;
-      padding: 10px 16px;
+      padding: 11px 16px;
       background: none;
       border: none;
       font-size: 13.5px;
@@ -982,12 +987,21 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
       color: #1f2937;
       cursor: pointer;
       text-align: left;
-      transition: background 0.15s ease;
+      transition: background 0.12s ease;
       line-height: 1.4;
+    }
+
+    .jade-menu-item svg {
+      flex-shrink: 0;
+      opacity: 0.65;
     }
 
     .jade-menu-item:hover {
       background: #f3f4f6;
+    }
+
+    .jade-menu-item:hover svg {
+      opacity: 0.9;
     }
 
     .jade-menu-item:focus-visible {
@@ -999,25 +1013,30 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
       color: #dc2626;
     }
 
+    .jade-menu-item--danger svg {
+      opacity: 0.75;
+    }
+
     .jade-menu-item--danger:hover {
-      background: #fef2f2;
+      background: #fff1f1;
     }
 
     .jade-menu-item--disabled {
-      opacity: 0.45;
+      opacity: 0.4;
       pointer-events: none;
     }
 
     .jade-menu-divider {
       height: 1px;
       background: rgba(0,0,0,0.07);
-      margin: 4px 0;
+      margin: 5px 0;
     }
 
     /* Sound toggle row */
     .jade-menu-sound-row {
       justify-content: space-between;
       cursor: default;
+      user-select: none;
     }
 
     .jade-menu-sound-row:hover {
@@ -1027,21 +1046,25 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
     .jade-menu-sound-label {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 11px;
       color: #1f2937;
       font-size: 13.5px;
+    }
+
+    .jade-menu-sound-label svg {
+      opacity: 0.65;
     }
 
     /* Toggle switch */
     .jade-sound-toggle {
       position: relative;
-      width: 38px;
-      height: 22px;
+      width: 40px;
+      height: 23px;
       background: #d1d5db;
       border: none;
-      border-radius: 11px;
+      border-radius: 12px;
       cursor: pointer;
-      transition: background 0.2s ease;
+      transition: background 0.22s ease;
       flex-shrink: 0;
       padding: 0;
     }
@@ -1052,19 +1075,19 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
 
     .jade-sound-toggle-knob {
       position: absolute;
-      top: 3px;
-      left: 3px;
+      top: 3.5px;
+      left: 3.5px;
       width: 16px;
       height: 16px;
       background: white;
       border-radius: 50%;
-      transition: transform 0.2s cubic-bezier(0.4,0,0.2,1);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      transition: transform 0.22s cubic-bezier(0.34, 1.4, 0.64, 1);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.25);
       pointer-events: none;
     }
 
     .jade-sound-toggle--on .jade-sound-toggle-knob {
-      transform: translateX(16px);
+      transform: translateX(17px);
     }
 
     .jade-sound-toggle:focus-visible {
@@ -1074,9 +1097,11 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
 
     /* Volume row */
     .jade-menu-volume-row {
-      gap: 8px;
+      gap: 10px;
       flex-wrap: nowrap;
       cursor: default;
+      padding-top: 8px;
+      padding-bottom: 10px;
     }
 
     .jade-menu-volume-row:hover {
@@ -1084,19 +1109,20 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
     }
 
     .jade-volume-label {
-      font-size: 13px;
+      font-size: 12.5px;
       color: #6b7280;
       white-space: nowrap;
       flex-shrink: 0;
+      user-select: none;
     }
 
     .jade-volume-slider {
       flex: 1;
       -webkit-appearance: none;
       appearance: none;
-      height: 4px;
+      height: 5px;
       background: #e5e7eb;
-      border-radius: 2px;
+      border-radius: 3px;
       outline: none;
       cursor: pointer;
       min-width: 0;
@@ -1105,26 +1131,31 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
     .jade-volume-slider::-webkit-slider-thumb {
       -webkit-appearance: none;
       appearance: none;
-      width: 14px;
-      height: 14px;
+      width: 15px;
+      height: 15px;
       background: ${r};
       border-radius: 50%;
       cursor: pointer;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+      transition: transform 0.12s ease;
+    }
+
+    .jade-volume-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
     }
 
     .jade-volume-slider::-moz-range-thumb {
-      width: 14px;
-      height: 14px;
+      width: 15px;
+      height: 15px;
       background: ${r};
       border-radius: 50%;
       border: none;
       cursor: pointer;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.25);
     }
 
     .jade-volume-slider:disabled {
-      opacity: 0.4;
+      opacity: 0.35;
       cursor: not-allowed;
     }
 
@@ -1133,35 +1164,48 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
       color: #6b7280;
       white-space: nowrap;
       flex-shrink: 0;
-      min-width: 32px;
+      min-width: 30px;
       text-align: right;
+      font-variant-numeric: tabular-nums;
     }
 
     /* Clear chat confirmation modal */
     .jade-modal-overlay {
       position: absolute;
       inset: 0;
-      background: rgba(0,0,0,0.4);
+      background: rgba(17, 24, 39, 0.45);
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 20;
+      z-index: 50;
       border-radius: 20px;
+      animation: jade-overlay-enter 0.18s ease;
+    }
+
+    @keyframes jade-overlay-enter {
+      from { opacity: 0; }
+      to   { opacity: 1; }
     }
 
     .jade-modal {
       background: white;
-      border-radius: 14px;
-      padding: 24px 20px 18px;
-      margin: 16px;
-      box-shadow: 0 16px 40px rgba(0,0,0,0.2);
-      max-width: 280px;
+      border-radius: 16px;
+      padding: 22px 20px 18px;
+      margin: 20px;
+      box-shadow: 0 20px 48px rgba(0,0,0,0.22), 0 4px 12px rgba(0,0,0,0.12);
+      max-width: 285px;
       width: 100%;
+      animation: jade-modal-enter 0.2s cubic-bezier(0.34, 1.3, 0.64, 1);
+    }
+
+    @keyframes jade-modal-enter {
+      from { opacity: 0; transform: scale(0.92) translateY(8px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
     }
 
     .jade-modal-title {
-      font-size: 15px;
-      font-weight: 600;
+      font-size: 15.5px;
+      font-weight: 700;
       color: #111827;
       margin-bottom: 8px;
     }
@@ -1169,7 +1213,7 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
     .jade-modal-desc {
       font-size: 13px;
       color: #6b7280;
-      line-height: 1.5;
+      line-height: 1.55;
       margin-bottom: 20px;
     }
 
@@ -1180,8 +1224,8 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
     }
 
     .jade-modal-btn {
-      padding: 8px 16px;
-      border-radius: 8px;
+      padding: 8px 18px;
+      border-radius: 9px;
       border: none;
       font-size: 13.5px;
       font-family: inherit;
@@ -1202,15 +1246,44 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
     .jade-modal-btn--confirm {
       background: #dc2626;
       color: white;
+      box-shadow: 0 2px 6px rgba(220,38,38,0.35);
     }
 
     .jade-modal-btn--confirm:hover {
       background: #b91c1c;
+      box-shadow: 0 3px 8px rgba(185,28,28,0.4);
     }
 
     .jade-modal-btn:focus-visible {
       outline: 2px solid ${r};
       outline-offset: 2px;
+    }
+
+    /* Export success toast */
+    .jade-toast {
+      position: absolute;
+      bottom: 76px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #111827;
+      color: white;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 9px 16px;
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      z-index: 40;
+      white-space: nowrap;
+      animation: jade-toast-enter 0.25s cubic-bezier(0.34, 1.3, 0.64, 1);
+      pointer-events: none;
+    }
+
+    @keyframes jade-toast-enter {
+      from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+      to   { opacity: 1; transform: translateX(-50%) translateY(0); }
     }
 
 
@@ -1500,8 +1573,8 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
     @media (max-width: 480px) {
       :host {
         /* Mobile-specific CSS custom properties */
-        --jade-offset-bottom: ${i||n};
-        --jade-offset-right: ${o||(s==="24px"?"16px":s)};
+        --jade-offset-bottom: ${i||s};
+        --jade-offset-right: ${o||(n==="24px"?"16px":n)};
         --jade-offset-left: ${u||(a&&a==="24px"?"16px":a)};
       }
       
@@ -1530,7 +1603,7 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
     .jade-hidden {
       display: none !important;
     }
-  `}class v{constructor(e={}){this.isMenuOpen=!1,this.showClearConfirm=!1,this.config={...p,...e},this.apiClient=new b(this.config.apiBaseUrl,this.config.authToken),this.config.debug&&(console.log("[JadeWidget] Initializing with config:",this.config),console.log("[JadeWidget] Avatar URL:",this.config.avatarUrl)),this.escapeKeyHandler=a=>{a.key==="Escape"&&(this.showClearConfirm?(this.showClearConfirm=!1,this.render()):this.isMenuOpen?(this.isMenuOpen=!1,this.render()):this.state.isOpen&&this.closeChat())},this.soundEnabled=d.loadSoundEnabled(),this.soundVolume=d.loadSoundVolume();const t=d.loadState(),n=d.loadMessages(),s=d.loadConversationId();this.state={isOpen:t.isOpen||!1,isMinimized:t.isMinimized||!1,showGreeting:!1,conversationId:s||void 0,messages:n.length>0?n:this.getInitialMessages()},this.container=document.createElement("div"),this.container.className="jade-widget-root",this.shadowRoot=this.container.attachShadow({mode:"open"}),this.render(),this.attachEventListeners()}getInitialMessages(){return[{id:"initial",role:"assistant",content:this.config.greetingText,timestamp:Date.now(),quickReplies:["Yes, please","No, thanks"]}]}render(){const e=y(this.config.primaryColor,this.config.accentColor,this.config.fontFamily,this.config.offsetBottom,this.config.offsetRight,this.config.offsetLeft,this.config.offsetBottomMobile,this.config.offsetRightMobile,this.config.offsetLeftMobile,this.config.scale);this.shadowRoot.innerHTML=`
+  `}class v{constructor(e={}){this.isMenuOpen=!1,this.showClearConfirm=!1,this.showExportToast=!1,this.config={...p,...e},this.apiClient=new b(this.config.apiBaseUrl,this.config.authToken),this.config.debug&&(console.log("[JadeWidget] Initializing with config:",this.config),console.log("[JadeWidget] Avatar URL:",this.config.avatarUrl)),this.escapeKeyHandler=a=>{a.key==="Escape"&&(this.showClearConfirm?(this.showClearConfirm=!1,this.render()):this.isMenuOpen?(this.isMenuOpen=!1,this.render()):this.state.isOpen&&this.closeChat())},this.soundEnabled=d.loadSoundEnabled(),this.soundVolume=d.loadSoundVolume();const t=d.loadState(),s=d.loadMessages(),n=d.loadConversationId();this.state={isOpen:t.isOpen||!1,isMinimized:t.isMinimized||!1,showGreeting:!1,conversationId:n||void 0,messages:s.length>0?s:this.getInitialMessages()},this.container=document.createElement("div"),this.container.className="jade-widget-root",this.shadowRoot=this.container.attachShadow({mode:"open"}),this.render(),this.attachEventListeners()}getInitialMessages(){return[{id:"initial",role:"assistant",content:this.config.greetingText,timestamp:Date.now(),quickReplies:["Yes, please","No, thanks"]}]}render(){const e=y(this.config.primaryColor,this.config.accentColor,this.config.fontFamily,this.config.offsetBottom,this.config.offsetRight,this.config.offsetLeft,this.config.offsetBottomMobile,this.config.offsetRightMobile,this.config.offsetLeftMobile,this.config.scale);this.shadowRoot.innerHTML=`
       <style>${e}</style>
       <div class="jade-widget-container">
         ${this.renderAvatar()}
@@ -1553,8 +1626,10 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
         ${this.renderHeader()}
         ${this.renderMessages()}
         ${this.renderInputArea()}
+        ${this.showClearConfirm?this.renderClearConfirmModal():""}
+        ${this.showExportToast?this.renderExportToast():""}
       </div>
-    `}renderHeader(){return`
+    `}renderHeader(){const e=`jade-menu-btn${this.isMenuOpen?" jade-menu-btn--open":""}`;return`
       <div class="jade-chat-header">
         <div class="jade-chat-header-left">
           <div class="jade-chat-avatar">
@@ -1566,7 +1641,7 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
           </div>
         </div>
         <div class="jade-chat-controls">
-          <button class="jade-menu-btn" aria-label="Open menu" aria-haspopup="true" aria-expanded="${this.isMenuOpen}" data-action="toggle-menu" title="Menu">
+          <button class="${e}" aria-label="${this.isMenuOpen?"Close menu":"Open menu"}" aria-haspopup="true" aria-expanded="${this.isMenuOpen}" data-action="toggle-menu" title="Menu">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <circle cx="8" cy="3" r="1.5" fill="currentColor"/>
               <circle cx="8" cy="8" r="1.5" fill="currentColor"/>
@@ -1578,7 +1653,6 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
         </div>
       </div>
       ${this.isMenuOpen?this.renderMenu():""}
-      ${this.showClearConfirm?this.renderClearConfirmModal():""}
     `}renderMenu(){const e=Math.round(this.soundVolume*100);return`
       <div class="jade-menu-panel" role="menu" aria-label="Chat options">
         <button class="jade-menu-item" data-action="export-chat" role="menuitem">
@@ -1640,11 +1714,18 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
           </div>
         </div>
       </div>
+    `}renderExportToast(){return`
+      <div class="jade-toast" role="status" aria-live="polite">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M2 7.5l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Chat exported successfully
+      </div>
     `}renderMessages(){return`
       <div class="jade-chat-messages" data-messages-container>
         ${this.state.messages.map(t=>this.renderMessage(t)).join("")}
       </div>
-    `}renderMessage(e){const t=e.role==="user",n=new Date(e.timestamp).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),s=!t&&e.quickReplies?`
+    `}renderMessage(e){const t=e.role==="user",s=new Date(e.timestamp).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),n=!t&&e.quickReplies?`
       <div class="jade-quick-replies">
         ${e.quickReplies.map(o=>`<button class="jade-quick-reply-btn" data-action="quick-reply" data-reply="${this.escapeHtml(o)}">${this.escapeHtml(o)}</button>`).join("")}
       </div>
@@ -1655,12 +1736,12 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
         </div>
         <div class="jade-message-content">
           <div class="jade-message-bubble">${a}</div>
-          <div class="jade-message-time">${n}</div>
-          ${s}
+          <div class="jade-message-time">${s}</div>
+          ${n}
         </div>
       </div>
-    `}renderMarkdown(e){const s=this.escapeHtml(e).replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").replace(/\*([^*\n]+?)\*/g,(u,c)=>`<em>${c}</em>`).replace(/`([^`\n]+?)`/g,'<code class="jade-inline-code">$1</code>').split(`
-`),a=[];let i=!1,o=null;for(let u=0;u<s.length;u++){const c=s[u],m=/^[-*•]\s+(.*)/.exec(c),f=/^\d+\.\s+(.*)/.exec(c);m?((!i||o!=="ul")&&(i&&a.push(o==="ol"?"</ol>":"</ul>"),a.push('<ul class="jade-md-list">'),i=!0,o="ul"),a.push(`<li>${m[1]}</li>`)):f?((!i||o!=="ol")&&(i&&a.push(o==="ul"?"</ul>":"</ol>"),a.push('<ol class="jade-md-list">'),i=!0,o="ol"),a.push(`<li>${f[1]}</li>`)):(i&&(a.push(o==="ol"?"</ol>":"</ul>"),i=!1,o=null),c.trim()===""?a.push("<br>"):a.push(c))}return i&&a.push(o==="ol"?"</ol>":"</ul>"),a.join(`
+    `}renderMarkdown(e){const n=this.escapeHtml(e).replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").replace(/\*([^*\n]+?)\*/g,(u,c)=>`<em>${c}</em>`).replace(/`([^`\n]+?)`/g,'<code class="jade-inline-code">$1</code>').split(`
+`),a=[];let i=!1,o=null;for(let u=0;u<n.length;u++){const c=n[u],m=/^[-*•]\s+(.*)/.exec(c),f=/^\d+\.\s+(.*)/.exec(c);m?((!i||o!=="ul")&&(i&&a.push(o==="ol"?"</ol>":"</ul>"),a.push('<ul class="jade-md-list">'),i=!0,o="ul"),a.push(`<li>${m[1]}</li>`)):f?((!i||o!=="ol")&&(i&&a.push(o==="ul"?"</ul>":"</ol>"),a.push('<ol class="jade-md-list">'),i=!0,o="ol"),a.push(`<li>${f[1]}</li>`)):(i&&(a.push(o==="ol"?"</ol>":"</ul>"),i=!1,o=null),c.trim()===""?a.push("<br>"):a.push(c))}return i&&a.push(o==="ol"?"</ol>":"</ul>"),a.join(`
 `)}renderInputArea(){return`
       <div class="jade-chat-input-area">
         <div class="jade-chat-input-wrapper">
@@ -1680,7 +1761,7 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
         </div>
         <div class="jade-char-count" aria-live="polite" aria-atomic="true"></div>
       </div>
-    `}attachEventListeners(){this.shadowRoot.addEventListener("click",n=>{const a=n.target.closest("[data-action]"),i=a==null?void 0:a.getAttribute("data-action");if(i==="toggle-chat")this.toggleChat();else if(i==="open-chat")this.openChat();else if(i==="close-chat")this.closeChat();else if(i==="minimize-chat")this.minimizeChat();else if(i==="close-greeting")n.stopPropagation(),this.closeGreeting();else if(i==="send")this.handleSend();else if(i==="quick-reply"){const o=a==null?void 0:a.getAttribute("data-reply");o&&this.handleQuickReply(o)}else if(i==="toggle-menu")n.stopPropagation(),this.isMenuOpen=!this.isMenuOpen,this.render(),this.isMenuOpen&&setTimeout(()=>{const o=this.shadowRoot.querySelector('.jade-menu-panel [role="menuitem"]');o==null||o.focus()},50);else if(i==="export-chat")this.isMenuOpen=!1,this.exportChat();else if(i==="toggle-sound")n.stopPropagation(),this.soundEnabled=!this.soundEnabled,d.saveSoundEnabled(this.soundEnabled),this.render();else if(i==="show-clear-confirm")this.isMenuOpen=!1,this.showClearConfirm=!0,this.render(),setTimeout(()=>{const o=this.shadowRoot.querySelector(".jade-modal-btn--cancel");o==null||o.focus()},50);else if(i==="cancel-clear-chat")this.showClearConfirm=!1,this.render();else if(i==="confirm-clear-chat")this.showClearConfirm=!1,this.performClearChat();else if(i==="modal-stop"){n.stopPropagation();return}this.isMenuOpen&&i!=="toggle-menu"&&!(a!=null&&a.closest(".jade-menu-panel"))&&(this.isMenuOpen=!1,this.render())}),this.shadowRoot.addEventListener("keydown",n=>{const s=n,a=n.target;a.hasAttribute("data-input")&&s.key==="Enter"&&!s.shiftKey&&(n.preventDefault(),this.handleSend()),a.classList.contains("jade-menu-btn")&&(s.key==="Enter"||s.key===" ")&&(n.preventDefault(),this.isMenuOpen=!this.isMenuOpen,this.render(),this.isMenuOpen&&setTimeout(()=>{const i=this.shadowRoot.querySelector('.jade-menu-panel [role="menuitem"]');i==null||i.focus()},50))}),this.shadowRoot.addEventListener("input",n=>{const s=n.target;if(s.hasAttribute("data-input")){const a=s;a.style.height="auto",a.style.height=Math.min(a.scrollHeight,100)+"px";const i=this.shadowRoot.querySelector(".jade-char-count");if(i){const o=a.value.length;o>1e3*.8?(i.textContent=`${o}/1000`,i.classList.add("jade-char-count-visible")):(i.textContent="",i.classList.remove("jade-char-count-visible"))}}else if(s.getAttribute("data-action")==="volume-change"){const i=parseInt(s.value,10)/100;this.soundVolume=i,d.saveSoundVolume(i);const o=this.shadowRoot.querySelector(".jade-volume-value");o&&(o.textContent=`${Math.round(i*100)}%`)}}),document.addEventListener("keydown",this.escapeKeyHandler);const e=this.shadowRoot.querySelector(".jade-avatar-img");e&&(e.addEventListener("error",()=>{this.config.debug&&console.error("[JadeWidget] Failed to load avatar image:",this.config.avatarUrl),e.setAttribute("style","display:none;");const n=this.shadowRoot.querySelector(".jade-avatar-fallback");n&&n.setAttribute("style","display:flex;")}),e.addEventListener("load",()=>{this.config.debug&&console.log("[JadeWidget] Avatar image loaded successfully:",this.config.avatarUrl)}));const t=this.shadowRoot.querySelector(".jade-header-avatar-img");t&&(t.addEventListener("error",()=>{this.config.debug&&console.error("[JadeWidget] Failed to load header avatar image:",this.config.avatarUrl);const n=t.parentElement;n&&(n.innerHTML="💬")}),t.addEventListener("load",()=>{this.config.debug&&console.log("[JadeWidget] Header avatar image loaded successfully:",this.config.avatarUrl)}))}toggleChat(){this.state.isOpen?this.closeChat():this.openChat()}openChat(){this.state.isOpen=!0,this.state.showGreeting=!1,this.greetingTimeout&&clearTimeout(this.greetingTimeout),d.setGreetingDismissed(),d.saveState({isOpen:!0,showGreeting:!1}),this.render(),this.scrollToBottom(),this.focusInput()}closeChat(){this.state.isOpen=!1,d.saveState({isOpen:!1}),this.render()}minimizeChat(){this.state.isMinimized=!0,this.state.isOpen=!1,d.saveState({isOpen:!1,isMinimized:!0}),this.render()}closeGreeting(){this.state.showGreeting=!1,d.setGreetingDismissed(),this.render()}async handleSend(){const e=this.shadowRoot.querySelector("[data-input]");if(!e)return;const t=e.value.trim();if(!t)return;const n={id:"user-"+Date.now(),role:"user",content:t,timestamp:Date.now()};this.state.messages.push(n),d.saveMessages(this.state.messages),e.value="",e.style.height="auto",this.render(),this.scrollToBottom(),this.showTypingIndicator();try{const s=await this.apiClient.sendMessage(t,this.state.conversationId);this.state.conversationId||(this.state.conversationId=s.conversationId,d.saveConversationId(s.conversationId)),this.state.messages.push(s.message),d.saveMessages(this.state.messages),this.playNotificationSound(),this.removeTypingIndicator(),this.render(),this.scrollToBottom(),this.focusInput()}catch(s){console.error("Failed to send message:",s),this.removeTypingIndicator();const a=s instanceof Error?s.message:"";let i;a.includes("429")||a.toLowerCase().includes("rate limit")?i="I'm getting a lot of requests right now — please wait a moment and try again. ⏳":a.includes("401")||a.includes("403")?i="I couldn't authenticate your request. Please refresh the page and try again.":a.includes("503")||a.includes("Failed to fetch")?i="I'm having trouble connecting right now. Please check your connection and try again.":i="I'm sorry, something went wrong. Please try again.";const o={id:"error-"+Date.now(),role:"assistant",content:i,timestamp:Date.now()};this.state.messages.push(o),d.saveMessages(this.state.messages),this.render(),this.scrollToBottom()}}handleQuickReply(e){const t=this.shadowRoot.querySelector("[data-input]");t&&(t.value=e,this.handleSend())}showTypingIndicator(){this.removeTypingIndicator();const e=this.shadowRoot.querySelector("[data-messages-container]");if(e){const t=document.createElement("div");t.className="jade-message jade-message-assistant",t.setAttribute("data-typing-indicator",""),t.innerHTML=`
+    `}attachEventListeners(){this.shadowRoot.addEventListener("click",s=>{const a=s.target.closest("[data-action]"),i=a==null?void 0:a.getAttribute("data-action");if(i==="toggle-chat")this.toggleChat();else if(i==="open-chat")this.openChat();else if(i==="close-chat")this.closeChat();else if(i==="minimize-chat")this.minimizeChat();else if(i==="close-greeting")s.stopPropagation(),this.closeGreeting();else if(i==="send")this.handleSend();else if(i==="quick-reply"){const o=a==null?void 0:a.getAttribute("data-reply");o&&this.handleQuickReply(o)}else if(i==="toggle-menu")s.stopPropagation(),this.isMenuOpen=!this.isMenuOpen,this.render(),this.isMenuOpen&&setTimeout(()=>{const o=this.shadowRoot.querySelector('.jade-menu-panel [role="menuitem"]');o==null||o.focus()},50);else if(i==="export-chat")this.isMenuOpen=!1,this.render(),this.exportChat();else if(i==="toggle-sound")s.stopPropagation(),this.soundEnabled=!this.soundEnabled,d.saveSoundEnabled(this.soundEnabled),this.render();else if(i==="show-clear-confirm")this.isMenuOpen=!1,this.showClearConfirm=!0,this.render(),setTimeout(()=>{const o=this.shadowRoot.querySelector(".jade-modal-btn--cancel");o==null||o.focus()},50);else if(i==="cancel-clear-chat")this.showClearConfirm=!1,this.render();else if(i==="confirm-clear-chat")this.showClearConfirm=!1,this.performClearChat();else if(i==="modal-stop"){s.stopPropagation();return}this.isMenuOpen&&i!=="toggle-menu"&&!(a!=null&&a.closest(".jade-menu-panel"))&&(this.isMenuOpen=!1,this.render())}),this.shadowRoot.addEventListener("keydown",s=>{const n=s,a=s.target;a.hasAttribute("data-input")&&n.key==="Enter"&&!n.shiftKey&&(s.preventDefault(),this.handleSend()),a.classList.contains("jade-menu-btn")&&(n.key==="Enter"||n.key===" ")&&(s.preventDefault(),this.isMenuOpen=!this.isMenuOpen,this.render(),this.isMenuOpen&&setTimeout(()=>{const i=this.shadowRoot.querySelector('.jade-menu-panel [role="menuitem"]');i==null||i.focus()},50))}),this.shadowRoot.addEventListener("input",s=>{const n=s.target;if(n.hasAttribute("data-input")){const a=n;a.style.height="auto",a.style.height=Math.min(a.scrollHeight,100)+"px";const i=this.shadowRoot.querySelector(".jade-char-count");if(i){const o=a.value.length;o>1e3*.8?(i.textContent=`${o}/1000`,i.classList.add("jade-char-count-visible")):(i.textContent="",i.classList.remove("jade-char-count-visible"))}}else if(n.getAttribute("data-action")==="volume-change"){const i=parseInt(n.value,10)/100;this.soundVolume=i,d.saveSoundVolume(i);const o=this.shadowRoot.querySelector(".jade-volume-value");o&&(o.textContent=`${Math.round(i*100)}%`)}}),document.addEventListener("keydown",this.escapeKeyHandler);const e=this.shadowRoot.querySelector(".jade-avatar-img");e&&(e.addEventListener("error",()=>{this.config.debug&&console.error("[JadeWidget] Failed to load avatar image:",this.config.avatarUrl),e.setAttribute("style","display:none;");const s=this.shadowRoot.querySelector(".jade-avatar-fallback");s&&s.setAttribute("style","display:flex;")}),e.addEventListener("load",()=>{this.config.debug&&console.log("[JadeWidget] Avatar image loaded successfully:",this.config.avatarUrl)}));const t=this.shadowRoot.querySelector(".jade-header-avatar-img");t&&(t.addEventListener("error",()=>{this.config.debug&&console.error("[JadeWidget] Failed to load header avatar image:",this.config.avatarUrl);const s=t.parentElement;s&&(s.innerHTML="💬")}),t.addEventListener("load",()=>{this.config.debug&&console.log("[JadeWidget] Header avatar image loaded successfully:",this.config.avatarUrl)}))}toggleChat(){this.state.isOpen?this.closeChat():this.openChat()}openChat(){this.state.isOpen=!0,this.state.showGreeting=!1,this.greetingTimeout&&clearTimeout(this.greetingTimeout),d.setGreetingDismissed(),d.saveState({isOpen:!0,showGreeting:!1}),this.render(),this.scrollToBottom(),this.focusInput()}closeChat(){this.state.isOpen=!1,this.isMenuOpen=!1,this.showClearConfirm=!1,d.saveState({isOpen:!1}),this.render()}minimizeChat(){this.state.isMinimized=!0,this.state.isOpen=!1,this.isMenuOpen=!1,this.showClearConfirm=!1,d.saveState({isOpen:!1,isMinimized:!0}),this.render()}closeGreeting(){this.state.showGreeting=!1,d.setGreetingDismissed(),this.render()}async handleSend(){const e=this.shadowRoot.querySelector("[data-input]");if(!e)return;const t=e.value.trim();if(!t)return;const s={id:"user-"+Date.now(),role:"user",content:t,timestamp:Date.now()};this.state.messages.push(s),d.saveMessages(this.state.messages),e.value="",e.style.height="auto",this.render(),this.scrollToBottom(),this.showTypingIndicator();try{const n=await this.apiClient.sendMessage(t,this.state.conversationId);this.state.conversationId||(this.state.conversationId=n.conversationId,d.saveConversationId(n.conversationId)),this.state.messages.push(n.message),d.saveMessages(this.state.messages),this.playNotificationSound(),this.removeTypingIndicator(),this.render(),this.scrollToBottom(),this.focusInput()}catch(n){console.error("Failed to send message:",n),this.removeTypingIndicator();const a=n instanceof Error?n.message:"";let i;a.includes("429")||a.toLowerCase().includes("rate limit")?i="I'm getting a lot of requests right now — please wait a moment and try again. ⏳":a.includes("401")||a.includes("403")?i="I couldn't authenticate your request. Please refresh the page and try again.":a.includes("503")||a.includes("Failed to fetch")?i="I'm having trouble connecting right now. Please check your connection and try again.":i="I'm sorry, something went wrong. Please try again.";const o={id:"error-"+Date.now(),role:"assistant",content:i,timestamp:Date.now()};this.state.messages.push(o),d.saveMessages(this.state.messages),this.render(),this.scrollToBottom()}}handleQuickReply(e){const t=this.shadowRoot.querySelector("[data-input]");t&&(t.value=e,this.handleSend())}showTypingIndicator(){this.removeTypingIndicator();const e=this.shadowRoot.querySelector("[data-messages-container]");if(e){const t=document.createElement("div");t.className="jade-message jade-message-assistant",t.setAttribute("data-typing-indicator",""),t.innerHTML=`
         <div class="jade-message-avatar assistant">💬</div>
         <div class="jade-message-content">
           <div class="jade-message-bubble">
@@ -1691,4 +1772,4 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
             </div>
           </div>
         </div>
-      `,e.appendChild(t),this.scrollToBottom()}}removeTypingIndicator(){const e=this.shadowRoot.querySelector("[data-typing-indicator]");e&&e.remove()}playNotificationSound(){if(this.soundEnabled)try{this.audioCtx||(this.audioCtx=new(window.AudioContext||window.webkitAudioContext));const e=this.audioCtx,t=e.createGain();t.gain.setValueAtTime(0,e.currentTime),t.gain.linearRampToValueAtTime(this.soundVolume*.3,e.currentTime+.02),t.gain.exponentialRampToValueAtTime(1e-4,e.currentTime+.5),t.connect(e.destination),[880,1108].forEach((s,a)=>{const i=e.createOscillator();i.type="sine",i.frequency.setValueAtTime(s,e.currentTime+a*.12),i.connect(t),i.start(e.currentTime+a*.12),i.stop(e.currentTime+a*.12+.35)})}catch{}}exportChat(){const e={exportedAt:new Date().toISOString(),messages:this.state.messages.map(i=>({role:i.role,content:i.content,timestamp:new Date(i.timestamp).toISOString()}))},t=JSON.stringify(e,null,2),n=new Blob([t],{type:"application/json"}),s=URL.createObjectURL(n),a=document.createElement("a");a.href=s,a.download=`jade-chat-${new Date().toISOString().slice(0,10)}.json`,document.body.appendChild(a),a.click(),document.body.removeChild(a),setTimeout(()=>URL.revokeObjectURL(s),500)}performClearChat(){d.clearAll(),this.isMenuOpen=!1,this.showClearConfirm=!1,this.state={isOpen:!1,isMinimized:!1,showGreeting:!1,messages:this.getInitialMessages()},this.render()}scrollToBottom(){setTimeout(()=>{const e=this.shadowRoot.querySelector("[data-messages-container]");e&&(e.scrollTop=e.scrollHeight)},100)}focusInput(){setTimeout(()=>{const e=this.shadowRoot.querySelector("[data-input]");e&&e.focus()},100)}escapeHtml(e){const t=document.createElement("div");return t.textContent=e,t.innerHTML}shouldShowGreeting(){const e=d.loadMessages(),t=e.length===0||e.length===1;return!this.state.isOpen&&t&&!d.isGreetingDismissed()}mount(e){(e||document.body).appendChild(this.container),this.shouldShowGreeting()&&(this.greetingTimeout=window.setTimeout(()=>{this.state.showGreeting=!0,this.render()},1e3))}unmount(){this.container.remove(),this.greetingTimeout&&clearTimeout(this.greetingTimeout),document.removeEventListener("keydown",this.escapeKeyHandler)}open(){this.openChat()}close(){this.closeChat()}toggle(){this.toggleChat()}reset(){d.clearAll(),this.state={isOpen:!1,isMinimized:!1,showGreeting:!1,messages:this.getInitialMessages()},this.render()}}function x(r){var t;(t=window.JadeWidget)!=null&&t.instance&&window.JadeWidget.instance.unmount();const e=(r==null?void 0:r.showDelayMs)??p.showDelayMs;setTimeout(()=>{const n=new v(r);n.mount(),window.JadeWidget&&(window.JadeWidget.instance=n)},e)}const g={init:x};typeof window<"u"&&(window.JadeWidget=g),h.default=g,Object.defineProperties(h,{__esModule:{value:!0},[Symbol.toStringTag]:{value:"Module"}})})(this.JadeWidget=this.JadeWidget||{});
+      `,e.appendChild(t),this.scrollToBottom()}}removeTypingIndicator(){const e=this.shadowRoot.querySelector("[data-typing-indicator]");e&&e.remove()}playNotificationSound(){if(this.soundEnabled)try{this.audioCtx||(this.audioCtx=new(window.AudioContext||window.webkitAudioContext));const e=this.audioCtx,t=e.createGain();t.gain.setValueAtTime(0,e.currentTime),t.gain.linearRampToValueAtTime(this.soundVolume*.3,e.currentTime+.02),t.gain.exponentialRampToValueAtTime(1e-4,e.currentTime+.5),t.connect(e.destination),[880,1108].forEach((n,a)=>{const i=e.createOscillator();i.type="sine",i.frequency.setValueAtTime(n,e.currentTime+a*.12),i.connect(t),i.start(e.currentTime+a*.12),i.stop(e.currentTime+a*.12+.35)})}catch{}}exportChat(){const e={exportedAt:new Date().toISOString(),messages:this.state.messages.map(i=>({role:i.role,content:i.content,timestamp:new Date(i.timestamp).toISOString()}))},t=JSON.stringify(e,null,2),s=new Blob([t],{type:"application/json"}),n=URL.createObjectURL(s),a=document.createElement("a");a.href=n,a.download=`jade-chat-${new Date().toISOString().slice(0,10)}.json`,document.body.appendChild(a),a.click(),document.body.removeChild(a),setTimeout(()=>URL.revokeObjectURL(n),500),this.exportToastTimeout&&clearTimeout(this.exportToastTimeout),this.showExportToast=!0,this.render(),this.exportToastTimeout=window.setTimeout(()=>{this.showExportToast=!1,this.state.isOpen&&this.render()},3e3)}performClearChat(){d.clearAll(),this.isMenuOpen=!1,this.showClearConfirm=!1,this.state={isOpen:!1,isMinimized:!1,showGreeting:!1,messages:this.getInitialMessages()},this.render()}scrollToBottom(){setTimeout(()=>{const e=this.shadowRoot.querySelector("[data-messages-container]");e&&(e.scrollTop=e.scrollHeight)},100)}focusInput(){setTimeout(()=>{const e=this.shadowRoot.querySelector("[data-input]");e&&e.focus()},100)}escapeHtml(e){const t=document.createElement("div");return t.textContent=e,t.innerHTML}shouldShowGreeting(){const e=d.loadMessages(),t=e.length===0||e.length===1;return!this.state.isOpen&&t&&!d.isGreetingDismissed()}mount(e){(e||document.body).appendChild(this.container),this.shouldShowGreeting()&&(this.greetingTimeout=window.setTimeout(()=>{this.state.showGreeting=!0,this.render()},1e3))}unmount(){this.container.remove(),this.greetingTimeout&&clearTimeout(this.greetingTimeout),this.exportToastTimeout&&clearTimeout(this.exportToastTimeout),document.removeEventListener("keydown",this.escapeKeyHandler)}open(){this.openChat()}close(){this.closeChat()}toggle(){this.toggleChat()}reset(){d.clearAll(),this.state={isOpen:!1,isMinimized:!1,showGreeting:!1,messages:this.getInitialMessages()},this.render()}}function x(r){var t;(t=window.JadeWidget)!=null&&t.instance&&window.JadeWidget.instance.unmount();const e=(r==null?void 0:r.showDelayMs)??p.showDelayMs;setTimeout(()=>{const s=new v(r);s.mount(),window.JadeWidget&&(window.JadeWidget.instance=s)},e)}const g={init:x};typeof window<"u"&&(window.JadeWidget=g),h.default=g,Object.defineProperties(h,{__esModule:{value:!0},[Symbol.toStringTag]:{value:"Module"}})})(this.JadeWidget=this.JadeWidget||{});

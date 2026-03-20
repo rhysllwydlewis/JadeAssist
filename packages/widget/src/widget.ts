@@ -17,9 +17,11 @@ export class JadeWidget {
   private escapeKeyHandler: (e: KeyboardEvent) => void;
   private isMenuOpen: boolean = false;
   private showClearConfirm: boolean = false;
+  private showExportToast: boolean = false;
   private soundEnabled: boolean;
   private soundVolume: number;
   private audioCtx?: AudioContext;
+  private exportToastTimeout?: number;
 
   constructor(config: WidgetConfig = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -144,11 +146,14 @@ export class JadeWidget {
         ${this.renderHeader()}
         ${this.renderMessages()}
         ${this.renderInputArea()}
+        ${this.showClearConfirm ? this.renderClearConfirmModal() : ''}
+        ${this.showExportToast ? this.renderExportToast() : ''}
       </div>
     `;
   }
 
   private renderHeader(): string {
+    const menuBtnClass = `jade-menu-btn${this.isMenuOpen ? ' jade-menu-btn--open' : ''}`;
     return `
       <div class="jade-chat-header">
         <div class="jade-chat-header-left">
@@ -161,7 +166,7 @@ export class JadeWidget {
           </div>
         </div>
         <div class="jade-chat-controls">
-          <button class="jade-menu-btn" aria-label="Open menu" aria-haspopup="true" aria-expanded="${this.isMenuOpen}" data-action="toggle-menu" title="Menu">
+          <button class="${menuBtnClass}" aria-label="${this.isMenuOpen ? 'Close menu' : 'Open menu'}" aria-haspopup="true" aria-expanded="${this.isMenuOpen}" data-action="toggle-menu" title="Menu">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <circle cx="8" cy="3" r="1.5" fill="currentColor"/>
               <circle cx="8" cy="8" r="1.5" fill="currentColor"/>
@@ -173,7 +178,6 @@ export class JadeWidget {
         </div>
       </div>
       ${this.isMenuOpen ? this.renderMenu() : ''}
-      ${this.showClearConfirm ? this.renderClearConfirmModal() : ''}
     `;
   }
 
@@ -243,6 +247,17 @@ export class JadeWidget {
             <button class="jade-modal-btn jade-modal-btn--confirm" data-action="confirm-clear-chat">Clear chat</button>
           </div>
         </div>
+      </div>
+    `;
+  }
+
+  private renderExportToast(): string {
+    return `
+      <div class="jade-toast" role="status" aria-live="polite">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M2 7.5l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Chat exported successfully
       </div>
     `;
   }
@@ -432,6 +447,7 @@ export class JadeWidget {
         }
       } else if (action === 'export-chat') {
         this.isMenuOpen = false;
+        this.render();
         this.exportChat();
       } else if (action === 'toggle-sound') {
         e.stopPropagation();
@@ -589,6 +605,8 @@ export class JadeWidget {
 
   private closeChat(): void {
     this.state.isOpen = false;
+    this.isMenuOpen = false;
+    this.showClearConfirm = false;
     StorageManager.saveState({ isOpen: false });
     this.render();
   }
@@ -596,6 +614,8 @@ export class JadeWidget {
   private minimizeChat(): void {
     this.state.isMinimized = true;
     this.state.isOpen = false;
+    this.isMenuOpen = false;
+    this.showClearConfirm = false;
     StorageManager.saveState({ isOpen: false, isMinimized: true });
     this.render();
   }
@@ -783,6 +803,15 @@ export class JadeWidget {
     anchor.click();
     document.body.removeChild(anchor);
     setTimeout(() => URL.revokeObjectURL(url), 500);
+
+    // Show success toast
+    if (this.exportToastTimeout) clearTimeout(this.exportToastTimeout);
+    this.showExportToast = true;
+    this.render();
+    this.exportToastTimeout = window.setTimeout(() => {
+      this.showExportToast = false;
+      if (this.state.isOpen) this.render();
+    }, 3000);
   }
 
   private performClearChat(): void {
@@ -845,6 +874,9 @@ export class JadeWidget {
     this.container.remove();
     if (this.greetingTimeout) {
       clearTimeout(this.greetingTimeout);
+    }
+    if (this.exportToastTimeout) {
+      clearTimeout(this.exportToastTimeout);
     }
     // Clean up event listener to prevent memory leaks
     document.removeEventListener('keydown', this.escapeKeyHandler);
