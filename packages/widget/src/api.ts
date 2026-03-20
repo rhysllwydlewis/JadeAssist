@@ -140,23 +140,23 @@ export class ApiClient {
       this.demoState.eventType = 'party';
     }
 
-    // Budget — most specific first
-    if (/under\s*[£$]?5/.test(lower) || /under\s*5k/i.test(lower)) {
+    // Budget — most specific first, with word boundaries to prevent partial matches
+    if (/under\s*[£$]?5k\b/i.test(lower) || /under\s*£?5,000\b/.test(lower)) {
       this.demoState.budget = 'under £5,000';
-    } else if (/[£$]?50k|\b50,000/.test(lower)) {
+    } else if (/\b[£$]?50k\b|\b50,000\b/.test(lower)) {
       this.demoState.budget = '£50,000+';
-    } else if (/[£$]?20k|\b20,000/.test(lower)) {
+    } else if (/\b[£$]?20k\b|\b20,000\b/.test(lower)) {
       this.demoState.budget = '£20,000–£50,000';
-    } else if (/[£$]?10k|\b10,000/.test(lower)) {
+    } else if (/\b[£$]?10k\b|\b10,000\b/.test(lower)) {
       this.demoState.budget = '£10,000–£20,000';
-    } else if (/[£$]?5k|\b5,000/.test(lower)) {
+    } else if (/\b[£$]?5k\b|\b5,000\b/.test(lower)) {
       this.demoState.budget = '£5,000–£10,000';
     }
 
-    // Guest count
-    const guestMatch = /\b(\d+)\s*(guests?|people|attendees?|pax)\b/.exec(lower);
+    // Guest count — support comma-formatted numbers (e.g. "1,000 guests")
+    const guestMatch = /\b(\d{1,3}(?:,\d{3})*|\d+)\s*(guests?|people|attendees?|pax)\b/.exec(lower);
     if (guestMatch) {
-      this.demoState.guestCount = guestMatch[1];
+      this.demoState.guestCount = guestMatch[1].replace(/,/g, '');
     } else if (lower.includes('under 30') || lower.includes('intimate')) {
       this.demoState.guestCount = '20–30';
     } else if (lower.includes('150+') || lower.includes('large')) {

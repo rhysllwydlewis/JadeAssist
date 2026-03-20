@@ -188,10 +188,16 @@ export class JadeWidget {
       ? this.escapeHtml(message.content)
       : this.renderMarkdown(message.content);
 
+    const avatarContent = isUser
+      ? '👤'
+      : this.config.avatarUrl
+        ? `<img src="${this.escapeHtml(this.config.avatarUrl)}" alt="${this.escapeHtml(this.config.assistantName)}" class="jade-msg-avatar-img" />`
+        : '💬';
+
     return `
       <div class="jade-message jade-message-${message.role}" data-message-id="${message.id}">
         <div class="jade-message-avatar ${message.role}">
-          ${isUser ? '👤' : '💬'}
+          ${avatarContent}
         </div>
         <div class="jade-message-content">
           <div class="jade-message-bubble">${contentHtml}</div>
@@ -234,7 +240,7 @@ export class JadeWidget {
       if (bulletMatch) {
         if (!inList || listType !== 'ul') {
           if (inList) outputLines.push(listType === 'ol' ? '</ol>' : '</ul>');
-        outputLines.push('<ul class="jade-md-list">');
+          outputLines.push('<ul class="jade-md-list">');
           inList = true;
           listType = 'ul';
         }

@@ -8,10 +8,16 @@ import { validateBody } from '../middleware/validation';
 import { asyncHandler } from '../middleware/errorHandler';
 import { ConversationModel } from '../models/Conversation';
 import { planningEngine } from '../services/planningEngine';
-import { ChatRequest, ChatResponse, ApiResponse } from '@jadeassist/shared';
+import { ChatRequest, ChatResponse, ApiResponse, EventType } from '@jadeassist/shared';
 import { logger } from '../utils/logger';
 
 const router = Router();
+
+/** Safely coerce a string stored in the DB to a typed EventType (or undefined). */
+function toEventType(value: string | undefined): EventType | undefined {
+  const valid: EventType[] = ['wedding', 'birthday', 'corporate', 'conference', 'party', 'anniversary', 'other'];
+  return value && valid.includes(value as EventType) ? (value as EventType) : undefined;
+}
 
 // Validation schemas
 const chatRequestSchema = z.object({
@@ -77,8 +83,7 @@ router.post(
         {
           conversationId: conversation.id,
           userId,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
-          eventType: conversation.eventType as any,
+          eventType: toEventType(conversation.eventType),
         },
         message
       );

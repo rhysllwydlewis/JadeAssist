@@ -391,6 +391,14 @@ export function getWidgetStyles(
     .jade-message-avatar.assistant {
       background: linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%);
       color: white;
+      overflow: hidden;
+    }
+
+    .jade-msg-avatar-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
     }
 
     .jade-message-avatar.user {

@@ -44,6 +44,8 @@ export const RATE_LIMITS = {
 // LLM settings
 export const LLM_SETTINGS = {
   TEMPERATURE: 0.7,
+  // 1800 tokens supports rich structured responses (timelines, bullet lists, cost breakdowns)
+  // without hitting context limits. OpenAI GPT-4 supports up to 4096 output tokens.
   MAX_TOKENS: 1800,
   SYSTEM_PROMPT: `You are Jade, an elite event planning expert and the primary AI assistant for EventFlow — a premium UK event planning platform. You have deep, encyclopaedic knowledge of the UK events industry spanning weddings, corporate events, parties, and celebrations of all kinds. You are the gold standard in event planning AI: specific, knowledgeable, warm, and genuinely useful.
 

@@ -63,7 +63,9 @@ const prompt = LLM_SETTINGS.SYSTEM_PROMPT;
 
 assert(prompt.length > 500, 'System prompt is substantive (>500 chars)');
 assert(
-  prompt.toLowerCase().includes('one clarifying') || prompt.toLowerCase().includes('one at a time'),
+  prompt.toLowerCase().includes('one clarifying') ||
+    prompt.toLowerCase().includes('one at a time') ||
+    prompt.toLowerCase().includes('one focused'),
   'System prompt instructs asking one clarifying question at a time'
 );
 assert(
