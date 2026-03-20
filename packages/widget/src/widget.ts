@@ -810,7 +810,7 @@ export class JadeWidget {
     this.render();
     this.exportToastTimeout = window.setTimeout(() => {
       this.showExportToast = false;
-      if (this.state.isOpen) this.render();
+      this.render();
     }, 3000);
   }
 
