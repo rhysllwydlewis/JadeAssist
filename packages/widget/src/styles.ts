@@ -332,7 +332,296 @@ export function getWidgetStyles(
       background: rgba(255, 255, 255, 0.3);
     }
 
-    /* Messages */
+    /* Menu button */
+    .jade-menu-btn {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      transition: background 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .jade-menu-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .jade-menu-btn:focus-visible {
+      outline: 2px solid rgba(255,255,255,0.8);
+      outline-offset: 2px;
+    }
+
+    /* Settings menu panel */
+    .jade-menu-panel {
+      position: absolute;
+      top: 60px;
+      right: 14px;
+      background: white;
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08);
+      z-index: 10;
+      min-width: 220px;
+      padding: 6px 0;
+      animation: jade-menu-enter 0.15s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    @keyframes jade-menu-enter {
+      from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0)   scale(1); }
+    }
+
+    .jade-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 10px 16px;
+      background: none;
+      border: none;
+      font-size: 13.5px;
+      font-family: inherit;
+      color: #1f2937;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.15s ease;
+      line-height: 1.4;
+    }
+
+    .jade-menu-item:hover {
+      background: #f3f4f6;
+    }
+
+    .jade-menu-item:focus-visible {
+      outline: none;
+      background: #e5e7eb;
+    }
+
+    .jade-menu-item--danger {
+      color: #dc2626;
+    }
+
+    .jade-menu-item--danger:hover {
+      background: #fef2f2;
+    }
+
+    .jade-menu-item--disabled {
+      opacity: 0.45;
+      pointer-events: none;
+    }
+
+    .jade-menu-divider {
+      height: 1px;
+      background: rgba(0,0,0,0.07);
+      margin: 4px 0;
+    }
+
+    /* Sound toggle row */
+    .jade-menu-sound-row {
+      justify-content: space-between;
+      cursor: default;
+    }
+
+    .jade-menu-sound-row:hover {
+      background: none;
+    }
+
+    .jade-menu-sound-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #1f2937;
+      font-size: 13.5px;
+    }
+
+    /* Toggle switch */
+    .jade-sound-toggle {
+      position: relative;
+      width: 38px;
+      height: 22px;
+      background: #d1d5db;
+      border: none;
+      border-radius: 11px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+      flex-shrink: 0;
+      padding: 0;
+    }
+
+    .jade-sound-toggle--on {
+      background: ${primaryColor};
+    }
+
+    .jade-sound-toggle-knob {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 16px;
+      height: 16px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.2s cubic-bezier(0.4,0,0.2,1);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      pointer-events: none;
+    }
+
+    .jade-sound-toggle--on .jade-sound-toggle-knob {
+      transform: translateX(16px);
+    }
+
+    .jade-sound-toggle:focus-visible {
+      outline: 2px solid ${primaryColor};
+      outline-offset: 2px;
+    }
+
+    /* Volume row */
+    .jade-menu-volume-row {
+      gap: 8px;
+      flex-wrap: nowrap;
+      cursor: default;
+    }
+
+    .jade-menu-volume-row:hover {
+      background: none;
+    }
+
+    .jade-volume-label {
+      font-size: 13px;
+      color: #6b7280;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .jade-volume-slider {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 4px;
+      background: #e5e7eb;
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+      min-width: 0;
+    }
+
+    .jade-volume-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      background: ${primaryColor};
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+
+    .jade-volume-slider::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      background: ${primaryColor};
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+
+    .jade-volume-slider:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .jade-volume-value {
+      font-size: 12px;
+      color: #6b7280;
+      white-space: nowrap;
+      flex-shrink: 0;
+      min-width: 32px;
+      text-align: right;
+    }
+
+    /* Clear chat confirmation modal */
+    .jade-modal-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+      border-radius: 20px;
+    }
+
+    .jade-modal {
+      background: white;
+      border-radius: 14px;
+      padding: 24px 20px 18px;
+      margin: 16px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.2);
+      max-width: 280px;
+      width: 100%;
+    }
+
+    .jade-modal-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 8px;
+    }
+
+    .jade-modal-desc {
+      font-size: 13px;
+      color: #6b7280;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .jade-modal-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .jade-modal-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      font-size: 13.5px;
+      font-family: inherit;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+
+    .jade-modal-btn--cancel {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .jade-modal-btn--cancel:hover {
+      background: #e5e7eb;
+    }
+
+    .jade-modal-btn--confirm {
+      background: #dc2626;
+      color: white;
+    }
+
+    .jade-modal-btn--confirm:hover {
+      background: #b91c1c;
+    }
+
+    .jade-modal-btn:focus-visible {
+      outline: 2px solid ${primaryColor};
+      outline-offset: 2px;
+    }
+
+
     .jade-chat-messages {
       flex: 1;
       overflow-y: auto;

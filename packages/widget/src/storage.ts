@@ -87,4 +87,43 @@ export class StorageManager {
       console.warn('Failed to save greeting dismissed state:', error);
     }
   }
+
+  static loadSoundEnabled(): boolean {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.SOUND_ENABLED);
+      // Default is false (conservative default)
+      return stored === null ? false : stored === 'true';
+    } catch (error) {
+      console.warn('Failed to load sound enabled state:', error);
+      return false;
+    }
+  }
+
+  static saveSoundEnabled(enabled: boolean): void {
+    try {
+      localStorage.setItem(STORAGE_KEYS.SOUND_ENABLED, String(enabled));
+    } catch (error) {
+      console.warn('Failed to save sound enabled state:', error);
+    }
+  }
+
+  static loadSoundVolume(): number {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.SOUND_VOLUME);
+      if (stored === null) return 0.5;
+      const val = parseFloat(stored);
+      return isNaN(val) ? 0.5 : Math.min(1, Math.max(0, val));
+    } catch (error) {
+      console.warn('Failed to load sound volume:', error);
+      return 0.5;
+    }
+  }
+
+  static saveSoundVolume(volume: number): void {
+    try {
+      localStorage.setItem(STORAGE_KEYS.SOUND_VOLUME, String(volume));
+    } catch (error) {
+      console.warn('Failed to save sound volume:', error);
+    }
+  }
 }

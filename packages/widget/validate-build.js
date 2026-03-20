@@ -109,7 +109,42 @@ try {
   }
   
   console.log('✅ window.JadeWidget.init is a function');
-  
+
+  // Feature presence checks: verify required strings exist in the minified bundle.
+  // These patterns are taken from class/method names and CSS class names that
+  // are unlikely to appear unless the feature was actually compiled in.
+  const featureChecks = [
+    {
+      name: 'Sound settings storage methods',
+      patterns: ['loadSoundEnabled', 'saveSoundEnabled', 'loadSoundVolume', 'saveSoundVolume'],
+    },
+    {
+      name: 'Settings menu UI',
+      patterns: ['jade-menu-panel', 'jade-menu-btn'],
+    },
+    {
+      name: 'Export chat functionality',
+      patterns: ['exportChat', 'application/json'],
+    },
+    {
+      name: 'Clear chat confirmation UI',
+      patterns: ['jade-modal', 'confirm-clear-chat'],
+    },
+    {
+      name: 'Sound notification (WebAudio)',
+      patterns: ['playNotificationSound', 'AudioContext'],
+    },
+  ];
+
+  for (const check of featureChecks) {
+    const missing = check.patterns.filter((p) => !code.includes(p));
+    if (missing.length > 0) {
+      console.error(`❌ ${check.name} not found in bundle (missing: ${missing.join(', ')})`);
+      process.exit(1);
+    }
+    console.log(`✅ ${check.name} present`);
+  }
+
 } catch (error) {
   console.error('❌ JavaScript validation failed:');
   console.error('  ', error.message);

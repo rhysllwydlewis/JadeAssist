@@ -411,7 +411,60 @@ Set up monitoring for:
 - ✅ CSP headers allow widget script
 - ✅ API authentication implemented (if required)
 
-## 🐛 Troubleshooting
+## ⚙️ Step 10: Widget Settings Menu
+
+The widget includes a built-in settings menu accessible via the **⋮ (kebab) button** in the chat header. It is only visible when the chat window is open.
+
+### 10.1 Menu Features
+
+| Feature | Description |
+|---------|-------------|
+| **Export chat** | Downloads the current conversation as a JSON file (`jade-chat-YYYY-MM-DD.json`). Includes role, content, and timestamp for every message. |
+| **Sounds toggle** | Enable or disable the subtle chime played when the assistant replies. Persisted in `localStorage`. |
+| **Volume slider** | Adjust notification volume (0–100%). Persisted in `localStorage`. Takes effect immediately. |
+| **Clear chat** | Opens a confirmation dialog. On confirm: clears all messages, conversation ID, and widget state from `localStorage`, then closes the chat and resets to the initial greeting. |
+
+### 10.2 Keyboard Accessibility
+
+- The **⋮ menu button** is fully keyboard-focusable. Press **Enter** or **Space** to open/close.
+- Press **Escape** to close the menu (or the confirmation dialog) without making changes.
+- When the menu opens, focus moves to the first menu item automatically.
+- When the clear-chat confirmation opens, focus moves to the **Cancel** button.
+
+### 10.3 Sound Settings Persistence
+
+Sound settings are stored under these `localStorage` keys:
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `jade-widget-sound-enabled` | `"true"` / `"false"` | `"false"` | Whether notification sounds are on |
+| `jade-widget-sound-volume` | number string `0`–`1` | `"0.5"` | Notification volume |
+
+Sounds are generated entirely via the Web Audio API — **no external requests are made**.
+
+### 10.4 Export Format
+
+The exported JSON file has the following structure:
+
+```json
+{
+  "exportedAt": "2025-01-15T12:34:56.789Z",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "Hi! 👋 I'm Jade, your event planning assistant...",
+      "timestamp": "2025-01-15T12:00:00.000Z"
+    },
+    {
+      "role": "user",
+      "content": "I need help planning a wedding",
+      "timestamp": "2025-01-15T12:01:00.000Z"
+    }
+  ]
+}
+```
+
+
 
 ### Widget doesn't appear
 

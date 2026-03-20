@@ -72,4 +72,6 @@ export const STORAGE_KEYS = {
   MESSAGES: 'jade-widget-messages',
   CONVERSATION_ID: 'jade-widget-conversation-id',
   GREETING_DISMISSED: 'jade-widget-greeting-dismissed',
+  SOUND_ENABLED: 'jade-widget-sound-enabled',
+  SOUND_VOLUME: 'jade-widget-sound-volume',
 } as const;
