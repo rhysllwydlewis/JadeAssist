@@ -43,6 +43,10 @@ const envSchema = z.object({
   EVENTFLOW_API_URL: z.string().optional(),
   EVENTFLOW_API_KEY: z.string().optional(),
 
+  // EventFlow Catalog API (protected)
+  EVENTFLOW_CATALOG_BASE_URL: z.string().optional(),
+  EVENTFLOW_CATALOG_API_KEY: z.string().optional(),
+
   // CORS — comma-separated list of allowed origins, or '*' for all (default)
   CORS_ORIGIN: z.string().default('*'),
 
@@ -129,6 +133,10 @@ export const env = {
   eventflow: {
     apiUrl: parsedEnv.data.EVENTFLOW_API_URL,
     apiKey: parsedEnv.data.EVENTFLOW_API_KEY,
+    catalog: {
+      baseUrl: parsedEnv.data.EVENTFLOW_CATALOG_BASE_URL,
+      apiKey: parsedEnv.data.EVENTFLOW_CATALOG_API_KEY,
+    },
   },
 
   // CORS

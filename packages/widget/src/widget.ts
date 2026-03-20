@@ -132,6 +132,10 @@ export class JadeWidget {
   }
 
   private renderGreeting(): string {
+    // Don't render an empty tooltip — host page may supply its own teaser bubble
+    if (!this.config.greetingTooltipText) {
+      return '';
+    }
     return `
       <div class="jade-greeting-tooltip" data-action="open-chat" role="tooltip" aria-live="polite">
         <button class="jade-greeting-close" aria-label="Dismiss greeting" data-action="close-greeting">×</button>
@@ -143,11 +147,14 @@ export class JadeWidget {
   private renderChatPopup(): string {
     return `
       <div class="jade-chat-popup" role="dialog" aria-label="Chat">
-        ${this.renderHeader()}
-        ${this.renderMessages()}
-        ${this.renderInputArea()}
-        ${this.showClearConfirm ? this.renderClearConfirmModal() : ''}
-        ${this.showExportToast ? this.renderExportToast() : ''}
+        <div class="jade-chat-content">
+          ${this.renderHeader()}
+          ${this.renderMessages()}
+          ${this.renderInputArea()}
+          ${this.showClearConfirm ? this.renderClearConfirmModal() : ''}
+          ${this.showExportToast ? this.renderExportToast() : ''}
+        </div>
+        ${this.isMenuOpen ? this.renderMenu() : ''}
       </div>
     `;
   }
@@ -177,7 +184,6 @@ export class JadeWidget {
           <button class="jade-chat-close" aria-label="Close chat" data-action="close-chat" title="Close">×</button>
         </div>
       </div>
-      ${this.isMenuOpen ? this.renderMenu() : ''}
     `;
   }
 

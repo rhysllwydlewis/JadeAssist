@@ -18,6 +18,7 @@ import healthRouter from './routes/health';
 import chatRouter from './routes/chat';
 import planningRouter from './routes/planning';
 import assistRouter from './routes/assist';
+import catalogRouter from './routes/catalog';
 
 // Create Express app
 const app: Application = express();
@@ -117,6 +118,9 @@ if (env.minimalMode) {
   app.use('/api/planning', planningRouter);
   app.use('/api/v1/assist', assistRouter);
 }
+
+// Catalog routes — always mounted (returns 503 when env vars are absent)
+app.use('/api/catalog', catalogRouter);
 
 // 404 handler
 app.use(notFoundHandler);
