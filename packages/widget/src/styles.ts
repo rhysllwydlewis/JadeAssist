@@ -224,7 +224,6 @@ export function getWidgetStyles(
       ${offsetLeft ? 'left: 0;' : 'right: 0;'}
       width: 400px;
       height: 600px;
-      background: white;
       border-radius: 22px;
       box-shadow: 0 24px 64px rgba(0, 0, 0, 0.18), 0 8px 24px rgba(0, 0, 0, 0.12);
       display: flex;
@@ -233,7 +232,20 @@ export function getWidgetStyles(
       transform: translateY(20px) scale(0.95);
       animation: popupOpen 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
       border: 1px solid rgba(0, 0, 0, 0.06);
+      /* overflow: visible so the settings menu panel is never clipped */
+      overflow: visible;
+    }
+
+    /* Inner content wrapper — provides overflow clipping for rounded corners */
+    .jade-chat-content {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
       overflow: hidden;
+      border-radius: 22px;
+      background: white;
+      width: 100%;
+      height: 100%;
     }
 
     @keyframes popupOpen {
@@ -1000,6 +1012,10 @@ export function getWidgetStyles(
         height: min(600px, calc(100vh - 120px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)));
         /* Modern browsers with dvh support - prevents cut-off on mobile */
         height: min(600px, calc(100dvh - 120px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)));
+      }
+
+      .jade-chat-content {
+        border-radius: 22px;
       }
 
       .jade-greeting-tooltip {

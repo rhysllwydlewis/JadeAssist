@@ -92,8 +92,10 @@
 &lt;script src="https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/dist/jade-widget.js"&gt;&lt;/script&gt;
 &lt;script&gt;
   window.JadeWidget.init({
+    apiBaseUrl: 'https://api.event-flow.co.uk',
     assistantName: 'Jade',
-    greetingText: 'Hi! 👋 I\'m Jade, your event planning assistant.',
+    greetingText: 'Hi! 👋 I\'m Jade, your event planning assistant at EventFlow. How can I help you plan your perfect event?',
+    greetingTooltipText: '',
     primaryColor: '#0B8073',  // EventFlow teal (default)
     accentColor: '#13B6A2',   // EventFlow accent (default)
   });
@@ -107,11 +109,12 @@
   <!-- Load widget from local dist file -->
   <script src="./dist/jade-widget.js"></script>
   
-  <!-- Initialize with EventFlow colors (these are now defaults) -->
+  <!-- EventFlow integration — production-ready init -->
   <script>
     window.JadeWidget.init({
       assistantName: 'Jade',
-      greetingText: 'Hi! 👋 I\'m Jade, your event planning assistant. Can I help you plan your special day?',
+      greetingText: 'Hi! 👋 I\'m Jade, your event planning assistant at EventFlow. How can I help you plan your perfect event?',
+      greetingTooltipText: '',
     });
   </script>
 </body>
