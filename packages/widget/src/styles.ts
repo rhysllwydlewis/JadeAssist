@@ -225,14 +225,14 @@ export function getWidgetStyles(
       width: 400px;
       height: 600px;
       background: white;
-      border-radius: 20px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2), 0 8px 24px rgba(0, 0, 0, 0.15);
+      border-radius: 22px;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.18), 0 8px 24px rgba(0, 0, 0, 0.12);
       display: flex;
       flex-direction: column;
       opacity: 0;
       transform: translateY(20px) scale(0.95);
-      animation: popupOpen 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-      border: 1px solid rgba(0, 0, 0, 0.08);
+      animation: popupOpen 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      border: 1px solid rgba(0, 0, 0, 0.06);
       overflow: hidden;
     }
 
@@ -339,8 +339,8 @@ export function getWidgetStyles(
       padding: 20px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
-      background: #f9fafb;
+      gap: 14px;
+      background: #f8f9fb;
     }
 
     .jade-chat-messages::-webkit-scrollbar {
@@ -391,6 +391,14 @@ export function getWidgetStyles(
     .jade-message-avatar.assistant {
       background: linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%);
       color: white;
+      overflow: hidden;
+    }
+
+    .jade-msg-avatar-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
     }
 
     .jade-message-avatar.user {
@@ -403,28 +411,54 @@ export function getWidgetStyles(
     }
 
     .jade-message-bubble {
-      padding: 10px 14px;
-      border-radius: 16px;
+      padding: 10px 16px;
+      border-radius: 18px;
       word-wrap: break-word;
+      word-break: break-word;
+      overflow-wrap: break-word;
+      line-height: 1.55;
+      font-size: 14px;
     }
 
     .jade-message-assistant .jade-message-bubble {
       background: white;
       color: #1f2937;
       border-bottom-left-radius: 4px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
     }
 
     .jade-message-user .jade-message-bubble {
-      background: ${primaryColor};
+      background: linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%);
       color: white;
       border-bottom-right-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
 
     .jade-message-time {
       font-size: 11px;
       color: #9ca3af;
-      margin-top: 4px;
+      margin-top: 5px;
       padding: 0 4px;
+    }
+
+    /* Markdown rendering styles */
+    .jade-md-list {
+      margin: .35em 0 .35em 1.25em;
+      padding: 0;
+      line-height: 1.65;
+    }
+
+    .jade-md-list li {
+      margin-bottom: .2em;
+    }
+
+    .jade-inline-code {
+      background: rgba(0,0,0,.07);
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-size: .88em;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      letter-spacing: -.01em;
     }
 
     /* Quick Replies */
@@ -436,28 +470,36 @@ export function getWidgetStyles(
     }
 
     .jade-quick-reply-btn {
-      padding: 8px 16px;
-      border: 1px solid ${primaryColor};
+      padding: 7px 14px;
+      border: 1.5px solid ${primaryColor};
       background: white;
       color: ${primaryColor};
       border-radius: 20px;
-      font-size: 13px;
+      font-size: 12.5px;
+      font-weight: 500;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       white-space: nowrap;
+      letter-spacing: 0.01em;
     }
 
     .jade-quick-reply-btn:hover {
       background: ${primaryColor};
       color: white;
+      transform: translateY(-1px);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+    }
+
+    .jade-quick-reply-btn:active {
+      transform: translateY(0);
     }
 
     /* Input Area */
     .jade-chat-input-area {
-      padding: 16px 20px;
+      padding: 14px 18px 16px;
       background: white;
-      border-top: 1px solid #e5e7eb;
-      border-radius: 0 0 16px 16px;
+      border-top: 1px solid rgba(0,0,0,0.06);
+      border-radius: 0 0 20px 20px;
     }
 
     .jade-chat-input-wrapper {
@@ -468,20 +510,29 @@ export function getWidgetStyles(
 
     .jade-chat-input {
       flex: 1;
-      padding: 10px 14px;
-      border: 1px solid #e5e7eb;
-      border-radius: 20px;
+      padding: 10px 16px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 22px;
       font-size: 14px;
       font-family: inherit;
       outline: none;
       resize: none;
       max-height: 100px;
       min-height: 40px;
+      background: #f9fafb;
+      transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+      color: #1f2937;
+      line-height: 1.5;
     }
 
     .jade-chat-input:focus {
       border-color: ${primaryColor};
-      box-shadow: 0 0 0 3px rgba(11, 128, 115, 0.1);
+      background: white;
+      box-shadow: 0 0 0 3px rgba(0, 178, 169, 0.12);
+    }
+
+    .jade-chat-input::placeholder {
+      color: #9ca3af;
     }
 
     .jade-char-count {
@@ -502,7 +553,7 @@ export function getWidgetStyles(
       width: 40px;
       height: 40px;
       border: none;
-      background: ${primaryColor};
+      background: linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%);
       color: white;
       border-radius: 50%;
       cursor: pointer;
@@ -511,17 +562,23 @@ export function getWidgetStyles(
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      transition: all 0.2s ease;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
 
     .jade-chat-send-btn:hover:not(:disabled) {
-      background: ${accentColor};
-      transform: scale(1.05);
+      transform: scale(1.08);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    }
+
+    .jade-chat-send-btn:active:not(:disabled) {
+      transform: scale(0.96);
     }
 
     .jade-chat-send-btn:disabled {
-      opacity: 0.5;
+      opacity: 0.4;
       cursor: not-allowed;
+      box-shadow: none;
     }
 
     /* Loading indicator */

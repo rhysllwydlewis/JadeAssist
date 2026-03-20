@@ -8,10 +8,16 @@ import { validateBody } from '../middleware/validation';
 import { asyncHandler } from '../middleware/errorHandler';
 import { ConversationModel } from '../models/Conversation';
 import { planningEngine } from '../services/planningEngine';
-import { ChatRequest, ChatResponse, ApiResponse } from '@jadeassist/shared';
+import { ChatRequest, ChatResponse, ApiResponse, EventType } from '@jadeassist/shared';
 import { logger } from '../utils/logger';
 
 const router = Router();
+
+/** Safely coerce a string stored in the DB to a typed EventType (or undefined). */
+function toEventType(value: string | undefined): EventType | undefined {
+  const valid: EventType[] = ['wedding', 'birthday', 'corporate', 'conference', 'party', 'anniversary', 'other'];
+  return value && valid.includes(value as EventType) ? (value as EventType) : undefined;
+}
 
 // Validation schemas
 const chatRequestSchema = z.object({
@@ -71,15 +77,47 @@ router.post(
     await ConversationModel.addMessage(conversation.id, 'user', message);
 
     // Process with planning engine
-    const planningResponse = await planningEngine.processRequest(
-      {
+    let planningResponse;
+    try {
+      planningResponse = await planningEngine.processRequest(
+        {
+          conversationId: conversation.id,
+          userId,
+          eventType: toEventType(conversation.eventType),
+        },
+        message
+      );
+    } catch (err) {
+      // Return a user-friendly error instead of a 500 for known LLM failures
+      const errMessage = err instanceof Error ? err.message : '';
+      const isRateLimit = errMessage.startsWith('RATE_LIMIT:');
+
+      const fallbackContent = isRateLimit
+        ? "I'm getting a lot of requests right now — please give me a moment and try again. ⏳"
+        : "I'm having trouble connecting to my planning system right now. Please try again in a moment.";
+
+      // Store the fallback assistant message so conversation history remains consistent
+      await ConversationModel.addMessage(conversation.id, 'assistant', fallbackContent);
+
+      const messages = await ConversationModel.getMessages(conversation.id);
+      const assistantMessage = messages[messages.length - 1];
+
+      const chatResponse: ChatResponse = {
         conversationId: conversation.id,
-        userId,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
-        eventType: conversation.eventType as any,
-      },
-      message
-    );
+        message: assistantMessage,
+      };
+
+      res.status(isRateLimit ? 429 : 503).json({
+        success: false,
+        data: chatResponse,
+        error: {
+          code: isRateLimit ? 'RATE_LIMIT_EXCEEDED' : 'LLM_ERROR',
+          message: fallbackContent,
+        },
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
 
     // Get the assistant message that was stored by planning engine
     const messages = await ConversationModel.getMessages(conversation.id);

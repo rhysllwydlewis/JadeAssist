@@ -18,7 +18,7 @@ export class JadeWidget {
 
   constructor(config: WidgetConfig = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.apiClient = new ApiClient(this.config.apiBaseUrl);
+    this.apiClient = new ApiClient(this.config.apiBaseUrl, this.config.authToken);
     
     // Debug logging
     if (this.config.debug) {
@@ -184,18 +184,94 @@ export class JadeWidget {
     `
         : '';
 
+    const contentHtml = isUser
+      ? this.escapeHtml(message.content)
+      : this.renderMarkdown(message.content);
+
+    const avatarContent = isUser
+      ? '👤'
+      : this.config.avatarUrl
+        ? `<img src="${this.escapeHtml(this.config.avatarUrl)}" alt="${this.escapeHtml(this.config.assistantName)}" class="jade-msg-avatar-img" />`
+        : '💬';
+
     return `
       <div class="jade-message jade-message-${message.role}" data-message-id="${message.id}">
         <div class="jade-message-avatar ${message.role}">
-          ${isUser ? '👤' : '💬'}
+          ${avatarContent}
         </div>
         <div class="jade-message-content">
-          <div class="jade-message-bubble">${this.escapeHtml(message.content)}</div>
+          <div class="jade-message-bubble">${contentHtml}</div>
           <div class="jade-message-time">${time}</div>
           ${quickRepliesHtml}
         </div>
       </div>
     `;
+  }
+
+  /**
+   * Render basic markdown to safe HTML for assistant messages.
+   * Supports: **bold**, *italic*, bullet lists (- / * / •), numbered lists, line breaks.
+   */
+  private renderMarkdown(text: string): string {
+    // Escape HTML first to prevent XSS, then re-apply safe formatting
+    const escaped = this.escapeHtml(text);
+
+    const html = escaped
+      // Bold: **text**
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      // Italic: *text* — use replace callback to avoid lookbehind (not universally supported)
+      .replace(/\*([^*\n]+?)\*/g, (_match, inner: string) => {
+        return `<em>${inner}</em>`;
+      })
+      // Inline code: `code`
+      .replace(/`([^`\n]+?)`/g, '<code class="jade-inline-code">$1</code>');
+
+    // Process line by line for lists and paragraphs
+    const lines = html.split('\n');
+    const outputLines: string[] = [];
+    let inList = false;
+    let listType: 'ul' | 'ol' | null = null;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const bulletMatch = /^[-*•]\s+(.*)/.exec(line);
+      const numberedMatch = /^\d+\.\s+(.*)/.exec(line);
+
+      if (bulletMatch) {
+        if (!inList || listType !== 'ul') {
+          if (inList) outputLines.push(listType === 'ol' ? '</ol>' : '</ul>');
+          outputLines.push('<ul class="jade-md-list">');
+          inList = true;
+          listType = 'ul';
+        }
+        outputLines.push(`<li>${bulletMatch[1]}</li>`);
+      } else if (numberedMatch) {
+        if (!inList || listType !== 'ol') {
+          if (inList) outputLines.push(listType === 'ul' ? '</ul>' : '</ol>');
+          outputLines.push('<ol class="jade-md-list">');
+          inList = true;
+          listType = 'ol';
+        }
+        outputLines.push(`<li>${numberedMatch[1]}</li>`);
+      } else {
+        if (inList) {
+          outputLines.push(listType === 'ol' ? '</ol>' : '</ul>');
+          inList = false;
+          listType = null;
+        }
+        if (line.trim() === '') {
+          outputLines.push('<br>');
+        } else {
+          outputLines.push(line);
+        }
+      }
+    }
+
+    if (inList) {
+      outputLines.push(listType === 'ol' ? '</ol>' : '</ul>');
+    }
+
+    return outputLines.join('\n');
   }
 
   private renderInputArea(): string {
@@ -423,11 +499,26 @@ export class JadeWidget {
       // Remove typing indicator
       this.removeTypingIndicator();
 
-      // Show error message
+      // Show a context-appropriate error message
+      const errMsg = error instanceof Error ? error.message : '';
+      let errorContent: string;
+      if (errMsg.includes('429') || errMsg.toLowerCase().includes('rate limit')) {
+        errorContent =
+          "I'm getting a lot of requests right now — please wait a moment and try again. ⏳";
+      } else if (errMsg.includes('401') || errMsg.includes('403')) {
+        errorContent =
+          "I couldn't authenticate your request. Please refresh the page and try again.";
+      } else if (errMsg.includes('503') || errMsg.includes('Failed to fetch')) {
+        errorContent =
+          "I'm having trouble connecting right now. Please check your connection and try again.";
+      } else {
+        errorContent = "I'm sorry, something went wrong. Please try again.";
+      }
+
       const errorMessage: WidgetMessage = {
         id: 'error-' + Date.now(),
         role: 'assistant',
-        content: "I'm sorry, I'm having trouble connecting. Please try again.",
+        content: errorContent,
         timestamp: Date.now(),
       };
       this.state.messages.push(errorMessage);

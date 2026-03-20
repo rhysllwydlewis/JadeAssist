@@ -73,6 +73,17 @@ class LLMService {
       };
     } catch (error) {
       logger.error({ error }, 'LLM request failed');
+
+      // Surface rate-limit errors distinctly so callers can return a friendly message
+      if (
+        error instanceof Error &&
+        (error.message.includes('429') ||
+          error.message.toLowerCase().includes('rate limit') ||
+          error.message.toLowerCase().includes('rate_limit'))
+      ) {
+        throw new Error('RATE_LIMIT: Too many requests — please wait a moment and try again.');
+      }
+
       throw new Error('Failed to get response from LLM');
     }
   }

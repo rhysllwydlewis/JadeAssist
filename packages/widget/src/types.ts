@@ -4,6 +4,7 @@
 
 export interface WidgetConfig {
   apiBaseUrl?: string;
+  authToken?: string;
   assistantName?: string;
   greetingText?: string;
   greetingTooltipText?: string;
@@ -47,6 +48,7 @@ const DEFAULT_AVATAR_URL = 'https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssis
 
 export const DEFAULT_CONFIG: Required<WidgetConfig> = {
   apiBaseUrl: '',
+  authToken: '',
   assistantName: 'Jade',
   greetingText: 'Hi! 👋 I\'m Jade, your event planning assistant. Can I help you plan your special day?',
   greetingTooltipText: '👋 Hi! Need help planning your event?',
