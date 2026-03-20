@@ -32,6 +32,9 @@ const envSchema = z.object({
   EVENTFLOW_API_URL: z.string().optional(),
   EVENTFLOW_API_KEY: z.string().optional(),
 
+  // CORS — comma-separated list of allowed origins, or '*' for all (default)
+  CORS_ORIGIN: z.string().default('*'),
+
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
 });
@@ -79,6 +82,9 @@ export const env = {
     apiUrl: parsedEnv.data.EVENTFLOW_API_URL,
     apiKey: parsedEnv.data.EVENTFLOW_API_KEY,
   },
+
+  // CORS
+  corsOrigin: parsedEnv.data.CORS_ORIGIN,
 
   // Logging
   logLevel: parsedEnv.data.LOG_LEVEL,
