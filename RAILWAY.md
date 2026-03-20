@@ -108,6 +108,69 @@ Railway redeploys automatically. The service now runs in strict mode with all fe
 
 ---
 
+## Configuring CORS for EventFlow
+
+When JadeAssist runs as a standalone Railway service and the EventFlow website
+(`event-flow.co.uk`) embeds the widget, the JadeAssist backend must explicitly
+allow cross-origin requests from EventFlow's domain.
+
+### Recommended production setting
+
+In your Railway service **Variables** tab, set:
+
+| Variable | Value |
+|---|---|
+| `CORS_ORIGIN` | `https://event-flow.co.uk,https://www.event-flow.co.uk` |
+
+This tells the backend to:
+
+- Accept fetch/XHR requests from `https://event-flow.co.uk` and `https://www.event-flow.co.uk`.
+- Return `Access-Control-Allow-Credentials: true` (automatically enabled when specific origins are listed).
+- Handle `OPTIONS` preflight requests automatically (the `cors` package manages this).
+
+> **Note:** Do **not** use `*` together with credentials — the browser will reject such responses.
+> The backend already handles this correctly: `credentials` is only set to `true` when a specific
+> origin list is provided.
+
+### Development / staging
+
+For local development, the default `CORS_ORIGIN=*` allows all origins (including `localhost`).
+For a staging environment you can add extra origins to the comma-separated list, e.g.:
+
+```
+CORS_ORIGIN=https://event-flow.co.uk,https://www.event-flow.co.uk,https://staging.event-flow.co.uk,http://localhost:3000
+```
+
+### How EventFlow should configure the widget
+
+Add the following snippet to every public page on EventFlow (replace the `apiBaseUrl` value with
+the Railway-generated domain for your JadeAssist backend service):
+
+```html
+<script src="https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/dist/jade-widget.js"></script>
+<script>
+  window.JadeWidget.init({
+    apiBaseUrl: 'https://jadeassistbackend-production.up.railway.app',
+    assistantName: 'Jade',
+    primaryColor: '#8B5CF6',
+  });
+</script>
+```
+
+> The `apiBaseUrl` must be the **public** Railway URL for the backend service — never a
+> `*.railway.internal` hostname, as that is only reachable within the Railway private network.
+
+### Rate limiting
+
+The backend applies a global rate limit (see `RATE_LIMITS.DEFAULT` in
+`packages/backend/src/utils/constants.ts`).  Each visitor's IP address is counted
+independently, so normal EventFlow traffic is unlikely to be affected.  If you experience
+unexpected 429 responses from high-traffic pages, consider raising the limit via a
+dedicated environment variable (not currently configurable without a code change — open an
+issue if needed).
+
+---
+
 ## Health checks
 
 Configure the Railway health check in **Settings → Health Check Path**: `/healthz`
