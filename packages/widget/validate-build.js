@@ -132,7 +132,7 @@ try {
     },
     {
       name: 'Sound notification (WebAudio)',
-      patterns: ['playNotificationSound', 'AudioContext'],
+      patterns: ['playNotificationSound', 'AudioContext', 'unlockAudioContext'],
     },
   ];
 

@@ -32,6 +32,16 @@ export class JadeWidget {
       console.log('[JadeWidget] Initializing with config:', this.config);
       console.log('[JadeWidget] Avatar URL:', this.config.avatarUrl);
     }
+
+    // Warn when localStorage is unavailable (e.g. Safari private mode).
+    // The widget degrades gracefully – state is still held in memory for the
+    // current session; only persistence across page loads is lost.
+    try {
+      localStorage.setItem('__jade_test__', '1');
+      localStorage.removeItem('__jade_test__');
+    } catch {
+      console.warn('[JadeWidget] localStorage is unavailable – chat history, sound settings and session state will not be persisted across page loads.');
+    }
     
     // Bind escape key handler for proper cleanup
     this.escapeKeyHandler = (e: KeyboardEvent) => {
@@ -422,6 +432,10 @@ export class JadeWidget {
       const actionEl = target.closest('[data-action]') as HTMLElement | null;
       const action = actionEl?.getAttribute('data-action');
 
+      if (this.config.debug && action) {
+        console.log('[JadeWidget] Menu action dispatched:', action);
+      }
+
       if (action === 'toggle-chat') {
         this.toggleChat();
       } else if (action === 'open-chat') {
@@ -459,6 +473,11 @@ export class JadeWidget {
         e.stopPropagation();
         this.soundEnabled = !this.soundEnabled;
         StorageManager.saveSoundEnabled(this.soundEnabled);
+        if (this.soundEnabled) {
+          // Unlock AudioContext immediately while inside this user-gesture so
+          // the first chime can play without the browser blocking it.
+          this.unlockAudioContext();
+        }
         this.render();
       } else if (action === 'show-clear-confirm') {
         this.isMenuOpen = false;
@@ -658,6 +677,14 @@ export class JadeWidget {
     this.render();
     this.scrollToBottom();
 
+    // Unlock AudioContext now, while we are still inside a user-gesture
+    // callback.  This ensures the chime can play when the reply arrives
+    // (after the async API call) even on mobile browsers that enforce the
+    // autoplay policy strictly.
+    if (this.soundEnabled) {
+      this.unlockAudioContext();
+    }
+
     // Show typing indicator
     this.showTypingIndicator();
 
@@ -762,29 +789,73 @@ export class JadeWidget {
     }
   }
 
+  /**
+   * Create (if needed) and resume the AudioContext while inside a user-gesture
+   * callback so the browser treats it as an unlocked context.  Safe to call
+   * multiple times – no-ops when already running.
+   */
+  private unlockAudioContext(): void {
+    try {
+      if (!this.audioCtx) {
+        this.audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      }
+      if (this.audioCtx.state === 'suspended') {
+        this.audioCtx.resume().catch(() => {
+          // Ignored here – playNotificationSound will attempt resume again
+          // when the next assistant reply arrives.
+        });
+      }
+    } catch {
+      // Web Audio not supported
+    }
+  }
+
   private playNotificationSound(): void {
     if (!this.soundEnabled) return;
+    if (this.config.debug) {
+      console.log('[JadeWidget] Playing notification sound (volume:', this.soundVolume, ')');
+    }
     try {
       if (!this.audioCtx) {
         this.audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
       }
       const ctx = this.audioCtx;
-      const gainNode = ctx.createGain();
-      gainNode.gain.setValueAtTime(0, ctx.currentTime);
-      gainNode.gain.linearRampToValueAtTime(this.soundVolume * 0.3, ctx.currentTime + 0.02);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
-      gainNode.connect(ctx.destination);
 
-      // Two-tone chime: a gentle ascending interval
-      const tones = [880, 1108]; // A5 → C#6
-      tones.forEach((freq, i) => {
-        const osc = ctx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.12);
-        osc.connect(gainNode);
-        osc.start(ctx.currentTime + i * 0.12);
-        osc.stop(ctx.currentTime + i * 0.12 + 0.35);
-      });
+      const playChime = () => {
+        const gainNode = ctx.createGain();
+        gainNode.gain.setValueAtTime(0, ctx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(this.soundVolume * 0.3, ctx.currentTime + 0.02);
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
+        gainNode.connect(ctx.destination);
+
+        // Two-tone chime: a gentle ascending interval
+        const tones = [880, 1108]; // A5 → C#6
+        tones.forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.12);
+          osc.connect(gainNode);
+          osc.start(ctx.currentTime + i * 0.12);
+          osc.stop(ctx.currentTime + i * 0.12 + 0.35);
+        });
+      };
+
+      if (ctx.state === 'suspended') {
+        // AudioContext is suspended (e.g. browser autoplay policy); attempt to
+        // resume and then play.  This may silently fail on mobile if no prior
+        // user gesture has occurred – that edge-case is handled by
+        // unlockAudioContext() which is called on every user click.
+        if (this.config.debug) {
+          console.warn('[JadeWidget] AudioContext suspended – attempting resume before chime');
+        }
+        ctx.resume().then(playChime).catch(() => {
+          // Always log at info level so operators can diagnose why the
+          // notification sound is not playing without enabling debug mode.
+          console.info('[JadeWidget] Notification sound skipped – AudioContext could not be resumed (likely no prior user gesture)');
+        });
+      } else {
+        playChime();
+      }
     } catch {
       // Web Audio not available – silently skip
     }
@@ -883,6 +954,11 @@ export class JadeWidget {
     }
     if (this.exportToastTimeout) {
       clearTimeout(this.exportToastTimeout);
+    }
+    // Release OS audio resources
+    if (this.audioCtx) {
+      this.audioCtx.close().catch(() => {});
+      this.audioCtx = undefined;
     }
     // Clean up event listener to prevent memory leaks
     document.removeEventListener('keydown', this.escapeKeyHandler);
