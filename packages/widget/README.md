@@ -457,16 +457,16 @@ app.use(cors({
 
 ### 3. API Requirements
 
-The widget expects the backend to provide:
+The widget communicates with the backend via a dedicated public endpoint that does **not** require authentication.
 
-**Endpoint:** `POST /api/chat`
+**Endpoint:** `POST /api/widget/chat`
 
 **Request:**
 ```json
 {
   "message": "User message text",
-  "conversationId": "uuid-optional",
-  "userId": "anonymous-or-real-user-id"
+  "conversationId": "optional-session-id",
+  "userId": "optional-user-id"
 }
 ```
 
@@ -488,12 +488,24 @@ The widget expects the backend to provide:
 }
 ```
 
-### 4. Authentication (Future)
+> **Important:** The widget calls `/api/widget/chat`, **not** `/api/chat`.
+> `/api/chat` requires a valid JWT token and is intended for authenticated integrations only.
+> Using `/api/chat` with the widget will result in a 401 Unauthorized error for anonymous visitors.
 
-Currently uses anonymous user ID. For production:
-- Implement proper authentication
-- Pass JWT tokens in request headers
-- Update widget to handle auth state
+### 4. Authentication
+
+The widget endpoint (`/api/widget/chat`) is public — no JWT or auth token is needed.
+It is protected against abuse by a per-IP rate limiter (10 requests/minute).
+
+If you need an authenticated chat endpoint for logged-in users, use `/api/chat` with a
+`Authorization: Bearer <token>` header and pass `authToken` when initialising the widget:
+
+```javascript
+JadeWidget.init({
+  apiBaseUrl: 'https://your-backend.up.railway.app',
+  authToken: 'your-jwt-token',
+});
+```
 
 ## Customization
 

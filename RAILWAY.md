@@ -220,8 +220,47 @@ In minimal mode returns `"degraded"` (HTTP 200 always, so Railway does not resta
 | `GET` | `/healthz` | Lightweight health probe (Railway) |
 | `GET` | `/health` | Full health check (DB + LLM status) |
 | `POST` | `/api/v1/assist` | Primary EventFlow integration endpoint |
-| `POST` | `/api/chat` | Conversational chat (authenticated) |
+| `POST` | `/api/widget/chat` | Embedded widget endpoint (no auth required) |
+| `POST` | `/api/chat` | Conversational chat (JWT authenticated) |
 | `POST` | `/api/planning/plans` | Create event plans (authenticated) |
+
+### POST /api/widget/chat
+
+The endpoint used by the embedded JadeAssist widget on public sites (e.g. event-flow.co.uk).
+No JWT token is required — anonymous visitors can chat without logging in.
+A stricter per-IP rate limiter (10 requests/minute) is applied as abuse protection.
+
+**Request body:**
+```json
+{
+  "message": "Help me plan a birthday party for 50 guests",
+  "conversationId": "optional-session-id",
+  "userId": "optional-user-id"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "conversationId": "550e8400-e29b-41d4-a716-446655440000",
+    "message": {
+      "id": "uuid",
+      "content": "Here are my suggestions for your birthday party...",
+      "role": "assistant",
+      "createdAt": "2024-01-01T12:00:00Z"
+    },
+    "suggestions": ["What is your budget?", "Which city?"]
+  },
+  "timestamp": "2024-01-01T12:00:00Z"
+}
+```
+
+**In minimal mode** (before secrets are configured) this returns `503` — same as the other feature routes.
+
+> **Note:** Use this endpoint for the widget bundle embedded on EventFlow pages.
+> Use `/api/chat` only for authenticated (JWT) server-side or admin integrations.
 
 ### POST /api/v1/assist
 
