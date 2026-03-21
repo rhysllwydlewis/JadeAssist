@@ -25,6 +25,7 @@ import * as net from 'net';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
+import { randomUUID } from 'crypto';
 
 // ---------------------------------------------------------------------------
 // Test runner helpers
@@ -98,8 +99,6 @@ const chatSchema = z.object({
   message: z.string().min(1).max(5000),
   userId: z.string().uuid(),
 });
-
-import { randomUUID } from 'crypto';
 
 function buildTestApp(): Application {
   const app = express();

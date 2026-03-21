@@ -16,24 +16,27 @@ import { validateBody } from '../middleware/validation';
 import { asyncHandler } from '../middleware/errorHandler';
 import { planningEngine } from '../services/planningEngine';
 import { logger } from '../utils/logger';
+import { RATE_LIMITS } from '../utils/constants';
 
 const router = Router();
 
 // ── Rate limiter — stricter than the global limiter ──────────────────────────
 // 10 requests per minute per IP (vs 20/min for authenticated /api/chat).
 const widgetRateLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 10,
-  message: {
-    success: false,
-    error: {
-      code: 'RATE_LIMIT_EXCEEDED',
-      message: 'Too many requests. Please wait a moment and try again.',
-    },
-    timestamp: new Date().toISOString(),
-  },
+  windowMs: RATE_LIMITS.WIDGET_CHAT.windowMs,
+  max: RATE_LIMITS.WIDGET_CHAT.max,
   standardHeaders: true,
   legacyHeaders: false,
+  handler: (_req, res) => {
+    res.status(429).json({
+      success: false,
+      error: {
+        code: 'RATE_LIMIT_EXCEEDED',
+        message: 'Too many requests. Please wait a moment and try again.',
+      },
+      timestamp: new Date().toISOString(),
+    });
+  },
 });
 
 // ── Request schema ────────────────────────────────────────────────────────────
