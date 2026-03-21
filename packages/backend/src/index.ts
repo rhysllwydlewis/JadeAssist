@@ -19,6 +19,7 @@ import chatRouter from './routes/chat';
 import planningRouter from './routes/planning';
 import assistRouter from './routes/assist';
 import catalogRouter from './routes/catalog';
+import widgetChatRouter from './routes/widgetChat';
 
 // Create Express app
 const app: Application = express();
@@ -113,10 +114,12 @@ if (env.minimalMode) {
   app.use('/api/chat', unconfiguredHandler);
   app.use('/api/planning', unconfiguredHandler);
   app.use('/api/v1/assist', unconfiguredHandler);
+  app.use('/api/widget/chat', unconfiguredHandler);
 } else {
   app.use('/api/chat', chatRouter);
   app.use('/api/planning', planningRouter);
   app.use('/api/v1/assist', assistRouter);
+  app.use('/api/widget/chat', widgetChatRouter);
 }
 
 // Catalog routes — always mounted (returns 503 when env vars are absent)

@@ -60,7 +60,7 @@ export class ApiClient {
       headers['Authorization'] = `Bearer ${this.authToken}`;
     }
 
-    const response = await fetch(`${this.baseUrl}/api/chat`, {
+    const response = await fetch(`${this.baseUrl}/api/widget/chat`, {
       method: 'POST',
       headers,
       body: JSON.stringify({

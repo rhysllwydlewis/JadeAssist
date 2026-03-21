@@ -35,6 +35,10 @@ export const RATE_LIMITS = {
     windowMs: 60 * 1000,
     max: 10,
   },
+  WIDGET_CHAT: {
+    windowMs: 60 * 1000, // 1 minute
+    max: 10, // stricter than CHAT — public/anonymous endpoint
+  },
   DEFAULT: {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 100,
