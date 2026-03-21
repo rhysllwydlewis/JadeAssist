@@ -955,6 +955,11 @@ export class JadeWidget {
     if (this.exportToastTimeout) {
       clearTimeout(this.exportToastTimeout);
     }
+    // Release OS audio resources
+    if (this.audioCtx) {
+      this.audioCtx.close().catch(() => {});
+      this.audioCtx = undefined;
+    }
     // Clean up event listener to prevent memory leaks
     document.removeEventListener('keydown', this.escapeKeyHandler);
   }
