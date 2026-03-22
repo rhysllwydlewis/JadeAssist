@@ -32,17 +32,29 @@ the repo root.  When Railway sets the widget service Root Directory to
 Running `npm ci` from `packages/widget` fails with `EUSAGE` because there is no
 `package-lock.json` there.
 
-`packages/widget/railway.toml` therefore prefixes every command with
-`cd ../..` to move back to the repo root before running:
+`packages/widget/nixpacks.toml` overrides the Nixpacks **install phase** to run
+from the monorepo root:
+
+```toml
+[phases.install]
+cmds = ["cd ../.. && npm ci"]
+```
+
+This is required because Nixpacks runs the install phase *before* the
+`buildCommand` — without this override, the deploy fails at the install step
+even if `railway.toml`'s `buildCommand` is correct.
+
+`packages/widget/railway.toml` also prefixes the build and start commands with
+`cd ../..` to run from the repo root:
 
 ```
-buildCommand = "cd ../.. && npm ci && npm run build --workspace=packages/widget"
+buildCommand = "cd ../.. && npm run build --workspace=packages/widget"
 startCommand = "cd ../.. && npm run start --workspace=packages/widget"
 ```
 
-You **do not** need to override the build or start command in the Railway UI —
-the committed `railway.toml` handles this automatically once the Root Directory
-is set to `packages/widget`.
+You **do not** need to override the install, build, or start commands in the
+Railway UI — the committed `nixpacks.toml` and `railway.toml` handle this
+automatically once the Root Directory is set to `packages/widget`.
 
 ### Required environment variables per service
 
