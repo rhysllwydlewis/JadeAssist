@@ -1,9 +1,15 @@
 /**
- * Supplier model and database operations
+ * Supplier model — MongoDB / Mongoose implementation
+ *
+ * Also includes seedIfEmpty() which inserts the sample UK suppliers on first
+ * startup (equivalent to the INSERT statements in the old schema.sql).
  */
-import { query } from '../config/database';
+import mongoose, { Schema } from 'mongoose';
+import { randomUUID } from 'crypto';
 import { logger } from '../utils/logger';
 import { SupplierCategory } from '@jadeassist/shared';
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface Supplier {
   id: string;
@@ -35,130 +41,211 @@ export interface SearchSuppliersParams {
   limit?: number;
 }
 
+// ── Raw document shape ────────────────────────────────────────────────────────
+
+interface SupplierDoc {
+  _id: string;
+  name: string;
+  category: string;
+  location?: string;
+  postcode?: string;
+  description?: string;
+  rating: number;
+  region?: string;
+  createdAt: Date;
+}
+
+// ── Schema ────────────────────────────────────────────────────────────────────
+
+const SupplierSchema = new Schema<SupplierDoc>(
+  {
+    _id: { type: String, default: () => randomUUID() },
+    name: { type: String, required: true },
+    category: { type: String, required: true, index: true },
+    location: String,
+    postcode: { type: String, index: true },
+    description: String,
+    rating: { type: Number, default: 0, index: true },
+    region: { type: String, index: true },
+  },
+  { timestamps: { createdAt: 'createdAt', updatedAt: false } }
+);
+
+// ── Mongoose model ────────────────────────────────────────────────────────────
+
+const SupplierMongoose =
+  mongoose.models['Supplier'] ?? mongoose.model<SupplierDoc>('Supplier', SupplierSchema);
+
+// ── Mapping helper ────────────────────────────────────────────────────────────
+
+function toSupplier(doc: SupplierDoc): Supplier {
+  return {
+    id: doc._id,
+    name: doc.name,
+    category: doc.category as SupplierCategory,
+    location: doc.location ?? '',
+    postcode: doc.postcode ?? '',
+    description: doc.description ?? '',
+    rating: doc.rating,
+    region: doc.region ?? '',
+    createdAt: doc.createdAt,
+  };
+}
+
+// ── Seed data (mirrors the INSERT statements in database/schema.sql) ───────────
+
+const SAMPLE_SUPPLIERS: CreateSupplierParams[] = [
+  {
+    name: 'The Grand Hall',
+    category: 'venue',
+    location: 'London',
+    postcode: 'SW1A',
+    description: 'Elegant Victorian venue in central London',
+    rating: 4.8,
+    region: 'London',
+  },
+  {
+    name: 'Delicious Catering Co',
+    category: 'catering',
+    location: 'Manchester',
+    postcode: 'M1',
+    description: 'Award-winning catering service',
+    rating: 4.7,
+    region: 'North West',
+  },
+  {
+    name: 'Perfect Shots Photography',
+    category: 'photographer',
+    location: 'Birmingham',
+    postcode: 'B1',
+    description: 'Professional event photography',
+    rating: 4.9,
+    region: 'Midlands',
+  },
+  {
+    name: 'Blooms & Petals',
+    category: 'florist',
+    location: 'Edinburgh',
+    postcode: 'EH1',
+    description: 'Beautiful floral arrangements',
+    rating: 4.6,
+    region: 'Scotland',
+  },
+  {
+    name: 'Sound & Vision Events',
+    category: 'entertainment',
+    location: 'Bristol',
+    postcode: 'BS1',
+    description: 'DJ and live entertainment services',
+    rating: 4.5,
+    region: 'South West',
+  },
+  {
+    name: 'Elite Event Styling',
+    category: 'decorator',
+    location: 'Leeds',
+    postcode: 'LS1',
+    description: 'Contemporary event decoration and styling',
+    rating: 4.7,
+    region: 'Yorkshire',
+  },
+  {
+    name: 'Luxury Transport Solutions',
+    category: 'transport',
+    location: 'Cardiff',
+    postcode: 'CF10',
+    description: 'Premium event transportation',
+    rating: 4.8,
+    region: 'Wales',
+  },
+];
+
+/** Escape special regex characters in a string for safe use in a RegExp. */
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export class SupplierModel {
   /**
-   * Create a new supplier
+   * Insert sample suppliers if the collection is empty.
+   * Called once at server startup — equivalent to the schema.sql INSERT block.
    */
-  static async create(params: CreateSupplierParams): Promise<Supplier> {
-    const result = await query<Supplier>(
-      `INSERT INTO suppliers (
-        id, name, category, location, postcode, description, rating, region, created_at
-      )
-      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, NOW())
-      RETURNING *`,
-      [
-        params.name,
-        params.category,
-        params.location,
-        params.postcode,
-        params.description,
-        params.rating ?? 0,
-        params.region,
-      ]
+  static async seedIfEmpty(): Promise<void> {
+    const count = await SupplierMongoose.countDocuments();
+    if (count > 0) return;
+    await SupplierMongoose.insertMany(
+      SAMPLE_SUPPLIERS.map((s) => ({ ...s, _id: randomUUID() }))
     );
-
-    logger.info({ supplierId: result.rows[0].id }, 'Supplier created');
-    return result.rows[0];
+    logger.info({ count: SAMPLE_SUPPLIERS.length }, 'Suppliers collection seeded');
   }
 
-  /**
-   * Find supplier by ID
-   */
+  /** Create a new supplier */
+  static async create(params: CreateSupplierParams): Promise<Supplier> {
+    const doc = await SupplierMongoose.create({ ...params });
+    const result = toSupplier(doc.toObject() as SupplierDoc);
+    logger.info({ supplierId: result.id }, 'Supplier created');
+    return result;
+  }
+
+  /** Find supplier by ID */
   static async findById(id: string): Promise<Supplier | null> {
-    const result = await query<Supplier>('SELECT * FROM suppliers WHERE id = $1', [id]);
-    return result.rows[0] || null;
+    const doc = await SupplierMongoose.findById(id).lean<SupplierDoc>();
+    return doc ? toSupplier(doc) : null;
   }
 
-  /**
-   * Search suppliers with filters
-   */
+  /** Search suppliers with optional filters */
   static async search(params: SearchSuppliersParams): Promise<Supplier[]> {
-    const conditions: string[] = [];
-    const values: unknown[] = [];
-    let paramCount = 1;
+    const filter: Record<string, unknown> = {};
 
-    if (params.category) {
-      conditions.push(`category = $${paramCount++}`);
-      values.push(params.category);
-    }
+    if (params.category) filter['category'] = params.category;
+    if (params.postcode) filter['postcode'] = { $regex: `^${escapeRegex(params.postcode)}`, $options: 'i' };
+    if (params.region) filter['region'] = params.region;
+    if (params.minRating !== undefined) filter['rating'] = { $gte: params.minRating };
 
-    if (params.postcode) {
-      // Match first part of postcode (e.g., "SW1" from "SW1A 1AA")
-      conditions.push(`postcode ILIKE $${paramCount++}`);
-      values.push(`${params.postcode}%`);
-    }
-
-    if (params.region) {
-      conditions.push(`region = $${paramCount++}`);
-      values.push(params.region);
-    }
-
-    if (params.minRating !== undefined) {
-      conditions.push(`rating >= $${paramCount++}`);
-      values.push(params.minRating);
-    }
-
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const limit = params.limit ?? 50;
 
-    const result = await query<Supplier>(
-      `SELECT * FROM suppliers 
-       ${whereClause}
-       ORDER BY rating DESC, name ASC
-       LIMIT $${paramCount}`,
-      [...values, limit]
-    );
+    const docs = await SupplierMongoose.find(filter)
+      .sort({ rating: -1, name: 1 })
+      .limit(limit)
+      .lean<SupplierDoc[]>();
 
-    return result.rows;
+    return docs.map(toSupplier);
   }
 
-  /**
-   * Get all suppliers by category
-   */
+  /** Get all suppliers by category */
   static async findByCategory(category: SupplierCategory): Promise<Supplier[]> {
-    const result = await query<Supplier>(
-      'SELECT * FROM suppliers WHERE category = $1 ORDER BY rating DESC, name ASC',
-      [category]
-    );
-    return result.rows;
+    const docs = await SupplierMongoose.find({ category })
+      .sort({ rating: -1, name: 1 })
+      .lean<SupplierDoc[]>();
+    return docs.map(toSupplier);
   }
 
-  /**
-   * Update supplier
-   */
+  /** Update supplier fields */
   static async update(id: string, params: Partial<CreateSupplierParams>): Promise<Supplier | null> {
-    const updates: string[] = [];
-    const values: unknown[] = [];
-    let paramCount = 1;
-
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined) {
-        updates.push(`${key} = $${paramCount++}`);
-        values.push(value);
-      }
-    });
-
-    if (updates.length === 0) {
-      return await SupplierModel.findById(id);
+    const set: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined) set[key] = value;
     }
 
-    values.push(id);
+    if (Object.keys(set).length === 0) {
+      return SupplierModel.findById(id);
+    }
 
-    const result = await query<Supplier>(
-      `UPDATE suppliers SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`,
-      values
-    );
+    const doc = await SupplierMongoose.findByIdAndUpdate(
+      id,
+      { $set: set },
+      { new: true }
+    ).lean<SupplierDoc>();
 
+    if (!doc) return null;
     logger.info({ supplierId: id }, 'Supplier updated');
-    return result.rows[0] || null;
+    return toSupplier(doc);
   }
 
-  /**
-   * Delete supplier
-   */
+  /** Delete supplier */
   static async delete(id: string): Promise<boolean> {
-    const result = await query('DELETE FROM suppliers WHERE id = $1', [id]);
+    const result = await SupplierMongoose.deleteOne({ _id: id });
     logger.info({ supplierId: id }, 'Supplier deleted');
-    return (result.rowCount ?? 0) > 0;
+    return result.deletedCount > 0;
   }
 }

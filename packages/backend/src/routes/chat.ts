@@ -10,6 +10,7 @@ import { ConversationModel } from '../models/Conversation';
 import { planningEngine } from '../services/planningEngine';
 import { ChatRequest, ChatResponse, ApiResponse, EventType } from '@jadeassist/shared';
 import { logger } from '../utils/logger';
+import { isDbSchemaMissingError } from '../utils/dbErrors';
 
 const router = Router();
 
@@ -91,6 +92,21 @@ router.post(
       // Return a user-friendly error instead of a 500 for known LLM failures
       const errMessage = err instanceof Error ? err.message : '';
       const isRateLimit = errMessage.startsWith('RATE_LIMIT:');
+      const isDbSchema = !isRateLimit && isDbSchemaMissingError(err);
+
+      if (isDbSchema) {
+        res.status(503).json({
+          success: false,
+          error: {
+            code: 'DB_NOT_INITIALIZED',
+            message:
+              'The database is not available. ' +
+              'Please check that MONGODB_URL is set correctly and the MongoDB service is running.',
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
 
       const fallbackContent = isRateLimit
         ? "I'm getting a lot of requests right now — please give me a moment and try again. ⏳"

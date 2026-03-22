@@ -2,7 +2,7 @@
  * Health check route
  */
 import { Router, Request, Response } from 'express';
-import { checkDatabaseHealth } from '../config/database';
+import { checkDatabaseHealth, checkDatabaseSchema } from '../config/database';
 import { llmService } from '../services/llmService';
 import { HealthCheckResponse, ApiResponse } from '@jadeassist/shared';
 import { asyncHandler } from '../middleware/errorHandler';
@@ -29,15 +29,19 @@ router.get(
 
     let dbHealthy: boolean;
     let llmHealthy: boolean;
+    let missingTables: string[] = [];
     const skippedChecks: string[] = [];
 
     if (env.minimalMode) {
       // Skip checks that require unconfigured services
       if (!env.databaseUrl) {
         dbHealthy = false;
-        skippedChecks.push('database (DATABASE_URL not set)');
+        skippedChecks.push('database (MONGODB_URL not set)');
       } else {
         dbHealthy = await checkDatabaseHealth();
+        if (dbHealthy) {
+          missingTables = await checkDatabaseSchema();
+        }
       }
 
       if (!env.llm.apiKey) {
@@ -49,6 +53,9 @@ router.get(
     } else {
       // Strict mode — run all checks normally
       dbHealthy = await checkDatabaseHealth();
+      if (dbHealthy) {
+        missingTables = await checkDatabaseSchema();
+      }
       llmHealthy = await llmService.healthCheck();
     }
 
@@ -59,18 +66,23 @@ router.get(
     if (env.minimalMode) {
       if (skippedChecks.length > 0) {
         status = 'degraded';
-      } else if (dbHealthy && llmHealthy) {
+      } else if (dbHealthy && llmHealthy && missingTables.length === 0) {
         status = 'healthy';
       } else {
         status = 'unhealthy';
       }
     } else {
-      status = dbHealthy && llmHealthy ? 'healthy' : 'unhealthy';
+      if (dbHealthy && llmHealthy && missingTables.length === 0) {
+        status = 'healthy';
+      } else {
+        status = 'unhealthy';
+      }
     }
 
     const healthResponse: HealthCheckResponse & {
       minimalMode: boolean;
       skippedChecks?: string[];
+      details?: { missingTables: string[] };
     } = {
       status,
       timestamp: new Date().toISOString(),
@@ -82,6 +94,7 @@ router.get(
         llm: llmHealthy ? 'up' : 'down',
       },
       ...(skippedChecks.length > 0 && { skippedChecks }),
+      ...(missingTables.length > 0 && { details: { missingTables } }),
     };
 
     const response: ApiResponse<typeof healthResponse> = {
@@ -100,6 +113,7 @@ router.get(
         services: healthResponse.services,
         minimalMode: env.minimalMode,
         ...(skippedChecks.length > 0 && { skippedChecks }),
+        ...(missingTables.length > 0 && { details: { missingTables } }),
       },
       'Health check completed'
     );

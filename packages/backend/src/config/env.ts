@@ -2,7 +2,7 @@
  * Environment configuration and validation
  *
  * Two modes:
- *   Strict (default) — DATABASE_URL, OPENAI_API_KEY, JWT_SECRET are required.
+ *   Strict (default) — MONGODB_URL, OPENAI_API_KEY, JWT_SECRET are required.
  *                      The process exits(1) if any are missing.
  *   Minimal (opt-in) — Set JADEASSIST_MINIMAL_MODE=true to allow the server to
  *                      start without the above vars. Routes that depend on them
@@ -25,10 +25,10 @@ const envSchema = z.object({
   API_URL: z.string().default('http://localhost:3001'),
   JADEASSIST_MINIMAL_MODE: z.string().optional(),
 
-  // Database — required in strict mode, optional in minimal
-  DATABASE_URL: MINIMAL_MODE ? z.string().optional() : z.string(),
-  SUPABASE_URL: z.string().optional(),
-  SUPABASE_ANON_KEY: z.string().optional(),
+  // Database — MONGODB_URL is the primary env var.  DATABASE_URL is accepted
+  // as a legacy alias so existing Railway configs keep working without changes.
+  MONGODB_URL: z.string().optional(),
+  DATABASE_URL: z.string().optional(),
 
   // LLM — required in strict mode, optional in minimal
   OPENAI_API_KEY: MINIMAL_MODE ? z.string().optional() : z.string(),
@@ -63,10 +63,13 @@ if (!parsedEnv.success) {
   process.exit(1);
 }
 
+// Resolve the DB URL: MONGODB_URL takes precedence over DATABASE_URL
+const resolvedDbUrl = parsedEnv.data.MONGODB_URL ?? parsedEnv.data.DATABASE_URL;
+
 // ── Step 4: strict-mode enforcement (fail-fast) ──────────────────────────────
 if (!MINIMAL_MODE) {
   const missing: string[] = [];
-  if (!parsedEnv.data.DATABASE_URL) missing.push('DATABASE_URL');
+  if (!resolvedDbUrl) missing.push('MONGODB_URL');
   if (!parsedEnv.data.OPENAI_API_KEY) missing.push('OPENAI_API_KEY');
   if (!parsedEnv.data.JWT_SECRET) missing.push('JWT_SECRET');
 
@@ -80,8 +83,10 @@ if (!MINIMAL_MODE) {
 
 // ── Step 5: minimal-mode warnings ────────────────────────────────────────────
 if (MINIMAL_MODE) {
-  const REQUIRED = ['DATABASE_URL', 'OPENAI_API_KEY', 'JWT_SECRET'] as const;
-  const missing = REQUIRED.filter((k) => !parsedEnv.data[k]);
+  const missing: string[] = [];
+  if (!resolvedDbUrl) missing.push('MONGODB_URL');
+  if (!parsedEnv.data.OPENAI_API_KEY) missing.push('OPENAI_API_KEY');
+  if (!parsedEnv.data.JWT_SECRET) missing.push('JWT_SECRET');
 
   if (missing.length > 0) {
     console.warn('⚠️  JADEASSIST_MINIMAL_MODE is active.');
@@ -109,12 +114,8 @@ export const env = {
   isProduction: parsedEnv.data.NODE_ENV === 'production',
   isTest: parsedEnv.data.NODE_ENV === 'test',
 
-  // Database (string | undefined — always check before use in minimal mode)
-  databaseUrl: parsedEnv.data.DATABASE_URL as string | undefined,
-  supabase: {
-    url: parsedEnv.data.SUPABASE_URL,
-    anonKey: parsedEnv.data.SUPABASE_ANON_KEY,
-  },
+  // Database URL (MongoDB) — string | undefined; always check before use in minimal mode
+  databaseUrl: resolvedDbUrl as string | undefined,
 
   // LLM (string | undefined — always check before use in minimal mode)
   llm: {

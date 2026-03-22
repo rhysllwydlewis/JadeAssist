@@ -1,98 +1,48 @@
 /**
- * Database configuration and connection pool
+ * Database configuration — MongoDB via Mongoose
  */
-import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import mongoose from 'mongoose';
 import { env } from './env';
 import { logger } from '../utils/logger';
 
-// PostgreSQL connection pool
-let pool: Pool | null = null;
+// ── Connection ────────────────────────────────────────────────────────────────
 
-export const getPool = (): Pool => {
-  if (!pool) {
-    if (!env.databaseUrl) {
-      throw new Error('DATABASE_URL is not configured');
-    }
-    pool = new Pool({
-      connectionString: env.databaseUrl,
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
-    });
-
-    pool.on('error', (err) => {
-      logger.error({ err }, 'Unexpected database error');
-    });
-
-    logger.info('Database pool created');
+/**
+ * Connect to MongoDB.  Safe to call multiple times — subsequent calls are
+ * no-ops if Mongoose is already connected.
+ */
+export const connectDatabase = async (): Promise<void> => {
+  if (!env.databaseUrl) {
+    throw new Error('MONGODB_URL is not configured');
+  }
+  if (mongoose.connection.readyState === 1) {
+    return; // already connected
   }
 
-  return pool;
+  await mongoose.connect(env.databaseUrl, {
+    serverSelectionTimeoutMS: 5000,
+  });
+
+  logger.info('MongoDB connected');
 };
 
-// Database query helper
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const query = async <T extends QueryResultRow = any>(
-  text: string,
-  params?: unknown[]
-): Promise<QueryResult<T>> => {
-  const start = Date.now();
-  const pool = getPool();
+// ── Health check ──────────────────────────────────────────────────────────────
 
-  try {
-    const result = await pool.query<T>(text, params);
-    const duration = Date.now() - start;
-    logger.debug({ text, duration, rows: result.rowCount }, 'Database query executed');
-    return result;
-  } catch (error) {
-    logger.error({ error, text }, 'Database query error');
-    throw error;
-  }
-};
-
-// Transaction helper
-export const transaction = async <T>(callback: (client: PoolClient) => Promise<T>): Promise<T> => {
-  const pool = getPool();
-  const client = await pool.connect();
-
-  try {
-    await client.query('BEGIN');
-    const result = await callback(client);
-    await client.query('COMMIT');
-    return result;
-  } catch (error) {
-    await client.query('ROLLBACK');
-    logger.error({ error }, 'Transaction rolled back');
-    throw error;
-  } finally {
-    client.release();
-  }
-};
-
-// Supabase client (optional)
-let supabaseClient: SupabaseClient | null = null;
-
-export const getSupabaseClient = (): SupabaseClient | null => {
-  if (!env.supabase.url || !env.supabase.anonKey) {
-    return null;
-  }
-
-  if (!supabaseClient) {
-    supabaseClient = createClient(env.supabase.url, env.supabase.anonKey);
-    logger.info('Supabase client created');
-  }
-
-  return supabaseClient;
-};
-
-// Health check
 export const checkDatabaseHealth = async (): Promise<boolean> => {
   if (!env.databaseUrl) {
     return false;
   }
   try {
-    await query('SELECT 1');
+    if (mongoose.connection.readyState !== 1) {
+      await connectDatabase();
+    }
+    const db = mongoose.connection.db;
+    if (!db) {
+      logger.error('MongoDB connection established but db handle is unavailable');
+      return false;
+    }
+    // Ping the server to confirm connectivity
+    await db.admin().ping();
     return true;
   } catch (error) {
     logger.error({ error }, 'Database health check failed');
@@ -100,11 +50,20 @@ export const checkDatabaseHealth = async (): Promise<boolean> => {
   }
 };
 
-// Graceful shutdown
+/**
+ * With MongoDB, collections are created automatically on first write — no
+ * schema-migration step is required.  This function always returns an empty
+ * array so the health endpoint reports no missing tables.
+ */
+export const checkDatabaseSchema = async (): Promise<string[]> => {
+  return [];
+};
+
+// ── Graceful shutdown ─────────────────────────────────────────────────────────
+
 export const closeDatabaseConnections = async (): Promise<void> => {
-  if (pool) {
-    await pool.end();
-    pool = null;
-    logger.info('Database pool closed');
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.connection.close();
+    logger.info('MongoDB connection closed');
   }
 };

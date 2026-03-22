@@ -89,7 +89,7 @@ function parseEnv(vars: Record<string, string>): {
 section('Strict mode — all required vars present');
 
 const strictResult = parseEnv({
-  DATABASE_URL: 'postgresql://localhost/test',
+  MONGODB_URL: 'mongodb://localhost:27017/jadeassist',
   OPENAI_API_KEY: 'sk-test-key',
   JWT_SECRET: 'super-secret-string-at-least-32-chars-long',
   PORT: '3001',
@@ -98,7 +98,7 @@ const strictResult = parseEnv({
 
 assert(strictResult !== null, 'does not call process.exit when all required vars are present');
 assert(strictResult?.minimalMode === false, 'minimalMode is false');
-assert(strictResult?.databaseUrl === 'postgresql://localhost/test', 'databaseUrl is set');
+assert(strictResult?.databaseUrl === 'mongodb://localhost:27017/jadeassist', 'databaseUrl is set');
 assert(strictResult?.llm.apiKey === 'sk-test-key', 'llm.apiKey is set');
 assert(strictResult?.auth.jwtSecret === 'super-secret-string-at-least-32-chars-long', 'auth.jwtSecret is set');
 assert(strictResult?.port === 3001, 'port is parsed as integer');
@@ -108,7 +108,7 @@ assert(strictResult?.llm.tokenLimit === 4000, 'llm.tokenLimit defaults to 4000')
 section('Strict mode — missing required vars causes exit');
 
 const strictMissingResult = parseEnv({
-  // DATABASE_URL, OPENAI_API_KEY, JWT_SECRET intentionally absent
+  // MONGODB_URL, OPENAI_API_KEY, JWT_SECRET intentionally absent
   PORT: '3001',
   NODE_ENV: 'test',
 });
@@ -125,7 +125,7 @@ const minimalResult = parseEnv({
   JADEASSIST_MINIMAL_MODE: 'true',
   PORT: '3001',
   NODE_ENV: 'test',
-  // DATABASE_URL, OPENAI_API_KEY, JWT_SECRET intentionally absent
+  // MONGODB_URL, OPENAI_API_KEY, JWT_SECRET intentionally absent
 });
 
 assert(minimalResult !== null, 'does not call process.exit in minimal mode without required vars');
@@ -134,24 +134,24 @@ assert(minimalResult?.databaseUrl === undefined, 'databaseUrl is undefined');
 assert(minimalResult?.llm.apiKey === undefined, 'llm.apiKey is undefined');
 assert(minimalResult?.auth.jwtSecret === undefined, 'auth.jwtSecret is undefined');
 
-section('Minimal mode — partial configuration (only DATABASE_URL)');
+section('Minimal mode — partial configuration (only MONGODB_URL)');
 
 const minimalPartialResult = parseEnv({
   JADEASSIST_MINIMAL_MODE: 'true',
-  DATABASE_URL: 'postgresql://localhost/test',
+  MONGODB_URL: 'mongodb://localhost:27017/jadeassist',
   PORT: '3001',
   NODE_ENV: 'test',
 });
 
 assert(minimalPartialResult !== null, 'does not call process.exit with partial config in minimal mode');
-assert(minimalPartialResult?.databaseUrl === 'postgresql://localhost/test', 'databaseUrl is set when provided');
+assert(minimalPartialResult?.databaseUrl === 'mongodb://localhost:27017/jadeassist', 'databaseUrl is set when provided');
 assert(minimalPartialResult?.llm.apiKey === undefined, 'llm.apiKey still undefined');
 
 section('Minimal mode — all vars provided (fully configured)');
 
 const minimalFullResult = parseEnv({
   JADEASSIST_MINIMAL_MODE: 'true',
-  DATABASE_URL: 'postgresql://localhost/test',
+  MONGODB_URL: 'mongodb://localhost:27017/jadeassist',
   OPENAI_API_KEY: 'sk-test-key',
   JWT_SECRET: 'super-secret-string-at-least-32-chars-long',
   PORT: '3001',
@@ -160,7 +160,7 @@ const minimalFullResult = parseEnv({
 
 assert(minimalFullResult !== null, 'starts successfully when all vars are present in minimal mode');
 assert(minimalFullResult?.minimalMode === true, 'minimalMode flag is still true');
-assert(minimalFullResult?.databaseUrl === 'postgresql://localhost/test', 'databaseUrl is set');
+assert(minimalFullResult?.databaseUrl === 'mongodb://localhost:27017/jadeassist', 'databaseUrl is set');
 assert(minimalFullResult?.llm.apiKey === 'sk-test-key', 'llm.apiKey is set');
 
 // ---------------------------------------------------------------------------
