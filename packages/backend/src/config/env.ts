@@ -47,8 +47,10 @@ const envSchema = z.object({
   EVENTFLOW_CATALOG_BASE_URL: z.string().optional(),
   EVENTFLOW_CATALOG_API_KEY: z.string().optional(),
 
-  // CORS — comma-separated list of allowed origins, or '*' for all (default)
-  CORS_ORIGIN: z.string().default('*'),
+  // CORS — comma-separated list of allowed origins, '*' for all, or empty to
+  // use the built-in production fallback (event-flow.co.uk domains in prod,
+  // wildcard in development).
+  CORS_ORIGIN: z.string().default(''),
 
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),

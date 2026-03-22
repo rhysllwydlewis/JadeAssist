@@ -187,9 +187,21 @@ When JadeAssist runs as a standalone Railway service and the EventFlow website
 (`event-flow.co.uk`) embeds the widget, the JadeAssist backend must explicitly
 allow cross-origin requests from EventFlow's domain.
 
-### Recommended production setting
+### Production fallback (automatic)
 
-In your Railway service **Variables** tab, set:
+If `CORS_ORIGIN` is **not set** in the Railway Variables and `NODE_ENV=production`,
+the backend automatically allows requests from:
+
+- `https://event-flow.co.uk`
+- `https://www.event-flow.co.uk`
+
+This means the widget works out of the box on EventFlow after a fresh deploy —
+no manual variable configuration needed for these two domains.
+
+### Recommended production setting (explicit)
+
+For clarity and to future-proof the configuration, it is still recommended to
+set the variable explicitly in the Railway service **Variables** tab:
 
 | Variable | Value |
 |---|---|
@@ -199,16 +211,26 @@ This tells the backend to:
 
 - Accept fetch/XHR requests from `https://event-flow.co.uk` and `https://www.event-flow.co.uk`.
 - Return `Access-Control-Allow-Credentials: true` (automatically enabled when specific origins are listed).
-- Handle `OPTIONS` preflight requests automatically (the `cors` package manages this).
+- Handle `OPTIONS` preflight requests (both via the explicit `app.options('*')` handler and the general CORS middleware).
 
 > **Note:** Do **not** use `*` together with credentials — the browser will reject such responses.
 > The backend already handles this correctly: `credentials` is only set to `true` when a specific
 > origin list is provided.
 
+### Common pitfalls
+
+| Mistake | Correct value |
+|---|---|
+| Trailing slash: `https://event-flow.co.uk/` | `https://event-flow.co.uk` (no slash) |
+| Missing `www`: only `https://event-flow.co.uk` | Include both: `https://event-flow.co.uk,https://www.event-flow.co.uk` |
+| Wrong TLD: `https://event-flow.com` | Must be `.co.uk` |
+| Space around comma: `https://event-flow.co.uk, https://www.event-flow.co.uk` | Avoid spaces; the backend trims each entry but keeping it clean prevents surprises |
+
 ### Development / staging
 
-For local development, the default `CORS_ORIGIN=*` allows all origins (including `localhost`).
-For a staging environment you can add extra origins to the comma-separated list, e.g.:
+For local development, leaving `CORS_ORIGIN` unset (or setting it to `*`) allows all origins
+(including `localhost`).  For a staging environment you can add extra origins to the
+comma-separated list, e.g.:
 
 ```
 CORS_ORIGIN=https://event-flow.co.uk,https://www.event-flow.co.uk,https://staging.event-flow.co.uk,http://localhost:3000

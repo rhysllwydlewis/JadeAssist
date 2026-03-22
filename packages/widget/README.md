@@ -445,15 +445,24 @@ npm start
 
 ### 2. Configure CORS
 
-The backend must allow requests from your website domain:
+The backend must allow cross-origin requests from your website domain.
 
-```javascript
-// In backend server configuration
-app.use(cors({
-  origin: ['https://event-flow.co.uk', 'https://www.event-flow.co.uk'],
-  credentials: true,
-}));
+**If you deploy on Railway** and leave `CORS_ORIGIN` unset with `NODE_ENV=production`,
+the backend automatically allows `https://event-flow.co.uk` and `https://www.event-flow.co.uk`
+— no extra configuration needed.
+
+To set origins explicitly, add a `CORS_ORIGIN` variable in your Railway service Variables tab:
+
 ```
+CORS_ORIGIN=https://event-flow.co.uk,https://www.event-flow.co.uk
+```
+
+> **Common pitfalls:**
+> - Do **not** include a trailing slash: `https://event-flow.co.uk` ✅ vs `https://event-flow.co.uk/` ❌
+> - Include **both** `www` and non-`www` variants so visitors on either URL are covered.
+> - Use `.co.uk` — not `.com`.
+
+See `RAILWAY.md` for the full CORS configuration reference.
 
 ### 3. API Requirements
 
