@@ -340,3 +340,62 @@ npm run dev
 - The service is stateless; all state lives in PostgreSQL.
 - Graceful shutdown handles `SIGTERM` from Railway.
 - Strict fail-fast (the default) means misconfiguration is caught at startup — not silently at request time.
+
+---
+
+## Production setup (required after first deploy)
+
+After the service is running and all environment variables are set, you **must** initialise the
+PostgreSQL database schema.  Without this step:
+
+- `/api/widget/chat` and `/api/chat` will return **503** with
+  `error.code = "DB_SCHEMA_MISSING"` and a message telling you to run migrations.
+- `GET /health` will show `"status": "unhealthy"` with
+  `"details": { "missingTables": ["users","conversations","messages","event_plans","suppliers"] }`.
+
+### Step A — Apply the database schema
+
+**Option 1: Railway CLI (recommended)**
+
+```bash
+# Install Railway CLI if you haven't already
+npm install -g @railway/cli
+
+# Link to your project
+railway link
+
+# Open a one-off shell on the Railway network and pipe in the schema
+railway run psql "$DATABASE_URL" < database/schema.sql
+```
+
+**Option 2: Railway "Connect" shell in the dashboard**
+
+1. In Railway, open your **PostgreSQL** service.
+2. Click **Connect** → copy the connection string (or use the built-in query editor).
+3. Paste the contents of `database/schema.sql` into the query editor and run it.
+
+**Option 3: Any Postgres client (psql, TablePlus, DBeaver, etc.)**
+
+```bash
+psql "postgres://<user>:<password>@<host>:<port>/<db>?sslmode=require" < database/schema.sql
+```
+
+Replace the connection string with the one shown in Railway → Postgres service → Connect.
+
+### Step B — Verify the schema was applied
+
+After running the SQL, hit the health endpoint:
+
+```bash
+curl https://<your-backend-domain>/health
+```
+
+You should see `"status": "healthy"` and no `details.missingTables` field.
+
+### Trust proxy (already applied in code)
+
+Railway routes traffic through a proxy that sets the `X-Forwarded-For` header.
+The backend now calls `app.set('trust proxy', 1)` at startup so that
+`express-rate-limit` reads the correct client IP.  **No manual configuration is
+needed** — this fix is included in the deployed code and eliminates the
+`ERR_ERL_UNEXPECTED_X_FORWARDED_FOR` warning from the logs.

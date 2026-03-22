@@ -24,6 +24,11 @@ import widgetChatRouter from './routes/widgetChat';
 // Create Express app
 const app: Application = express();
 
+// Trust the first proxy hop — required on Railway (and similar PaaS platforms)
+// so that express-rate-limit can read the real client IP from X-Forwarded-For
+// instead of logging ERR_ERL_UNEXPECTED_X_FORWARDED_FOR warnings.
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 

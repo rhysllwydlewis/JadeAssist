@@ -17,6 +17,7 @@ import { asyncHandler } from '../middleware/errorHandler';
 import { planningEngine } from '../services/planningEngine';
 import { logger } from '../utils/logger';
 import { RATE_LIMITS } from '../utils/constants';
+import { isDbSchemaMissingError } from '../utils/dbErrors';
 
 const router = Router();
 
@@ -88,12 +89,28 @@ router.post(
     } catch (err) {
       const errMessage = err instanceof Error ? err.message : '';
       const isRateLimit = errMessage.startsWith('RATE_LIMIT:');
+      const isDbSchema = !isRateLimit && isDbSchemaMissingError(err);
+
+      if (isDbSchema) {
+        logger.warn({ err, conversationId: resolvedConversationId }, 'Widget chat DB schema missing');
+        res.status(503).json({
+          success: false,
+          error: {
+            code: 'DB_SCHEMA_MISSING',
+            message:
+              'The database schema has not been initialised. ' +
+              'Please apply database/schema.sql to the production database and restart the service.',
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      logger.warn({ err, conversationId: resolvedConversationId }, 'Widget chat planning error');
 
       const fallbackContent = isRateLimit
         ? "I'm getting a lot of requests right now — please give me a moment and try again. ⏳"
         : "I'm having trouble connecting to my planning system right now. Please try again in a moment.";
-
-      logger.warn({ err, conversationId: resolvedConversationId }, 'Widget chat planning error');
 
       res.status(isRateLimit ? 429 : 503).json({
         success: false,

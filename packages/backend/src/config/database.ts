@@ -100,6 +100,34 @@ export const checkDatabaseHealth = async (): Promise<boolean> => {
   }
 };
 
+/** Core tables that must exist for JadeAssist to function. */
+const CORE_TABLES = ['users', 'conversations', 'messages', 'event_plans', 'suppliers'];
+
+/**
+ * Checks whether the core JadeAssist tables are present in the database.
+ *
+ * Returns an array of table names that are missing.  An empty array means the
+ * schema is fully initialised.  Call this only after checkDatabaseHealth()
+ * has confirmed the database is reachable.
+ */
+export const checkDatabaseSchema = async (): Promise<string[]> => {
+  try {
+    const result = await query<{ table_name: string }>(
+      `SELECT table_name
+         FROM information_schema.tables
+        WHERE table_schema = 'public'
+          AND table_name = ANY($1)`,
+      [CORE_TABLES]
+    );
+    const found = new Set(result.rows.map((r) => r.table_name));
+    return CORE_TABLES.filter((t) => !found.has(t));
+  } catch (error) {
+    logger.error({ error }, 'Database schema check failed');
+    // If the check itself errors, treat all tables as potentially missing.
+    return CORE_TABLES;
+  }
+};
+
 // Graceful shutdown
 export const closeDatabaseConnections = async (): Promise<void> => {
   if (pool) {
