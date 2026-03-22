@@ -4,6 +4,42 @@ This guide walks you through deploying the **JadeAssist backend API** as a live 
 
 ---
 
+## ⚠️ Critical: set the Root Directory for each Railway service
+
+JadeAssist is a **monorepo** with two separate Railway services.  Each service
+**must** have its **Root Directory** set correctly in the Railway dashboard so
+that it reads the right `railway.toml` and runs the right workspace.
+
+| Railway service      | Root Directory     | Reads                              |
+|----------------------|--------------------|------------------------------------|
+| `@jadeassist/backend`| `packages/backend` | `packages/backend/railway.toml`    |
+| `@jadeassist/widget` | `packages/widget`  | `packages/widget/railway.toml`     |
+
+**Where to set it in Railway:**  
+Service → **Settings** → **Source** → **Root Directory**
+
+> If the widget service Root Directory is left blank (repo root `/`), it will
+> read the root `railway.toml` which contains backend commands and will attempt
+> to start `@jadeassist/backend`.  This causes an
+> `❌ Invalid environment variables: OPENAI_API_KEY Required` crash in the
+> widget service — even though the widget itself does not need `OPENAI_API_KEY`.
+
+### Required environment variables per service
+
+| Variable        | `@jadeassist/backend` | `@jadeassist/widget` |
+|-----------------|-----------------------|----------------------|
+| `OPENAI_API_KEY`| ✅ Required            | ❌ Do NOT set        |
+| `JWT_SECRET`    | ✅ Required            | ❌ Do NOT set        |
+| `MONGODB_URL`   | ✅ Required            | ❌ Do NOT set        |
+| `LLM_MODEL`     | Recommended (`gpt-4o-mini`) | ❌ Do NOT set |
+| `NODE_ENV`      | `production`          | *(not needed)*       |
+| `CORS_ORIGIN`   | Recommended           | *(not needed)*       |
+
+The widget service serves a **static JavaScript bundle** — it has no server-side
+secrets and must not have `OPENAI_API_KEY` set.
+
+---
+
 ## Overview
 
 JadeAssist is a stateless HTTP API built with Node.js + Express + TypeScript.  
@@ -106,7 +142,7 @@ Railway redeploys automatically. The service now runs in strict mode with all fe
 | `PORT` | auto-set by Railway | Railway injects this automatically — do not set manually |
 | `NODE_ENV` | `development` | Set to `production` on Railway |
 | `JADEASSIST_MINIMAL_MODE` | `false` | Set to `true` to start without DB / OpenAI / JWT |
-| `LLM_MODEL` | `gpt-4-turbo` | OpenAI model to use |
+| `LLM_MODEL` | `gpt-4-turbo` | OpenAI model to use. **Recommended: set to `gpt-4o-mini`** — `gpt-4-turbo` may not be available on all API keys |
 | `LLM_TOKEN_LIMIT` | `4000` | Max tokens per LLM request |
 | `AUTH_PROVIDER` | `jwt` | `jwt` \| `eventflow` |
 | `CORS_ORIGIN` | `*` | Allowed CORS origin(s). `*` allows all. Use a comma-separated list to restrict, e.g. `https://event-flow.co.uk` |

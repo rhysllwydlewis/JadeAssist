@@ -1,0 +1,26 @@
+# railway.toml — Backend service configuration
+#
+# Usage: In Railway, set the "@jadeassist/backend" service root directory to
+#        "packages/backend". Railway will pick up this file automatically.
+#
+# Required environment variables for this service:
+#   OPENAI_API_KEY   — Your OpenAI API key (starts with sk-…)
+#   JWT_SECRET       — Long random secret for JWT signing (32+ chars)
+#   MONGODB_URL      — MongoDB connection string (use ${{ MongoDB.MONGO_URL }} on Railway)
+#
+# Recommended (optional) variables:
+#   LLM_MODEL        — OpenAI model name, e.g. gpt-4o-mini (default: gpt-4-turbo)
+#   NODE_ENV         — Set to "production" on Railway
+#   CORS_ORIGIN      — Comma-separated allowed origins, e.g. https://event-flow.co.uk
+
+[build]
+builder = "nixpacks"
+buildCommand = "npm ci && npm run build"
+watchPaths = ["packages/backend/**", "packages/shared/**"]
+
+[deploy]
+startCommand = "npm run start"
+healthcheckPath = "/healthz"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3

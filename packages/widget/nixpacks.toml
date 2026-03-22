@@ -1,0 +1,11 @@
+# nixpacks.toml — Widget service Nixpacks configuration
+#
+# This file is used when the Railway widget service root is set to
+# "packages/widget". It ensures the install step runs only once,
+# avoiding EBUSY / ENOTEMPTY errors from nested npm ci calls.
+
+[phases.install]
+cmds = ["npm ci"]
+
+[phases.build]
+cmds = ["npm run build"]

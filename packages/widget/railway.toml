@@ -12,6 +12,7 @@
 [build]
 builder = "nixpacks"
 buildCommand = "npm ci && npm run build"
+watchPaths = ["packages/widget/**", "packages/shared/**"]
 
 [deploy]
 startCommand = "npm run start"

@@ -1,4 +1,10 @@
-# nixpacks.toml — Explicit Nixpacks build configuration for JadeAssist backend
+# nixpacks.toml — Backend service Nixpacks configuration (repo root)
+#
+# !! THIS FILE IS FOR THE @jadeassist/backend SERVICE ONLY !!
+#
+# See railway.toml in this directory for the full service routing table.
+# The @jadeassist/widget service should have its Railway root directory set to
+# "packages/widget", which uses packages/widget/nixpacks.toml instead.
 #
 # Why this file exists
 # --------------------
