@@ -1,0 +1,21 @@
+# railway.toml — Widget service configuration
+#
+# Usage: Point your Railway widget service root directory to "packages/widget".
+# Railway will pick up this file automatically and use the commands below.
+#
+# Build and start commands here do NOT use workspace flags because Railway
+# resolves them relative to the service root directory (packages/widget).
+#
+# For Option A (Railway Static site), ignore the [deploy] block and configure
+# the service as Static in the Railway dashboard instead — see RAILWAY.md.
+
+[build]
+builder = "nixpacks"
+buildCommand = "npm ci && npm run build"
+
+[deploy]
+startCommand = "npm run start"
+healthcheckPath = "/healthz"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3

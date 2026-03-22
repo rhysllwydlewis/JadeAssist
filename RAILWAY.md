@@ -17,7 +17,7 @@ JadeAssist supports two operating modes to make Railway deployment as smooth as 
 
 ### Strict mode (default — recommended for production)
 
-The server **requires** `DATABASE_URL`, `OPENAI_API_KEY`, and `JWT_SECRET` at startup.  
+The server **requires** `MONGODB_URL`, `OPENAI_API_KEY`, and `JWT_SECRET` at startup.  
 If any are missing the process exits with a clear error message.  
 This is the safe default: misconfiguration is surfaced immediately rather than silently.
 
@@ -208,7 +208,7 @@ In minimal mode returns `"degraded"` (HTTP 200 always, so Railway does not resta
     "status": "degraded",
     "minimalMode": true,
     "skippedChecks": [
-      "database (DATABASE_URL not set)",
+      "database (MONGODB_URL not set)",
       "llm (OPENAI_API_KEY not set)"
     ],
     "services": { "database": "down", "llm": "down" },
@@ -311,11 +311,180 @@ The main endpoint for EventFlow to call.
   "success": false,
   "error": {
     "code": "SERVICE_NOT_CONFIGURED",
-    "message": "This endpoint requires DATABASE_URL, OPENAI_API_KEY, and JWT_SECRET. Configure the missing variables and set JADEASSIST_MINIMAL_MODE=false (or remove it) to enable full functionality.",
-    "missingVars": ["DATABASE_URL", "OPENAI_API_KEY", "JWT_SECRET"]
+    "message": "This endpoint requires MONGODB_URL, OPENAI_API_KEY, and JWT_SECRET. Configure the missing variables and set JADEASSIST_MINIMAL_MODE=false (or remove it) to enable full functionality.",
+    "missingVars": ["MONGODB_URL", "OPENAI_API_KEY", "JWT_SECRET"]
   }
 }
 ```
+
+---
+
+## Widget deployment on Railway
+
+The JadeAssist widget (`@jadeassist/widget`) is a single-file JavaScript bundle
+(`packages/widget/dist/jade-widget.js`) produced by Vite.  **Never deploy it
+using the dev server** (`npm run dev` / `vite`) — that starts a hot-reload
+development server on port 5173 which is not suitable for production.
+
+### Why `npm run dev` is wrong in production
+
+When Railway auto-detects the monorepo it may fall back to
+`npm run dev --workspace=@jadeassist/widget`, which starts the Vite dev server.
+The Vite dev server:
+
+- Does **not** serve an optimised, bundled file.
+- Listens on `localhost:5173` (not Railway's dynamic `PORT`).
+- May not accept external connections at all.
+- Prints `Local: http://localhost:5173/` in the logs — a clear sign it is running
+  in dev mode.
+
+The `railway.toml` committed to this repository prevents this by declaring the
+correct build and start commands explicitly.
+
+---
+
+### Option A — Railway Static site (recommended)
+
+A Static site is the simplest and most efficient way to serve the widget bundle.
+Railway builds it once and serves the files from its edge CDN; no Node process
+is needed.
+
+#### Settings (Railway dashboard → widget service → Settings)
+
+| Setting | Value |
+|---|---|
+| Service type | **Static** |
+| Build command | `npm ci && npm run build --workspace=packages/widget` |
+| Output directory | `packages/widget/dist` |
+| Health check | *(not required for Static sites)* |
+
+After deploying, Railway will expose `jade-widget.js` at the root of the
+service domain, e.g.:
+
+```
+https://widget.up.railway.app/jade-widget.js
+```
+
+---
+
+### Option B — Node static server
+
+If you prefer a Node service (e.g. to keep a uniform service type or to add
+custom headers), the widget package ships with a minimal production-safe static
+server at `packages/widget/server.js`.
+
+The server:
+- Serves every file in `packages/widget/dist/` over HTTP.
+- Listens on `process.env.PORT` (Railway sets this automatically).
+- Responds `200 { "ok": true }` at `GET /healthz` for Railway health probes.
+- Sends sensible `Cache-Control` headers (immutable for hashed assets, 1-hour
+  max-age for `jade-widget.js`).
+- Uses no third-party dependencies — only Node built-ins.
+
+#### Railway service settings for Option B
+
+| Setting | Value |
+|---|---|
+| Build command | `npm ci && npm run build --workspace=packages/widget` |
+| Start command | `npm run start --workspace=packages/widget` |
+| Health check path | `/healthz` |
+
+Alternatively, set the service root directory to `packages/widget` and Railway
+will pick up `packages/widget/railway.toml` automatically (no dashboard
+overrides needed).
+
+---
+
+### How to embed the widget on your site
+
+Whichever option you choose, the widget URL will be the public Railway domain
+for that service with `/jade-widget.js` appended:
+
+```html
+<!-- Replace the src URL with your Railway widget service domain -->
+<script src="https://<widget-service-domain>/jade-widget.js"></script>
+<script>
+  window.JadeWidget.init({
+    apiBaseUrl: 'https://<backend-service-domain>',
+    assistantName: 'Jade',
+    primaryColor: '#8B5CF6',
+  });
+</script>
+```
+
+> The `apiBaseUrl` must be the **public** Railway URL of the backend service —
+> never a `*.railway.internal` hostname, which is only reachable within Railway's
+> private network.
+
+---
+
+### How to test after deploying the widget
+
+1. **Fetch the bundle** — confirm it exists and is JavaScript:
+
+   ```bash
+   curl -I https://<widget-service-domain>/jade-widget.js
+   # Expected: HTTP/2 200, Content-Type: application/javascript
+   ```
+
+2. **Inspect the first line** — it should be an IIFE, not YAML or HTML:
+
+   ```bash
+   curl -s https://<widget-service-domain>/jade-widget.js | head -c 20
+   # Expected output starts with: (function(
+   ```
+
+3. **Health check** (Node server option only):
+
+   ```bash
+   curl https://<widget-service-domain>/healthz
+   # Expected: {"ok":true}
+   ```
+
+4. **End-to-end widget test** in a browser:
+
+   ```html
+   <!DOCTYPE html>
+   <html>
+   <body>
+   <script src="https://<widget-service-domain>/jade-widget.js"></script>
+   <script>
+     window.JadeWidget.init({
+       apiBaseUrl: 'https://<backend-service-domain>',
+     });
+   </script>
+   </body>
+   </html>
+   ```
+
+   Open the page, click the chat bubble, and send a message.  
+   In the browser Network panel you should see a successful `POST /api/widget/chat`.
+
+---
+
+### Required backend environment variables (summary)
+
+The widget itself has no environment variables — it is a static file.  
+The **backend** service that the widget talks to requires:
+
+| Variable | Required | Description |
+|---|---|---|
+| `MONGODB_URL` | Yes | MongoDB connection string (`${{ MongoDB.MONGO_URL }}` on Railway) |
+| `OPENAI_API_KEY` | Yes | OpenAI API key |
+| `JWT_SECRET` | Yes | Long random secret for JWT signing |
+| `CORS_ORIGIN` | Recommended | Comma-separated list of origins allowed to call the API, e.g. `https://event-flow.co.uk` |
+
+> See [Environment variable reference](#environment-variable-reference) above for the full list.
+
+---
+
+### Multi-service Railway project summary
+
+| Service | Type | Build command | Start / Output |
+|---|---|---|---|
+| `@jadeassist/backend` | Node | `npm ci && npm run build --workspace=packages/backend` | `npm run start --workspace=packages/backend` |
+| `@jadeassist/widget` (Static) | Static | `npm ci && npm run build --workspace=packages/widget` | Output dir: `packages/widget/dist` |
+| `@jadeassist/widget` (Node) | Node | `npm ci && npm run build --workspace=packages/widget` | `npm run start --workspace=packages/widget` |
 
 ---
 
