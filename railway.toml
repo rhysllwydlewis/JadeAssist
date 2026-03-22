@@ -1,39 +1,33 @@
-# railway.toml — Backend service configuration (repo root)
+# railway.toml — Widget service configuration (repo root)
 #
-# !! THIS FILE IS FOR THE @jadeassist/backend SERVICE ONLY !!
+# This file is read by the @jadeassist/widget Railway service.
+# The widget service Root Directory MUST be set to "." (repo root) in the
+# Railway dashboard so that:
+#   1. Railway reads THIS file.
+#   2. The Docker build context includes package-lock.json (at repo root) and
+#      all workspace packages, which are required for `npm ci` to succeed.
 #
 # In a multi-service Railway project there are TWO services:
-#
-#   @jadeassist/backend  — Node.js API server
-#   @jadeassist/widget   — Static JS bundle / Node static server
-#
-# Each service MUST have its "Root Directory" set in the Railway dashboard so
-# that it reads the correct railway.toml:
 #
 #   Service              | Root Directory    | railway.toml used
 #   ---------------------|-------------------|------------------------------------
 #   @jadeassist/backend  | packages/backend  | packages/backend/railway.toml  ✓
-#   @jadeassist/widget   | packages/widget   | packages/widget/railway.toml   ✓
+#   @jadeassist/widget   | .  (repo root)    | railway.toml (this file)        ✓
 #
-# If the widget service root directory is left as "/" it will read THIS file
-# and attempt to start the backend — causing "OPENAI_API_KEY: Required" failures.
-#
-# Required environment variables for @jadeassist/backend:
-#   OPENAI_API_KEY   — OpenAI API key (starts with sk-…)
-#   JWT_SECRET       — Long random secret for JWT signing (32+ chars)
-#   MONGODB_URL      — MongoDB connection string
+# !! Do NOT set the backend service Root Directory to "." (repo root) — it will
+#    read this file and try to build/start the widget instead of the backend. !!
 #
 # The @jadeassist/widget service does NOT need OPENAI_API_KEY or JWT_SECRET.
 # See RAILWAY.md for the full setup guide.
 # ─────────────────────────────────────────────────────────────────────────────
 
 [build]
-builder = "nixpacks"
-buildCommand = "npm run build --workspace=packages/backend"
-watchPaths = ["packages/backend/**", "packages/shared/**"]
+builder = "dockerfile"
+dockerfilePath = "packages/widget/Dockerfile"
+watchPaths = ["packages/widget/**", "packages/shared/**"]
 
 [deploy]
-startCommand = "npm run start --workspace=packages/backend"
+startCommand = "node server.js"
 healthcheckPath = "/healthz"
 healthcheckTimeout = 30
 restartPolicyType = "on_failure"
