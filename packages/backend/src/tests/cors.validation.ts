@@ -6,6 +6,8 @@
  *   2. Does NOT return CORS headers for unlisted origins.
  *   3. Handles OPTIONS preflight correctly.
  *   4. Falls back to wildcard '*' when configured as such.
+ *   5. Uses PRODUCTION_FALLBACK_ORIGINS when CORS_ORIGIN is empty in production.
+ *   6. Does NOT apply the production fallback when CORS_ORIGIN='*' (explicit override).
  *
  * Run with:
  *   ts-node --project tsconfig.json src/tests/cors.validation.ts
@@ -17,6 +19,10 @@ import express from 'express';
 import cors from 'cors';
 import * as http from 'http';
 import * as net from 'net';
+import {
+  resolveAllowedOrigins,
+  PRODUCTION_FALLBACK_ORIGINS,
+} from '../utils/cors';
 
 // ---------------------------------------------------------------------------
 // Test runner helpers (same style as planningEngine.validation.ts)
@@ -46,16 +52,21 @@ function section(title: string): void {
 /**
  * Build a minimal Express app wired up with the same CORS logic used in
  * packages/backend/src/index.ts so the tests reflect real behaviour.
+ *
+ * @param corsOriginEnv  Value of the CORS_ORIGIN env var (may be empty).
+ * @param isProduction   Whether to treat this as a production environment.
  */
-function buildCorsApp(allowedOrigins: string | string[]): express.Application {
+function buildCorsApp(
+  corsOriginEnv: string,
+  isProduction = false,
+): express.Application {
   const app = express();
+  const allowedOrigins = resolveAllowedOrigins(corsOriginEnv, isProduction);
   const isWildcard = allowedOrigins === '*';
-  app.use(
-    cors({
-      origin: isWildcard ? '*' : allowedOrigins,
-      credentials: !isWildcard,
-    }),
-  );
+
+  // Explicit preflight handler (mirrors index.ts)
+  app.options('*', cors({ origin: allowedOrigins, credentials: !isWildcard }));
+  app.use(cors({ origin: allowedOrigins, credentials: !isWildcard }));
   app.get('/test', (_req, res) => res.json({ ok: true }));
   app.post('/test', (_req, res) => res.json({ ok: true }));
   return app;
@@ -134,16 +145,16 @@ const DEV_ORIGINS = [
   'http://localhost:5173',
 ];
 
-const ALL_ALLOWED = [...EVENTFLOW_ORIGINS, ...DEV_ORIGINS];
+const ALL_ALLOWED_CSV = [...EVENTFLOW_ORIGINS, ...DEV_ORIGINS].join(',');
 
 async function runTests(): Promise<void> {
   // ── 1. Allowed origins receive ACAO header ──────────────────────────────
   section('Allowed origins receive correct CORS headers');
 
   {
-    const { server, port } = await startServer(buildCorsApp(ALL_ALLOWED));
+    const { server, port } = await startServer(buildCorsApp(ALL_ALLOWED_CSV));
     try {
-      for (const origin of ALL_ALLOWED) {
+      for (const origin of [...EVENTFLOW_ORIGINS, ...DEV_ORIGINS]) {
         const res = await makeRequest(port, '/test', 'GET', { Origin: origin });
         assert(
           res.headers['access-control-allow-origin'] === origin,
@@ -163,7 +174,7 @@ async function runTests(): Promise<void> {
   section('Disallowed origins do not receive CORS headers');
 
   {
-    const { server, port } = await startServer(buildCorsApp(ALL_ALLOWED));
+    const { server, port } = await startServer(buildCorsApp(ALL_ALLOWED_CSV));
     try {
       const disallowed = [
         'https://evil.com',
@@ -187,7 +198,7 @@ async function runTests(): Promise<void> {
   section('OPTIONS preflight returns correct headers');
 
   {
-    const { server, port } = await startServer(buildCorsApp(ALL_ALLOWED));
+    const { server, port } = await startServer(buildCorsApp(ALL_ALLOWED_CSV));
     try {
       const origin = 'https://event-flow.co.uk';
       const res = await makeRequest(port, '/test', 'OPTIONS', {
@@ -221,7 +232,7 @@ async function runTests(): Promise<void> {
   section('OPTIONS preflight for disallowed origin is not granted');
 
   {
-    const { server, port } = await startServer(buildCorsApp(ALL_ALLOWED));
+    const { server, port } = await startServer(buildCorsApp(ALL_ALLOWED_CSV));
     try {
       const origin = 'https://evil.com';
       const res = await makeRequest(port, '/test', 'OPTIONS', {
@@ -264,6 +275,101 @@ async function runTests(): Promise<void> {
     } finally {
       await stopServer(server);
     }
+  }
+
+  // ── 6. resolveAllowedOrigins — production fallback ───────────────────────
+  section('resolveAllowedOrigins — empty CORS_ORIGIN in production uses fallback');
+
+  {
+    const result = resolveAllowedOrigins('', true);
+    assert(
+      Array.isArray(result),
+      'empty CORS_ORIGIN + production → returns an array',
+    );
+    if (Array.isArray(result)) {
+      for (const origin of PRODUCTION_FALLBACK_ORIGINS) {
+        assert(
+          result.includes(origin),
+          `production fallback includes ${origin}`,
+        );
+      }
+    }
+  }
+
+  // ── 7. resolveAllowedOrigins — production fallback (live HTTP) ───────────
+  section('Production fallback — EventFlow origins allowed, others blocked');
+
+  {
+    // Simulate a production deployment with CORS_ORIGIN not set (empty string).
+    const { server, port } = await startServer(buildCorsApp('', true));
+    try {
+      for (const origin of EVENTFLOW_ORIGINS) {
+        const res = await makeRequest(port, '/test', 'OPTIONS', {
+          Origin: origin,
+          'Access-Control-Request-Method': 'POST',
+          'Access-Control-Request-Headers': 'Content-Type',
+        });
+        assert(
+          res.headers['access-control-allow-origin'] === origin,
+          `Production fallback preflight: ${origin} → ACAO: ${origin}`,
+        );
+        assert(
+          res.headers['access-control-allow-credentials'] === 'true',
+          `Production fallback preflight: ${origin} → credentials: true`,
+        );
+      }
+
+      // Unknown origins must still be blocked.
+      const blockedOrigins = [
+        'https://evil.com',
+        // HTTP (non-HTTPS) variants of the EventFlow domains must also be blocked
+        // in production — the fallback only allows the HTTPS versions.
+        'http://event-flow.co.uk',
+        'http://www.event-flow.co.uk',
+      ];
+      for (const blocked of blockedOrigins) {
+        const blockedRes = await makeRequest(port, '/test', 'OPTIONS', {
+          Origin: blocked,
+          'Access-Control-Request-Method': 'POST',
+          'Access-Control-Request-Headers': 'Content-Type',
+        });
+        assert(
+          !blockedRes.headers['access-control-allow-origin'],
+          `Production fallback: ${blocked} → no ACAO header (blocked)`,
+        );
+      }
+    } finally {
+      await stopServer(server);
+    }
+  }
+
+  // ── 8. resolveAllowedOrigins — explicit '*' overrides fallback ───────────
+  section('Explicit CORS_ORIGIN=* always yields wildcard, even in production');
+
+  {
+    const result = resolveAllowedOrigins('*', true);
+    assert(result === '*', 'explicit * in production → wildcard');
+
+    const { server, port } = await startServer(buildCorsApp('*', true));
+    try {
+      const res = await makeRequest(port, '/test', 'GET', {
+        Origin: 'https://anything.com',
+      });
+      assert(
+        res.headers['access-control-allow-origin'] === '*',
+        'explicit * in production → ACAO: *',
+      );
+    } finally {
+      await stopServer(server);
+    }
+  }
+
+  // ── 9. resolveAllowedOrigins — empty CORS_ORIGIN in dev uses wildcard ────
+  section('Empty CORS_ORIGIN in non-production uses wildcard');
+
+  {
+    const result = resolveAllowedOrigins('', false);
+    assert(result === '*', 'empty CORS_ORIGIN + non-production → wildcard');
   }
 
   // ── Results ────────────────────────────────────────────────────────────────

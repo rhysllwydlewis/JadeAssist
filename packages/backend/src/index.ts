@@ -3,7 +3,7 @@
  * Main entry point
  */
 import express, { Application, Request, Response } from 'express';
-import cors from 'cors';
+import cors, { CorsOptions } from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { env } from './config/env';
@@ -12,6 +12,7 @@ import { logger } from './utils/logger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { requestId } from './middleware/requestId';
 import { RATE_LIMITS } from './utils/constants';
+import { resolveAllowedOrigins } from './utils/cors';
 
 // Import routes
 import healthRouter from './routes/health';
@@ -32,14 +33,25 @@ app.set('trust proxy', 1);
 // Security middleware
 app.use(helmet());
 
-// Parse CORS_ORIGIN: '*' means allow all; otherwise treat as comma-separated list
-const corsOrigins = env.corsOrigin.trim();
-app.use(
-  cors({
-    origin: corsOrigins === '*' ? '*' : corsOrigins.split(',').map((o) => o.trim()).filter((o) => o.length > 0),
-    credentials: corsOrigins !== '*',
-  })
-);
+// ── CORS ──────────────────────────────────────────────────────────────────────
+// resolveAllowedOrigins applies the following rules:
+//  1. CORS_ORIGIN='*'          → wildcard (all origins allowed, no credentials).
+//  2. CORS_ORIGIN=<list>       → only the specified comma-separated origins.
+//  3. CORS_ORIGIN not set + production → PRODUCTION_FALLBACK_ORIGINS (EventFlow domains).
+//  4. CORS_ORIGIN not set + other envs → wildcard (convenient for local dev).
+const allowedOrigins = resolveAllowedOrigins(env.corsOrigin, env.isProduction);
+const corsOptions: CorsOptions = {
+  origin: allowedOrigins,
+  credentials: allowedOrigins !== '*',
+};
+
+// Respond to OPTIONS preflight requests immediately — must be registered before
+// any route so browsers receive correct CORS headers without hitting
+// rate-limiting or other middleware.
+app.options('*', cors(corsOptions));
+
+// Attach CORS headers to every real request as well.
+app.use(cors(corsOptions));
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
