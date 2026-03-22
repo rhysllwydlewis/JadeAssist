@@ -1,0 +1,41 @@
+# railway.toml — Railway deployment configuration for JadeAssist
+#
+# This file configures how Railway builds and starts each service in the
+# JadeAssist monorepo.  It prevents Railway from auto-detecting the wrong
+# start command (e.g. `npm run dev`) and makes the intended build/start
+# behaviour explicit.
+#
+# ─── Service: @jadeassist/backend ────────────────────────────────────────────
+# Deploy the Node.js API server.  Railway injects PORT automatically.
+#
+# ─── Service: @jadeassist/widget ─────────────────────────────────────────────
+# Two options are documented below:
+#
+#   Option A (recommended) — Railway Static site
+#     Configure the widget service as a "Static" site in the Railway dashboard:
+#       Build command : npm ci && npm run build --workspace=packages/widget
+#       Output dir    : packages/widget/dist
+#     No [deploy] block is needed for a Static service — Railway hosts the files
+#     directly.  See RAILWAY.md §"Widget deployment on Railway" for full steps.
+#
+#   Option B — Node static server (this file)
+#     If you prefer a Node service (e.g. to keep a single service type), keep
+#     the [deploy] block for the widget service uncommented.
+#
+# Railway reads this file when the service root directory is set to the repo
+# root.  For per-service configuration in a multi-service project, point each
+# Railway service at the relevant sub-directory and use the override commands
+# in the Railway dashboard, or create per-directory railway.toml files.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Backend service ───────────────────────────────────────────────────────────
+[build]
+builder = "nixpacks"
+buildCommand = "npm ci && npm run build --workspace=packages/backend"
+
+[deploy]
+startCommand = "npm run start --workspace=packages/backend"
+healthcheckPath = "/healthz"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3

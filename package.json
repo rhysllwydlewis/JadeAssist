@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "start": "npm run start --workspace=packages/backend",
+    "start:widget": "npm run start --workspace=packages/widget",
     "dev": "npm run dev --workspace=packages/backend",
     "dev:widget": "npm run dev --workspace=packages/widget",
     "build": "npm run build --workspaces --if-present",

@@ -65,7 +65,18 @@ jobs:
             exit 1
           fi
 
-          echo "✓ $FILE is valid JavaScript"
+          # Verify expected output filename (ensures Vite config fileName remains stable)
+          BASENAME=$(basename "$FILE")
+          if [ "$BASENAME" != "jade-widget.js" ]; then
+            echo "Error: Expected output filename jade-widget.js, got $BASENAME"
+            exit 1
+          fi
+
+          SIZE=$(wc -c < "$FILE")
+          echo "✓ $FILE is valid JavaScript (${SIZE} bytes)"
+
+      - name: Run widget validate-build.js
+        run: node packages/widget/validate-build.js
 
       - name: Commit and push if changed (main branch only)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
