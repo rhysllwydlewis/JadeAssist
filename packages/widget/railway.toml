@@ -1,16 +1,18 @@
-# railway.toml — Widget service reference configuration
+# railway.toml — Widget service (packages/widget directory)
 #
-# NOTE: This file is NO LONGER the active Railway configuration for the
-# @jadeassist/widget service.  The widget service now uses a Dockerfile build
-# and its Railway Root Directory must be set to "." (the repo root).
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║  ⚠️  THIS FILE IS NOT THE ACTIVE RAILWAY CONFIGURATION          ║
+# ║                                                                  ║
+# ║  The @jadeassist/widget service Root Directory MUST be set to   ║
+# ║  "." (repo root) in the Railway dashboard, NOT "packages/widget"║
+# ║                                                                  ║
+# ║  If Root Directory is "packages/widget", the Docker build will  ║
+# ║  FAIL — the build context won't include the root               ║
+# ║  package-lock.json that npm ci requires.                        ║
+# ║                                                                  ║
+# ║  See RAILWAY.md for the correct Railway dashboard settings.     ║
+# ╚══════════════════════════════════════════════════════════════════╝
 #
-# When Root Directory is "." Railway reads the ROOT railway.toml (at the
-# repo root), which contains the Dockerfile builder configuration.
-#
-# This file is kept for reference only.  See RAILWAY.md for full setup
-# instructions and the correct Railway dashboard settings.
-#
-# Active configuration:
-#   Root Directory  : .  (repo root)
-#   Reads           : railway.toml  (repo root)
-#   Dockerfile      : packages/widget/Dockerfile
+# Active configuration when Root Directory is "." (repo root):
+#   railway.toml (repo root)  →  builder = "dockerfile"
+#                                dockerfilePath = "packages/widget/Dockerfile"

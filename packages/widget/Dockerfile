@@ -17,13 +17,18 @@ FROM node:18-alpine AS builder
 WORKDIR /app
 
 # Copy root-level workspace manifests (package-lock.json lives here)
-COPY package.json package-lock.json ./
+# tsconfig.json is also required because packages/widget/tsconfig.json and
+# packages/shared/tsconfig.json both extend "../../tsconfig.json" (repo root).
+COPY package.json package-lock.json tsconfig.json ./
 
 # Copy all workspace packages (needed for npm workspaces resolution and the
 # @jadeassist/shared dependency referenced by the widget)
 COPY packages/ ./packages/
 
-# Install all dependencies from the monorepo root using the root lockfile
+# Install all dependencies from the monorepo root using the root lockfile.
+# --ignore-scripts prevents lifecycle scripts (postinstall etc.) in third-party
+# packages from running, which is a Docker security best practice. No workspace
+# package in this repo uses postinstall scripts, so this is safe.
 RUN npm ci --ignore-scripts
 
 # Build the widget workspace (tsc + vite build + validate-build.js)

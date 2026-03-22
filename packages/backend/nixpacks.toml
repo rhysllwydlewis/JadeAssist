@@ -1,11 +1,16 @@
 # nixpacks.toml — Backend service Nixpacks configuration
 #
 # This file is used when the Railway backend service root is set to
-# "packages/backend". It ensures the install step runs only once,
-# avoiding EBUSY / ENOTEMPTY errors from nested npm ci calls.
+# "packages/backend". It overrides the Nixpacks install phase so that
+# `npm ci` runs from the monorepo root (where the only package-lock.json
+# lives), not from packages/backend where there is no lockfile.
+#
+# It also pins the build step to a single `npm run build` invocation,
+# avoiding EBUSY / ENOTEMPTY errors that occur when `npm ci` is run twice
+# (once here and once if buildCommand in railway.toml also includes `npm ci`).
 
 [phases.install]
-cmds = ["npm ci"]
+cmds = ["cd ../.. && npm ci"]
 
 [phases.build]
 cmds = ["npm run build"]
