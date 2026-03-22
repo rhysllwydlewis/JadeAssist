@@ -5,19 +5,18 @@
 #
 # The build and start commands use "cd ../.. && ..." to run from the monorepo
 # root instead of from packages/widget.  This is required because this is an
-# npm workspaces monorepo: the only package-lock.json is at the repo root, so
-# "npm ci" must be run from there.  Without "cd ../..":
-#   - npm ci fails with EUSAGE ("can only install packages when your
-#     package.json and package-lock.json ... are in sync")
-#   - npm run build / start would need --workspace flags anyway
+# npm workspaces monorepo: the only package-lock.json is at the repo root.
+# "npm ci" is handled by the Nixpacks install phase (see nixpacks.toml) which
+# also runs from the repo root.
 #
 # For Option A (Railway Static site), ignore the [deploy] block and configure
 # the service as Static in the Railway dashboard instead — see RAILWAY.md.
 
 [build]
 builder = "nixpacks"
-# cd ../.. moves from packages/widget → repo root so npm ci finds the lockfile
-buildCommand = "cd ../.. && npm ci && npm run build --workspace=packages/widget"
+# cd ../.. moves from packages/widget → repo root so the build finds workspace packages.
+# npm ci is handled by the Nixpacks install phase in nixpacks.toml (also runs from repo root).
+buildCommand = "cd ../.. && npm run build --workspace=packages/widget"
 watchPaths = ["packages/widget/**", "packages/shared/**"]
 
 [deploy]
