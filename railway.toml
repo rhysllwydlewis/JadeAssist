@@ -1,37 +1,36 @@
-# railway.toml — Railway deployment configuration for JadeAssist
+# railway.toml — Backend service configuration (repo root)
 #
-# This file configures how Railway builds and starts each service in the
-# JadeAssist monorepo.  It prevents Railway from auto-detecting the wrong
-# start command (e.g. `npm run dev`) and makes the intended build/start
-# behaviour explicit.
+# !! THIS FILE IS FOR THE @jadeassist/backend SERVICE ONLY !!
 #
-# ─── Service: @jadeassist/backend ────────────────────────────────────────────
-# Deploy the Node.js API server.  Railway injects PORT automatically.
+# In a multi-service Railway project there are TWO services:
 #
-# ─── Service: @jadeassist/widget ─────────────────────────────────────────────
-# Two options are documented below:
+#   @jadeassist/backend  — Node.js API server
+#   @jadeassist/widget   — Static JS bundle / Node static server
 #
-#   Option A (recommended) — Railway Static site
-#     Configure the widget service as a "Static" site in the Railway dashboard:
-#       Build command : npm ci && npm run build --workspace=packages/widget
-#       Output dir    : packages/widget/dist
-#     No [deploy] block is needed for a Static service — Railway hosts the files
-#     directly.  See RAILWAY.md §"Widget deployment on Railway" for full steps.
+# Each service MUST have its "Root Directory" set in the Railway dashboard so
+# that it reads the correct railway.toml:
 #
-#   Option B — Node static server (this file)
-#     If you prefer a Node service (e.g. to keep a single service type), keep
-#     the [deploy] block for the widget service uncommented.
+#   Service              | Root Directory    | railway.toml used
+#   ---------------------|-------------------|------------------------------------
+#   @jadeassist/backend  | packages/backend  | packages/backend/railway.toml  ✓
+#   @jadeassist/widget   | packages/widget   | packages/widget/railway.toml   ✓
 #
-# Railway reads this file when the service root directory is set to the repo
-# root.  For per-service configuration in a multi-service project, point each
-# Railway service at the relevant sub-directory and use the override commands
-# in the Railway dashboard, or create per-directory railway.toml files.
+# If the widget service root directory is left as "/" it will read THIS file
+# and attempt to start the backend — causing "OPENAI_API_KEY: Required" failures.
+#
+# Required environment variables for @jadeassist/backend:
+#   OPENAI_API_KEY   — OpenAI API key (starts with sk-…)
+#   JWT_SECRET       — Long random secret for JWT signing (32+ chars)
+#   MONGODB_URL      — MongoDB connection string
+#
+# The @jadeassist/widget service does NOT need OPENAI_API_KEY or JWT_SECRET.
+# See RAILWAY.md for the full setup guide.
 # ─────────────────────────────────────────────────────────────────────────────
 
-# ── Backend service ───────────────────────────────────────────────────────────
 [build]
 builder = "nixpacks"
 buildCommand = "npm run build --workspace=packages/backend"
+watchPaths = ["packages/backend/**", "packages/shared/**"]
 
 [deploy]
 startCommand = "npm run start --workspace=packages/backend"
