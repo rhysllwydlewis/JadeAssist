@@ -24,6 +24,26 @@ Service → **Settings** → **Source** → **Root Directory**
 > `❌ Invalid environment variables: OPENAI_API_KEY Required` crash in the
 > widget service — even though the widget itself does not need `OPENAI_API_KEY`.
 
+### Why the widget build/start commands run from the monorepo root
+
+This repository uses **npm workspaces** with a single `package-lock.json` at
+the repo root.  When Railway sets the widget service Root Directory to
+`packages/widget`, Nixpacks runs all commands from inside that directory.
+Running `npm ci` from `packages/widget` fails with `EUSAGE` because there is no
+`package-lock.json` there.
+
+`packages/widget/railway.toml` therefore prefixes every command with
+`cd ../..` to move back to the repo root before running:
+
+```
+buildCommand = "cd ../.. && npm ci && npm run build --workspace=packages/widget"
+startCommand = "cd ../.. && npm run start --workspace=packages/widget"
+```
+
+You **do not** need to override the build or start command in the Railway UI —
+the committed `railway.toml` handles this automatically once the Root Directory
+is set to `packages/widget`.
+
 ### Required environment variables per service
 
 | Variable        | `@jadeassist/backend` | `@jadeassist/widget` |
