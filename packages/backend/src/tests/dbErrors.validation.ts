@@ -39,22 +39,34 @@ function runTests(): void {
   assert(!isDbSchemaMissingError('string error'), 'string → false');
   assert(!isDbSchemaMissingError(42), 'number → false');
   assert(!isDbSchemaMissingError(new Error('generic error')), 'plain Error → false');
-  assert(!isDbSchemaMissingError({ code: undefined }), '{ code: undefined } → false');
-  assert(!isDbSchemaMissingError({ code: '23505' }), 'unrelated PG code 23505 → false');
-  assert(!isDbSchemaMissingError({ code: '' }), 'empty code string → false');
+  assert(!isDbSchemaMissingError({ name: undefined }), '{ name: undefined } → false');
+  assert(!isDbSchemaMissingError({ name: 'SomeOtherError' }), 'unrelated error name → false');
+  assert(!isDbSchemaMissingError({ name: '' }), 'empty name string → false');
 
-  section('isDbSchemaMissingError — 42P01 (undefined_table)');
-  // Simulates: Error thrown by pg when a table doesn't exist
-  const pgErr42P01 = Object.assign(new Error('relation "messages" does not exist'), {
-    code: '42P01',
+  section('isDbSchemaMissingError — MongoDB connection errors → true');
+  const networkErr = Object.assign(new Error('connection refused'), {
+    name: 'MongoNetworkError',
   });
-  assert(isDbSchemaMissingError(pgErr42P01), 'Error with code 42P01 → true');
-  assert(isDbSchemaMissingError({ code: '42P01' }), 'plain object { code: "42P01" } → true');
+  assert(isDbSchemaMissingError(networkErr), 'Error with name MongoNetworkError → true');
 
-  section('isDbSchemaMissingError — 42703 (undefined_column)');
-  const pgErr42703 = Object.assign(new Error('column "foo" does not exist'), { code: '42703' });
-  assert(isDbSchemaMissingError(pgErr42703), 'Error with code 42703 → true');
-  assert(isDbSchemaMissingError({ code: '42703' }), 'plain object { code: "42703" } → true');
+  const selectionErr = Object.assign(new Error('server selection timeout'), {
+    name: 'MongoServerSelectionError',
+  });
+  assert(isDbSchemaMissingError(selectionErr), 'Error with name MongoServerSelectionError → true');
+
+  const notConnectedErr = Object.assign(new Error('not connected'), {
+    name: 'MongoNotConnectedError',
+  });
+  assert(isDbSchemaMissingError(notConnectedErr), 'Error with name MongoNotConnectedError → true');
+
+  const expiredErr = Object.assign(new Error('session expired'), {
+    name: 'MongoExpiredSessionError',
+  });
+  assert(isDbSchemaMissingError(expiredErr), 'Error with name MongoExpiredSessionError → true');
+
+  section('isDbSchemaMissingError — plain objects');
+  assert(isDbSchemaMissingError({ name: 'MongoNetworkError' }), '{ name: MongoNetworkError } → true');
+  assert(isDbSchemaMissingError({ name: 'MongoServerSelectionError' }), '{ name: MongoServerSelectionError } → true');
 
   // ── Results ───────────────────────────────────────────────────────────────
   console.log('\n──────────────────────────────────');

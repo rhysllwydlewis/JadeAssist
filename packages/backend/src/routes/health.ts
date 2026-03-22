@@ -36,7 +36,7 @@ router.get(
       // Skip checks that require unconfigured services
       if (!env.databaseUrl) {
         dbHealthy = false;
-        skippedChecks.push('database (DATABASE_URL not set)');
+        skippedChecks.push('database (MONGODB_URL not set)');
       } else {
         dbHealthy = await checkDatabaseHealth();
         if (dbHealthy) {

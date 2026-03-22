@@ -7,7 +7,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { env } from './config/env';
-import { getPool, closeDatabaseConnections } from './config/database';
+import { connectDatabase, closeDatabaseConnections } from './config/database';
 import { logger } from './utils/logger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { requestId } from './middleware/requestId';
@@ -95,12 +95,17 @@ app.get('/', (_req, res) => {
 });
 
 // ── Feature routes ─────────────────────────────────────────────────────────────
-// In minimal mode the service may be missing DATABASE_URL / OPENAI_API_KEY /
+// In minimal mode the service may be missing MONGODB_URL / OPENAI_API_KEY /
 // JWT_SECRET.  Rather than not mounting these routes at all (which makes
 // misconfiguration hard to debug) we return a clear 503 with guidance.
 if (env.minimalMode) {
-  const REQUIRED = ['DATABASE_URL', 'OPENAI_API_KEY', 'JWT_SECRET'];
-  const missingVars = REQUIRED.filter((v) => !process.env[v]);
+  // env.databaseUrl already resolves MONGODB_URL and DATABASE_URL as fallback
+  const hasDb = Boolean(env.databaseUrl);
+  const missingVars = [
+    ...(!hasDb ? ['MONGODB_URL'] : []),
+    ...(!process.env['OPENAI_API_KEY'] ? ['OPENAI_API_KEY'] : []),
+    ...(!process.env['JWT_SECRET'] ? ['JWT_SECRET'] : []),
+  ];
 
   const unconfiguredHandler = (_req: Request, res: Response): void => {
     res.status(503).json({
@@ -108,7 +113,7 @@ if (env.minimalMode) {
       error: {
         code: 'SERVICE_NOT_CONFIGURED',
         message:
-          'This endpoint requires DATABASE_URL, OPENAI_API_KEY, and JWT_SECRET. ' +
+          'This endpoint requires MONGODB_URL, OPENAI_API_KEY, and JWT_SECRET. ' +
           'Configure the missing variables and set JADEASSIST_MINIMAL_MODE=false (or remove it) to enable full functionality.',
         missingVars,
       },
@@ -137,13 +142,17 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 // ── Database initialisation ───────────────────────────────────────────────────
-// Only create the pool when DATABASE_URL is present and we are not in minimal
-// mode (avoids a throw/crash on startup).
+// Connect to MongoDB when MONGODB_URL (or legacy DATABASE_URL) is present and
+// we are not in minimal mode.  Mongoose buffers commands until connected, so
+// the server can start accepting HTTP while the connection establishes.
 if (!env.minimalMode && env.databaseUrl) {
-  getPool();
-}
-
-// Graceful shutdown
+  const { SupplierModel } = require('./models/Supplier') as typeof import('./models/Supplier');
+  connectDatabase()
+    .then(() => SupplierModel.seedIfEmpty())
+    .catch((err: unknown) => {
+      logger.error({ err }, 'Failed to connect to MongoDB on startup');
+    });
+}// Graceful shutdown
 const gracefulShutdown = async (signal: string) => {
   logger.info(`${signal} received, starting graceful shutdown`);
 

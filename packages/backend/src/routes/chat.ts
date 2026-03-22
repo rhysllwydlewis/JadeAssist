@@ -98,10 +98,10 @@ router.post(
         res.status(503).json({
           success: false,
           error: {
-            code: 'DB_SCHEMA_MISSING',
+            code: 'DB_NOT_INITIALIZED',
             message:
-              'The database schema has not been initialised. ' +
-              'Please apply database/schema.sql to the production database and restart the service.',
+              'The database is not available. ' +
+              'Please check that MONGODB_URL is set correctly and the MongoDB service is running.',
           },
           timestamp: new Date().toISOString(),
         });

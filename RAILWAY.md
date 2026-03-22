@@ -51,10 +51,19 @@ In your Railway service **Variables** tab, set:
 
 Deploy. The service should start and stay healthy (Railway health check passes).
 
-### Step 2 — Add a PostgreSQL database
+### Step 2 — Add a MongoDB database
 
-1. Inside your Railway project, click **+ New** → **Database** → **PostgreSQL**.
-2. Railway automatically injects `DATABASE_URL` into your backend service.
+1. Inside your Railway project, click **+ New** → **Database** → **MongoDB**.
+2. Once the MongoDB service is ready, click **Connect** on the MongoDB service card.
+3. In the **Private Network** tab, copy the variable reference shown:
+   `${{ MongoDB.MONGO_URL }}`
+4. In your **`@jadeassist/backend`** service → **Variables** tab, create a new variable:
+   - **Name**: `MONGODB_URL`
+   - **Value**: `${{ MongoDB.MONGO_URL }}`
+5. Railway automatically resolves the reference at runtime — no connection string to copy manually.
+
+> **No schema migration needed.** MongoDB creates collections automatically on first use.
+> Sample suppliers are seeded into the database the first time the backend starts.
 
 ### Step 3 — Set the remaining secrets
 
@@ -84,9 +93,11 @@ Railway redeploys automatically. The service now runs in strict mode with all fe
 
 | Variable | Description |
 |---|---|
-| `DATABASE_URL` | Full PostgreSQL connection string (auto-set when using Railway Postgres plugin) |
+| `MONGODB_URL` | MongoDB connection string. On Railway, set this to `${{ MongoDB.MONGO_URL }}` (private network). |
 | `OPENAI_API_KEY` | Your OpenAI API key |
 | `JWT_SECRET` | A long random secret for JWT signing (32+ chars) |
+
+> **Legacy alias:** `DATABASE_URL` is also accepted if you have it already set. `MONGODB_URL` takes precedence when both are present.
 
 ### Always optional
 
@@ -97,11 +108,9 @@ Railway redeploys automatically. The service now runs in strict mode with all fe
 | `JADEASSIST_MINIMAL_MODE` | `false` | Set to `true` to start without DB / OpenAI / JWT |
 | `LLM_MODEL` | `gpt-4-turbo` | OpenAI model to use |
 | `LLM_TOKEN_LIMIT` | `4000` | Max tokens per LLM request |
-| `AUTH_PROVIDER` | `jwt` | `jwt` \| `supabase` \| `eventflow` |
+| `AUTH_PROVIDER` | `jwt` | `jwt` \| `eventflow` |
 | `CORS_ORIGIN` | `*` | Allowed CORS origin(s). `*` allows all. Use a comma-separated list to restrict, e.g. `https://event-flow.co.uk` |
 | `LOG_LEVEL` | `info` | `debug` \| `info` \| `warn` \| `error` |
-| `SUPABASE_URL` | — | Only required when `AUTH_PROVIDER=supabase` |
-| `SUPABASE_ANON_KEY` | — | Only required when `AUTH_PROVIDER=supabase` |
 | `EVENTFLOW_API_URL` | — | EventFlow base URL (optional, for callback integrations) |
 | `EVENTFLOW_API_KEY` | — | EventFlow API key (optional) |
 | `API_URL` | `http://localhost:3001` | Public base URL of this service |
@@ -337,65 +346,41 @@ npm run dev
 ## Notes
 
 - Railway injects `PORT` automatically — JadeAssist reads it from `process.env.PORT`. No start command changes are needed.
-- The service is stateless; all state lives in PostgreSQL.
+- The service is stateless; all state lives in MongoDB.
 - Graceful shutdown handles `SIGTERM` from Railway.
 - Strict fail-fast (the default) means misconfiguration is caught at startup — not silently at request time.
 
 ---
 
-## Production setup (required after first deploy)
+## Production setup
 
-After the service is running and all environment variables are set, you **must** initialise the
-PostgreSQL database schema.  Without this step:
+### No schema migration required
 
-- `/api/widget/chat` and `/api/chat` will return **503** with
-  `error.code = "DB_SCHEMA_MISSING"` and a message telling you to run migrations.
-- `GET /health` will show `"status": "unhealthy"` with
-  `"details": { "missingTables": ["users","conversations","messages","event_plans","suppliers"] }`.
+JadeAssist uses **MongoDB** — collections are created automatically on first write.
+The sample supplier data is seeded into the database the first time the backend starts up,
+so there is nothing you need to run manually to initialise the database.
 
-### Step A — Apply the database schema
+After adding the MongoDB service and setting `MONGODB_URL` (see Step 2 above), simply
+deploy or restart the `@jadeassist/backend` service. On first boot it will:
+1. Connect to MongoDB via `MONGODB_URL`.
+2. Seed the suppliers collection if it is empty.
+3. Serve all API endpoints normally.
 
-**Option 1: Railway CLI (recommended)**
+### Verify the database is connected
 
-```bash
-# Install Railway CLI if you haven't already
-npm install -g @railway/cli
-
-# Link to your project
-railway link
-
-# Open a one-off shell on the Railway network and pipe in the schema
-railway run psql "$DATABASE_URL" < database/schema.sql
-```
-
-**Option 2: Railway "Connect" shell in the dashboard**
-
-1. In Railway, open your **PostgreSQL** service.
-2. Click **Connect** → copy the connection string (or use the built-in query editor).
-3. Paste the contents of `database/schema.sql` into the query editor and run it.
-
-**Option 3: Any Postgres client (psql, TablePlus, DBeaver, etc.)**
-
-```bash
-psql "postgres://<user>:<password>@<host>:<port>/<db>?sslmode=require" < database/schema.sql
-```
-
-Replace the connection string with the one shown in Railway → Postgres service → Connect.
-
-### Step B — Verify the schema was applied
-
-After running the SQL, hit the health endpoint:
+Hit the health endpoint:
 
 ```bash
 curl https://<your-backend-domain>/health
 ```
 
-You should see `"status": "healthy"` and no `details.missingTables` field.
+You should see `"status": "healthy"` with `services.database: "up"`.
 
 ### Trust proxy (already applied in code)
 
 Railway routes traffic through a proxy that sets the `X-Forwarded-For` header.
-The backend now calls `app.set('trust proxy', 1)` at startup so that
+The backend calls `app.set('trust proxy', 1)` at startup so that
 `express-rate-limit` reads the correct client IP.  **No manual configuration is
-needed** — this fix is included in the deployed code and eliminates the
+needed** — this is included in the deployed code and eliminates the
 `ERR_ERL_UNEXPECTED_X_FORWARDED_FOR` warning from the logs.
+
