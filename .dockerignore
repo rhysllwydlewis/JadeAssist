@@ -1,0 +1,49 @@
+# .dockerignore — exclude files from the Docker build context
+#
+# This applies to the @jadeassist/widget Dockerfile build
+# (packages/widget/Dockerfile, build context = repo root).
+#
+# Keeping the context lean speeds up `docker build` and avoids
+# accidentally shipping local artifacts into the image.
+
+# Version-control metadata
+.git
+.gitignore
+
+# Local environment / secrets (never ship into images)
+.env
+.env.*
+
+# All pre-existing build outputs and installed deps
+# (the Dockerfile runs `npm ci` and `npm run build` itself)
+node_modules/
+packages/*/node_modules/
+dist/
+packages/*/dist/
+build/
+*.tsbuildinfo
+
+# Test / example HTML files in the widget package (not needed in the image)
+packages/widget/cdn-test.html
+packages/widget/example.html
+packages/widget/test-*.html
+
+# Documentation
+*.md
+ARCHITECTURE.md
+DEPLOYMENT_GUIDE.md
+GITHUB_DEPLOYMENT.md
+QUICK_START.md
+RAILWAY.md
+README.md
+
+# Editor / OS artifacts
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# CI
+.github/

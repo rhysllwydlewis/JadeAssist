@@ -8,53 +8,49 @@ This guide walks you through deploying the **JadeAssist backend API** as a live 
 
 JadeAssist is a **monorepo** with two separate Railway services.  Each service
 **must** have its **Root Directory** set correctly in the Railway dashboard so
-that it reads the right `railway.toml` and runs the right workspace.
+that it reads the right `railway.toml` and uses the right build method.
 
-| Railway service      | Root Directory     | Reads                              |
-|----------------------|--------------------|------------------------------------|
-| `@jadeassist/backend`| `packages/backend` | `packages/backend/railway.toml`    |
-| `@jadeassist/widget` | `packages/widget`  | `packages/widget/railway.toml`     |
+| Railway service      | Root Directory  | Build method | Reads                           |
+|----------------------|-----------------|--------------|---------------------------------|
+| `@jadeassist/backend`| `packages/backend` | Nixpacks  | `packages/backend/railway.toml` |
+| `@jadeassist/widget` | `.` (repo root) | Dockerfile   | `railway.toml` (repo root)      |
 
 **Where to set it in Railway:**  
 Service → **Settings** → **Source** → **Root Directory**
 
-> If the widget service Root Directory is left blank (repo root `/`), it will
-> read the root `railway.toml` which contains backend commands and will attempt
-> to start `@jadeassist/backend`.  This causes an
-> `❌ Invalid environment variables: OPENAI_API_KEY Required` crash in the
-> widget service — even though the widget itself does not need `OPENAI_API_KEY`.
+> ⚠️ Do **not** set the **backend** service Root Directory to `.` (repo root).
+> It will read the root `railway.toml` which is the widget's config and will
+> attempt to start the widget static server instead of the backend API.
 
-### Why the widget build/start commands run from the monorepo root
+### Widget service — Dockerfile build
 
-This repository uses **npm workspaces** with a single `package-lock.json` at
-the repo root.  When Railway sets the widget service Root Directory to
-`packages/widget`, Nixpacks runs all commands from inside that directory.
-Running `npm ci` from `packages/widget` fails with `EUSAGE` because there is no
-`package-lock.json` there.
-
-`packages/widget/nixpacks.toml` overrides the Nixpacks **install phase** to run
-from the monorepo root:
+The widget service uses a **Dockerfile** (not Nixpacks).  The root `railway.toml`
+configures it:
 
 ```toml
-[phases.install]
-cmds = ["cd ../.. && npm ci"]
+[build]
+builder = "dockerfile"
+dockerfilePath = "packages/widget/Dockerfile"
 ```
 
-This is required because Nixpacks runs the install phase *before* the
-`buildCommand` — without this override, the deploy fails at the install step
-even if `railway.toml`'s `buildCommand` is correct.
+The Dockerfile lives at `packages/widget/Dockerfile` and performs a multi-stage
+build:
 
-`packages/widget/railway.toml` also prefixes the build and start commands with
-`cd ../..` to run from the repo root:
+1. **Build stage** — copies the entire monorepo (root `package.json`,
+   `package-lock.json`, and all `packages/`), runs `npm ci` at the repo root
+   (where the lockfile is), then runs
+   `npm run build --workspace=packages/widget`.
+2. **Runtime stage** — copies only the built `dist/` directory and `server.js`
+   into a slim Node 18 Alpine image.  Railway's injected `PORT` env var is
+   respected automatically.
 
-```
-buildCommand = "cd ../.. && npm run build --workspace=packages/widget"
-startCommand = "cd ../.. && npm run start --workspace=packages/widget"
-```
+Setting the widget Root Directory to `.` (repo root) is **required** so that
+the Docker build context includes the root `package-lock.json`.  Without it,
+`npm ci` would fail with `EUSAGE: missing lockfile`.
 
-You **do not** need to override the install, build, or start commands in the
-Railway UI — the committed `nixpacks.toml` and `railway.toml` handle this
-automatically once the Root Directory is set to `packages/widget`.
+You **do not** need to override any build or start commands in the Railway
+UI — the committed `railway.toml` and `packages/widget/Dockerfile` handle
+the full build lifecycle automatically.
 
 ### Required environment variables per service
 

@@ -1,25 +1,19 @@
-# nixpacks.toml — Backend service Nixpacks configuration (repo root)
+# nixpacks.toml — Repo-root Nixpacks configuration (fallback)
 #
-# !! THIS FILE IS FOR THE @jadeassist/backend SERVICE ONLY !!
+# This file is a fallback for any Railway service whose Root Directory is set
+# to "." (repo root) and uses the Nixpacks builder.
 #
-# See railway.toml in this directory for the full service routing table.
-# The @jadeassist/widget service should have its Railway root directory set to
-# "packages/widget", which uses packages/widget/nixpacks.toml instead.
+# Current Railway service layout:
+#   @jadeassist/backend  | Root Directory: packages/backend | Nixpacks
+#                          reads packages/backend/nixpacks.toml
+#   @jadeassist/widget   | Root Directory: .  (repo root)   | Dockerfile
+#                          reads railway.toml → packages/widget/Dockerfile
+#                          (Nixpacks is NOT used for the widget service)
 #
-# Why this file exists
-# --------------------
-# Nixpacks auto-generates a Dockerfile that:
-#   1. Runs `npm ci` in its own install phase (with a BuildKit cache mount
-#      targeting /app/node_modules/.cache).
-#   2. Then executes whatever is in `railway.toml`'s buildCommand as a second
-#      RUN layer.
-#
-# If buildCommand also starts with `npm ci`, the second invocation tries to
-# delete and recreate node_modules while the BuildKit cache is still mounted on
-# node_modules/.cache → EBUSY / ENOTEMPTY.
-#
-# This file pins the install step to a single `npm ci` and keeps the build
-# step to compilation only.
+# Because the widget now uses a Dockerfile build, this file is not actively
+# used by either service in the standard configuration.  It is retained as a
+# safety net in case a service is accidentally pointed at the repo root with
+# the Nixpacks builder selected.
 
 [phases.install]
 cmds = ["npm ci"]

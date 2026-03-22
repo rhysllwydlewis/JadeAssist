@@ -1,28 +1,18 @@
-# railway.toml — Widget service configuration
+# railway.toml — Widget service (packages/widget directory)
 #
-# Usage: Point your Railway widget service root directory to "packages/widget".
-# Railway will pick up this file automatically and use the commands below.
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║  ⚠️  THIS FILE IS NOT THE ACTIVE RAILWAY CONFIGURATION          ║
+# ║                                                                  ║
+# ║  The @jadeassist/widget service Root Directory MUST be set to   ║
+# ║  "." (repo root) in the Railway dashboard, NOT "packages/widget"║
+# ║                                                                  ║
+# ║  If Root Directory is "packages/widget", the Docker build will  ║
+# ║  FAIL — the build context won't include the root               ║
+# ║  package-lock.json that npm ci requires.                        ║
+# ║                                                                  ║
+# ║  See RAILWAY.md for the correct Railway dashboard settings.     ║
+# ╚══════════════════════════════════════════════════════════════════╝
 #
-# The build and start commands use "cd ../.. && ..." to run from the monorepo
-# root instead of from packages/widget.  This is required because this is an
-# npm workspaces monorepo: the only package-lock.json is at the repo root.
-# "npm ci" is handled by the Nixpacks install phase (see nixpacks.toml) which
-# also runs from the repo root.
-#
-# For Option A (Railway Static site), ignore the [deploy] block and configure
-# the service as Static in the Railway dashboard instead — see RAILWAY.md.
-
-[build]
-builder = "nixpacks"
-# cd ../.. moves from packages/widget → repo root so the build finds workspace packages.
-# npm ci is handled by the Nixpacks install phase in nixpacks.toml (also runs from repo root).
-buildCommand = "cd ../.. && npm run build --workspace=packages/widget"
-watchPaths = ["packages/widget/**", "packages/shared/**"]
-
-[deploy]
-# cd ../.. moves from packages/widget → repo root (npm workspaces lockfile lives there)
-startCommand = "cd ../.. && npm run start --workspace=packages/widget"
-healthcheckPath = "/healthz"
-healthcheckTimeout = 30
-restartPolicyType = "on_failure"
-restartPolicyMaxRetries = 3
+# Active configuration when Root Directory is "." (repo root):
+#   railway.toml (repo root)  →  builder = "dockerfile"
+#                                dockerfilePath = "packages/widget/Dockerfile"
