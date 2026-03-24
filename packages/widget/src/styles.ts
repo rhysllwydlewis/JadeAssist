@@ -150,7 +150,7 @@ export function getWidgetStyles(
       bottom: 84px;
       ${offsetLeft ? 'left: 0;' : 'right: 0;'}
       background: white;
-      padding: 18px 22px;
+      padding: 18px 42px 18px 22px;
       border-radius: 16px;
       box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.1);
       max-width: 300px;
@@ -199,22 +199,29 @@ export function getWidgetStyles(
 
     .jade-greeting-close {
       position: absolute;
-      top: 8px;
-      right: 8px;
-      width: 20px;
-      height: 20px;
+      top: 4px;
+      right: 4px;
+      width: 32px;
+      height: 32px;
       border: none;
       background: transparent;
       color: #9ca3af;
       cursor: pointer;
-      font-size: 16px;
-      line-height: 1;
       padding: 0;
       z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
     }
 
     .jade-greeting-close:hover {
       color: #4b5563;
+    }
+
+    .jade-greeting-close:focus-visible {
+      outline: 2px solid #9ca3af;
+      outline-offset: 2px;
     }
 
     /* Chat Popup */
