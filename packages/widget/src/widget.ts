@@ -148,7 +148,7 @@ export class JadeWidget {
     }
     return `
       <div class="jade-greeting-tooltip" data-action="open-chat" role="tooltip" aria-live="polite">
-        <button class="jade-greeting-close" aria-label="Dismiss greeting" data-action="close-greeting">×</button>
+        <button class="jade-greeting-close" aria-label="Dismiss greeting" data-action="close-greeting"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><line x1="1" y1="1" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
         <div class="jade-greeting-text">${this.escapeHtml(this.config.greetingTooltipText)}</div>
       </div>
     `;
