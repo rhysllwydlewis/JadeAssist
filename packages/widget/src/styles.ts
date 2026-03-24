@@ -219,6 +219,11 @@ export function getWidgetStyles(
       color: #4b5563;
     }
 
+    .jade-greeting-close:focus-visible {
+      outline: 2px solid #9ca3af;
+      outline-offset: 2px;
+    }
+
     /* Chat Popup */
     .jade-chat-popup {
       position: absolute;
