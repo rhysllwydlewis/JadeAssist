@@ -11,6 +11,7 @@ import { asyncHandler } from '../middleware/errorHandler';
 import { searchService } from '../services/searchService';
 
 const router = Router();
+const allowedMethods = ['GET', 'HEAD', 'OPTIONS'] as const;
 
 const searchLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -22,9 +23,20 @@ const searchLimiter = rateLimit({
 
 const searchQuerySchema = z.object({
   q: z.string().trim().min(1).max(200),
-  category: z.string().trim().max(80).optional(),
-  location: z.string().trim().max(120).optional(),
+  category: z.string().trim().min(1).max(80).optional(),
+  location: z.string().trim().min(1).max(120).optional(),
   limit: z.string().regex(/^\d+$/).optional(),
+});
+
+function parseLimit(limit: string | undefined): number | undefined {
+  if (!limit) return undefined;
+  const parsed = parseInt(limit, 10);
+  if (!Number.isFinite(parsed)) return undefined;
+  return Math.min(Math.max(parsed, 1), 20);
+}
+
+router.options('/', (_req: Request, res: Response) => {
+  res.set('Allow', allowedMethods.join(', ')).sendStatus(204);
 });
 
 router.get(
@@ -49,8 +61,13 @@ router.get(
       query: parsed.data.q,
       category: parsed.data.category,
       location: parsed.data.location,
-      limit: parsed.data.limit ? parseInt(parsed.data.limit, 10) : undefined,
+      limit: parseLimit(parsed.data.limit),
     });
+
+    if (req.method === 'HEAD') {
+      res.status(200).end();
+      return;
+    }
 
     res.json({
       success: true,
@@ -63,5 +80,17 @@ router.get(
     });
   })
 );
+
+router.all('/', (req: Request, res: Response) => {
+  res.set('Allow', allowedMethods.join(', '));
+  res.status(405).json({
+    success: false,
+    error: {
+      code: 'METHOD_NOT_ALLOWED',
+      message: `${req.method} is not supported on /api/search. Use GET.`,
+    },
+    timestamp: new Date().toISOString(),
+  });
+});
 
 export default router;
