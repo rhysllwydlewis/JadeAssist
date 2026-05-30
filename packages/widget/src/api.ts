@@ -2,7 +2,7 @@
  * API client for chat communication
  */
 
-import { WidgetMessage, WidgetSearchResult } from './types';
+import { WidgetAssistantMeta, WidgetMessage, WidgetSearchResult } from './types';
 
 export interface ConversationBriefMetadata {
   eventType?: string;
@@ -13,6 +13,15 @@ export interface ConversationBriefMetadata {
   planningStage?: string;
   contextCompleteness?: number;
   missingDetails?: string[];
+}
+
+interface AssistantApiResponse {
+  assistantMessage: string;
+  statePatch?: Record<string, unknown>;
+  nextQuestion?: string;
+  uiActions?: Array<{ type: string; payload?: Record<string, unknown> }>;
+  confidence?: number;
+  mode?: 'live' | 'degraded';
 }
 
 export interface ChatApiResponse {
@@ -28,6 +37,7 @@ export interface ChatApiResponse {
     suggestions?: string[];
     conversation?: ConversationBriefMetadata;
     searchResults?: WidgetSearchResult[];
+    assistantResponse?: AssistantApiResponse;
   };
   error?: {
     code: string;
@@ -36,13 +46,27 @@ export interface ChatApiResponse {
   timestamp: string;
 }
 
-// Lightweight conversation state tracked in the demo client
+// Lightweight conversation state tracked in the explicit demo/degraded client.
 interface DemoConversationState {
   eventType?: string;
   budget?: string;
   location?: string;
   guestCount?: string;
   eventDate?: string;
+}
+
+function isLikelyProductionHost(): boolean {
+  if (typeof window === 'undefined') return false;
+  const host = window.location.hostname.toLowerCase();
+  return !['localhost', '127.0.0.1', '0.0.0.0'].includes(host) && !host.endsWith('.local');
+}
+
+function buildAssistantMeta(mode: 'live' | 'degraded', confidence = 0.75): WidgetAssistantMeta {
+  return {
+    mode,
+    confidence,
+    uiActions: mode === 'degraded' ? [{ type: 'show_degraded_mode_banner' }] : [],
+  };
 }
 
 export class ApiClient {
@@ -55,6 +79,12 @@ export class ApiClient {
     this.baseUrl = baseUrl || '';
     this.authToken = authToken || '';
     this.demoMode = !baseUrl;
+
+    if (this.demoMode && isLikelyProductionHost()) {
+      console.warn(
+        '[JadeAssist] apiBaseUrl is not configured on a production-like host. The widget will show explicit degraded guidance rather than silent demo-mode intelligence.'
+      );
+    }
   }
 
   async sendMessage(
@@ -114,6 +144,16 @@ export class ApiClient {
       throw new Error(data?.error?.message || 'API request failed');
     }
 
+    const assistantMeta = data.data.assistantResponse
+      ? {
+          mode: data.data.assistantResponse.mode,
+          confidence: data.data.assistantResponse.confidence,
+          nextQuestion: data.data.assistantResponse.nextQuestion,
+          uiActions: data.data.assistantResponse.uiActions,
+          statePatch: data.data.assistantResponse.statePatch,
+        }
+      : undefined;
+
     return {
       conversationId: data.data.conversationId,
       conversation: data.data.conversation,
@@ -124,6 +164,7 @@ export class ApiClient {
         content: data.data.message.content,
         timestamp: Date.now(),
         quickReplies: data.data.suggestions,
+        assistantMeta,
       },
     };
   }
@@ -155,6 +196,9 @@ export class ApiClient {
 
     this.updateDemoState(lower);
     const { content, quickReplies } = this.buildDemoResponse(lower);
+    const productionWarning = isLikelyProductionHost()
+      ? 'Jade is not connected to the live planning service on this page. '
+      : '';
 
     return {
       conversationId,
@@ -171,9 +215,10 @@ export class ApiClient {
       message: {
         id: 'msg-' + Date.now(),
         role: 'assistant',
-        content,
+        content: `${productionWarning}${content}`,
         timestamp: Date.now(),
         quickReplies,
+        assistantMeta: buildAssistantMeta('degraded', 0.45),
       },
     };
   }
@@ -227,6 +272,10 @@ export class ApiClient {
       lower.includes('glasgow')
     ) {
       this.demoState.location = 'Scotland';
+    } else if (lower.includes('south wales')) {
+      this.demoState.location = 'South Wales';
+    } else if (lower.includes('north wales')) {
+      this.demoState.location = 'North Wales';
     } else if (lower.includes('wales') || lower.includes('cardiff')) {
       this.demoState.location = 'Wales';
     } else if (
@@ -280,7 +329,7 @@ export class ApiClient {
       if (!state.eventType) {
         return {
           content:
-            "I'd love to help you plan your event! What type of event are you organising? 🎉",
+            "I'm in degraded demo mode, but I can still help you capture the brief manually. What type of event are you organising? 🎉",
           quickReplies: ['Wedding', 'Birthday Party', 'Corporate Event', 'Anniversary', 'Other'],
         };
       }
@@ -309,7 +358,7 @@ export class ApiClient {
       lower.includes('recommend')
     ) {
       return {
-        content: `In live mode I can search EventFlow suppliers and website sections. For demo mode, here is the supplier approach I would use for a ${event} in ${loc}:\n\n- Shortlist 3 options so you can compare like-for-like.\n- Ask for full written quotes, not headline prices.\n- Check insurance, cancellation terms, setup times and what is included.\n- For venues, confirm capacity, access, curfew and wet-weather options.\n\nIn live mode, I would return actual supplier or website results from EventFlow where available.`,
+        content: `I'm in degraded demo mode. In live mode I can search EventFlow suppliers and website sections. For now, here is the supplier approach I would use for a ${event} in ${loc}:\n\n- Shortlist 3 options so you can compare like-for-like.\n- Ask for full written quotes, not headline prices.\n- Check insurance, cancellation terms, setup times and what is included.\n- For venues, confirm capacity, access, curfew and wet-weather options.\n\nIn live mode, I would return actual supplier or website results from EventFlow where available.`,
         quickReplies: [
           'Budget breakdown',
           'Venue checklist',
@@ -321,7 +370,7 @@ export class ApiClient {
 
     if (lower.includes('budget') || lower.includes('cost') || lower.includes('price')) {
       return {
-        content: `For a ${event} in ${loc}, start with this practical budget split:\n\n- Venue: 25–35%\n- Food and drink: 30–40%\n- Photography, entertainment or main experience: 10–20%\n- Styling, stationery and extras: 10–15%\n- Contingency: keep 10% back\n\nIf you give me your guest count and rough budget, I can make the numbers more specific.`,
+        content: `I'm in degraded demo mode. For a ${event} in ${loc}, start with this practical budget split:\n\n- Venue: 25–35%\n- Food and drink: 30–40%\n- Photography, entertainment or main experience: 10–20%\n- Styling, stationery and extras: 10–15%\n- Contingency: keep 10% back\n\nIf you give me your guest count and rough budget, I can make the numbers more specific.`,
         quickReplies: ['Venue checklist', 'Planning timeline', 'Supplier questions'],
       };
     }
@@ -333,14 +382,14 @@ export class ApiClient {
       lower.includes('plan')
     ) {
       return {
-        content: `A sensible ${event} planning order is:\n\n- Confirm budget, guest count and location.\n- Shortlist and secure the venue/date.\n- Book key suppliers that affect availability.\n- Confirm guest communication, timings and layout.\n- In the final month, lock final numbers, balances and the day schedule.`,
+        content: `I'm in degraded demo mode. A sensible ${event} planning order is:\n\n- Confirm budget, guest count and location.\n- Shortlist and secure the venue/date.\n- Book key suppliers that affect availability.\n- Confirm guest communication, timings and layout.\n- In the final month, lock final numbers, balances and the day schedule.`,
         quickReplies: ['Find suppliers', 'Budget breakdown', 'Venue checklist'],
       };
     }
 
     return {
       content:
-        'I can help with that. To give you useful advice, what type of event are you planning?',
+        "I'm in degraded demo mode. To give you useful advice, what type of event are you planning?",
       quickReplies: ['Wedding', 'Birthday Party', 'Corporate Event', 'Anniversary', 'Other'],
     };
   }
