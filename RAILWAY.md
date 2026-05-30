@@ -6,14 +6,14 @@ This guide walks you through deploying the **JadeAssist backend API** as a live 
 
 ## ⚠️ Critical: set the Root Directory for each Railway service
 
-JadeAssist is a **monorepo** with two separate Railway services.  Each service
+JadeAssist is a **monorepo** with two separate Railway services. Each service
 **must** have its **Root Directory** set correctly in the Railway dashboard so
 that it reads the right `railway.toml` and uses the right build method.
 
-| Railway service      | Root Directory  | Build method | Reads                           |
-|----------------------|-----------------|--------------|---------------------------------|
-| `@jadeassist/backend`| `packages/backend` | Nixpacks  | `packages/backend/railway.toml` |
-| `@jadeassist/widget` | `.` (repo root) | Dockerfile   | `railway.toml` (repo root)      |
+| Railway service       | Root Directory     | Build method | Reads                           |
+| --------------------- | ------------------ | ------------ | ------------------------------- |
+| `@jadeassist/backend` | `packages/backend` | Nixpacks     | `packages/backend/railway.toml` |
+| `@jadeassist/widget`  | `.` (repo root)    | Dockerfile   | `railway.toml` (repo root)      |
 
 **Where to set it in Railway:**  
 Service → **Settings** → **Source** → **Root Directory**
@@ -24,7 +24,7 @@ Service → **Settings** → **Source** → **Root Directory**
 
 ### Widget service — Dockerfile build
 
-The widget service uses a **Dockerfile** (not Nixpacks).  The root `railway.toml`
+The widget service uses a **Dockerfile** (not Nixpacks). The root `railway.toml`
 configures it:
 
 ```toml
@@ -41,11 +41,11 @@ build:
    (where the lockfile is), then runs
    `npm run build --workspace=packages/widget`.
 2. **Runtime stage** — copies only the built `dist/` directory and `server.js`
-   into a slim Node 18 Alpine image.  Railway's injected `PORT` env var is
+   into a slim Node 18 Alpine image. Railway's injected `PORT` env var is
    respected automatically.
 
 Setting the widget Root Directory to `.` (repo root) is **required** so that
-the Docker build context includes the root `package-lock.json`.  Without it,
+the Docker build context includes the root `package-lock.json`. Without it,
 `npm ci` would fail with `EUSAGE: missing lockfile`.
 
 You **do not** need to override any build or start commands in the Railway
@@ -54,14 +54,14 @@ the full build lifecycle automatically.
 
 ### Required environment variables per service
 
-| Variable        | `@jadeassist/backend` | `@jadeassist/widget` |
-|-----------------|-----------------------|----------------------|
-| `OPENAI_API_KEY`| ✅ Required            | ❌ Do NOT set        |
-| `JWT_SECRET`    | ✅ Required            | ❌ Do NOT set        |
-| `MONGODB_URL`   | ✅ Required            | ❌ Do NOT set        |
-| `LLM_MODEL`     | Recommended (`gpt-4o-mini`) | ❌ Do NOT set |
-| `NODE_ENV`      | `production`          | *(not needed)*       |
-| `CORS_ORIGIN`   | Recommended           | *(not needed)*       |
+| Variable         | `@jadeassist/backend`       | `@jadeassist/widget` |
+| ---------------- | --------------------------- | -------------------- |
+| `OPENAI_API_KEY` | ✅ Required                 | ❌ Do NOT set        |
+| `JWT_SECRET`     | ✅ Required                 | ❌ Do NOT set        |
+| `MONGODB_URL`    | ✅ Required                 | ❌ Do NOT set        |
+| `LLM_MODEL`      | Recommended (`gpt-4o-mini`) | ❌ Do NOT set        |
+| `NODE_ENV`       | `production`                | _(not needed)_       |
+| `CORS_ORIGIN`    | Recommended                 | _(not needed)_       |
 
 The widget service serves a **static JavaScript bundle** — it has no server-side
 secrets and must not have `OPENAI_API_KEY` set.
@@ -90,6 +90,7 @@ This is the safe default: misconfiguration is surfaced immediately rather than s
 Activated by setting `JADEASSIST_MINIMAL_MODE=true`.
 
 In minimal mode:
+
 - The server **always starts** and binds to `PORT` so Railway health checks pass.
 - `/healthz` returns `{ "ok": true, "minimalMode": true }`.
 - `/health` returns status `"degraded"` (HTTP 200) and lists which checks were skipped.
@@ -108,10 +109,10 @@ Follow these steps for a smooth first deploy:
 
 In your Railway service **Variables** tab, set:
 
-| Variable | Value |
-|---|---|
-| `JADEASSIST_MINIMAL_MODE` | `true` |
-| `NODE_ENV` | `production` |
+| Variable                  | Value        |
+| ------------------------- | ------------ |
+| `JADEASSIST_MINIMAL_MODE` | `true`       |
+| `NODE_ENV`                | `production` |
 
 Deploy. The service should start and stay healthy (Railway health check passes).
 
@@ -133,10 +134,10 @@ Deploy. The service should start and stay healthy (Railway health check passes).
 
 In your Railway service **Variables** tab, add:
 
-| Variable | Value |
-|---|---|
-| `OPENAI_API_KEY` | Your OpenAI API key (starts with `sk-…`) |
-| `JWT_SECRET` | A long random string — generate one with `openssl rand -base64 48` |
+| Variable         | Value                                                              |
+| ---------------- | ------------------------------------------------------------------ |
+| `OPENAI_API_KEY` | Your OpenAI API key (starts with `sk-…`)                           |
+| `JWT_SECRET`     | A long random string — generate one with `openssl rand -base64 48` |
 
 ### Step 4 — Disable minimal mode
 
@@ -155,29 +156,29 @@ Railway redeploys automatically. The service now runs in strict mode with all fe
 
 ### Required in strict mode (the production default)
 
-| Variable | Description |
-|---|---|
-| `MONGODB_URL` | MongoDB connection string. On Railway, set this to `${{ MongoDB.MONGO_URL }}` (private network). |
-| `OPENAI_API_KEY` | Your OpenAI API key |
-| `JWT_SECRET` | A long random secret for JWT signing (32+ chars) |
+| Variable         | Description                                                                                      |
+| ---------------- | ------------------------------------------------------------------------------------------------ |
+| `MONGODB_URL`    | MongoDB connection string. On Railway, set this to `${{ MongoDB.MONGO_URL }}` (private network). |
+| `OPENAI_API_KEY` | Your OpenAI API key                                                                              |
+| `JWT_SECRET`     | A long random secret for JWT signing (32+ chars)                                                 |
 
 > **Legacy alias:** `DATABASE_URL` is also accepted if you have it already set. `MONGODB_URL` takes precedence when both are present.
 
 ### Always optional
 
-| Variable | Default | Description |
-|---|---|---|
-| `PORT` | auto-set by Railway | Railway injects this automatically — do not set manually |
-| `NODE_ENV` | `development` | Set to `production` on Railway |
-| `JADEASSIST_MINIMAL_MODE` | `false` | Set to `true` to start without DB / OpenAI / JWT |
-| `LLM_MODEL` | `gpt-4-turbo` | OpenAI model to use. **Recommended: set to `gpt-4o-mini`** — `gpt-4-turbo` may not be available on all API keys |
-| `LLM_TOKEN_LIMIT` | `4000` | Max tokens per LLM request |
-| `AUTH_PROVIDER` | `jwt` | `jwt` \| `eventflow` |
-| `CORS_ORIGIN` | `*` | Allowed CORS origin(s). `*` allows all. Use a comma-separated list to restrict, e.g. `https://event-flow.co.uk` |
-| `LOG_LEVEL` | `info` | `debug` \| `info` \| `warn` \| `error` |
-| `EVENTFLOW_API_URL` | — | EventFlow base URL (optional, for callback integrations) |
-| `EVENTFLOW_API_KEY` | — | EventFlow API key (optional) |
-| `API_URL` | `http://localhost:3001` | Public base URL of this service |
+| Variable                  | Default                 | Description                                                                                                     |
+| ------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `PORT`                    | auto-set by Railway     | Railway injects this automatically — do not set manually                                                        |
+| `NODE_ENV`                | `development`           | Set to `production` on Railway                                                                                  |
+| `JADEASSIST_MINIMAL_MODE` | `false`                 | Set to `true` to start without DB / OpenAI / JWT                                                                |
+| `LLM_MODEL`               | `gpt-4-turbo`           | OpenAI model to use. **Recommended: set to `gpt-4o-mini`** — `gpt-4-turbo` may not be available on all API keys |
+| `LLM_TOKEN_LIMIT`         | `4000`                  | Max tokens per LLM request                                                                                      |
+| `AUTH_PROVIDER`           | `jwt`                   | `jwt` \| `eventflow`                                                                                            |
+| `CORS_ORIGIN`             | `*`                     | Allowed CORS origin(s). `*` allows all. Use a comma-separated list to restrict, e.g. `https://event-flow.co.uk` |
+| `LOG_LEVEL`               | `info`                  | `debug` \| `info` \| `warn` \| `error`                                                                          |
+| `EVENTFLOW_API_URL`       | —                       | EventFlow base URL (optional, for callback integrations)                                                        |
+| `EVENTFLOW_API_KEY`       | —                       | EventFlow API key (optional)                                                                                    |
+| `API_URL`                 | `http://localhost:3001` | Public base URL of this service                                                                                 |
 
 ---
 
@@ -203,8 +204,8 @@ no manual variable configuration needed for these two domains.
 For clarity and to future-proof the configuration, it is still recommended to
 set the variable explicitly in the Railway service **Variables** tab:
 
-| Variable | Value |
-|---|---|
+| Variable      | Value                                                   |
+| ------------- | ------------------------------------------------------- |
 | `CORS_ORIGIN` | `https://event-flow.co.uk,https://www.event-flow.co.uk` |
 
 This tells the backend to:
@@ -219,17 +220,17 @@ This tells the backend to:
 
 ### Common pitfalls
 
-| Mistake | Correct value |
-|---|---|
-| Trailing slash: `https://event-flow.co.uk/` | `https://event-flow.co.uk` (no slash) |
-| Missing `www`: only `https://event-flow.co.uk` | Include both: `https://event-flow.co.uk,https://www.event-flow.co.uk` |
-| Wrong TLD: `https://event-flow.com` | Must be `.co.uk` |
+| Mistake                                                                      | Correct value                                                                      |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Trailing slash: `https://event-flow.co.uk/`                                  | `https://event-flow.co.uk` (no slash)                                              |
+| Missing `www`: only `https://event-flow.co.uk`                               | Include both: `https://event-flow.co.uk,https://www.event-flow.co.uk`              |
+| Wrong TLD: `https://event-flow.com`                                          | Must be `.co.uk`                                                                   |
 | Space around comma: `https://event-flow.co.uk, https://www.event-flow.co.uk` | Avoid spaces; the backend trims each entry but keeping it clean prevents surprises |
 
 ### Development / staging
 
 For local development, leaving `CORS_ORIGIN` unset (or setting it to `*`) allows all origins
-(including `localhost`).  For a staging environment you can add extra origins to the
+(including `localhost`). For a staging environment you can add extra origins to the
 comma-separated list, e.g.:
 
 ```
@@ -258,8 +259,8 @@ the Railway-generated domain for your JadeAssist backend service):
 ### Rate limiting
 
 The backend applies a global rate limit (see `RATE_LIMITS.DEFAULT` in
-`packages/backend/src/utils/constants.ts`).  Each visitor's IP address is counted
-independently, so normal EventFlow traffic is unlikely to be affected.  If you experience
+`packages/backend/src/utils/constants.ts`). Each visitor's IP address is counted
+independently, so normal EventFlow traffic is unlikely to be affected. If you experience
 unexpected 429 responses from high-traffic pages, consider raising the limit via a
 dedicated environment variable (not currently configurable without a code change — open an
 issue if needed).
@@ -277,6 +278,7 @@ Configure the Railway health check in **Settings → Health Check Path**: `/heal
 ```
 
 In minimal mode:
+
 ```json
 { "ok": true, "minimalMode": true }
 ```
@@ -293,10 +295,7 @@ In minimal mode returns `"degraded"` (HTTP 200 always, so Railway does not resta
   "data": {
     "status": "degraded",
     "minimalMode": true,
-    "skippedChecks": [
-      "database (MONGODB_URL not set)",
-      "llm (OPENAI_API_KEY not set)"
-    ],
+    "skippedChecks": ["database (MONGODB_URL not set)", "llm (OPENAI_API_KEY not set)"],
     "services": { "database": "down", "llm": "down" },
     "uptime": 12.3,
     "version": "1.0.0",
@@ -310,14 +309,14 @@ In minimal mode returns `"degraded"` (HTTP 200 always, so Railway does not resta
 
 ## Key API endpoints
 
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/healthz` | Lightweight health probe (Railway) |
-| `GET` | `/health` | Full health check (DB + LLM status) |
-| `POST` | `/api/v1/assist` | Primary EventFlow integration endpoint |
-| `POST` | `/api/widget/chat` | Embedded widget endpoint (no auth required) |
-| `POST` | `/api/chat` | Conversational chat (JWT authenticated) |
-| `POST` | `/api/planning/plans` | Create event plans (authenticated) |
+| Method | Path                  | Description                                 |
+| ------ | --------------------- | ------------------------------------------- |
+| `GET`  | `/healthz`            | Lightweight health probe (Railway)          |
+| `GET`  | `/health`             | Full health check (DB + LLM status)         |
+| `POST` | `/api/v1/assist`      | Primary EventFlow integration endpoint      |
+| `POST` | `/api/widget/chat`    | Embedded widget endpoint (no auth required) |
+| `POST` | `/api/chat`           | Conversational chat (JWT authenticated)     |
+| `POST` | `/api/planning/plans` | Create event plans (authenticated)          |
 
 ### POST /api/widget/chat
 
@@ -326,6 +325,7 @@ No JWT token is required — anonymous visitors can chat without logging in.
 A stricter per-IP rate limiter (10 requests/minute) is applied as abuse protection.
 
 **Request body:**
+
 ```json
 {
   "message": "Help me plan a birthday party for 50 guests",
@@ -335,6 +335,7 @@ A stricter per-IP rate limiter (10 requests/minute) is applied as abuse protecti
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -362,6 +363,7 @@ A stricter per-IP rate limiter (10 requests/minute) is applied as abuse protecti
 The main endpoint for EventFlow to call.
 
 **Request body:**
+
 ```json
 {
   "event": "Plan a wedding for 80 guests in London",
@@ -378,6 +380,7 @@ The main endpoint for EventFlow to call.
 ```
 
 **Response:**
+
 ```json
 {
   "result": "Here is a recommended plan for your London wedding...",
@@ -392,6 +395,7 @@ The main endpoint for EventFlow to call.
 ```
 
 **In minimal mode** (before secrets are configured) this returns:
+
 ```json
 {
   "success": false,
@@ -408,7 +412,7 @@ The main endpoint for EventFlow to call.
 ## Widget deployment on Railway
 
 The JadeAssist widget (`@jadeassist/widget`) is a single-file JavaScript bundle
-(`packages/widget/dist/jade-widget.js`) produced by Vite.  **Never deploy it
+(`packages/widget/dist/jade-widget.js`) produced by Vite. **Never deploy it
 using the dev server** (`npm run dev` / `vite`) — that starts a hot-reload
 development server on port 5173 which is not suitable for production.
 
@@ -424,8 +428,7 @@ The Vite dev server:
 - Prints `Local: http://localhost:5173/` in the logs — a clear sign it is running
   in dev mode.
 
-The `railway.toml` committed to this repository prevents this by declaring the
-correct build and start commands explicitly.
+The repo-root `railway.toml` now deliberately deploys the backend API, preventing the backend Railway domain from accidentally serving the widget static server. Use the Static site settings below for the widget bundle.
 
 ---
 
@@ -437,12 +440,12 @@ is needed.
 
 #### Settings (Railway dashboard → widget service → Settings)
 
-| Setting | Value |
-|---|---|
-| Service type | **Static** |
-| Build command | `npm ci && npm run build --workspace=packages/widget` |
-| Output directory | `packages/widget/dist` |
-| Health check | *(not required for Static sites)* |
+| Setting          | Value                                                 |
+| ---------------- | ----------------------------------------------------- |
+| Service type     | **Static**                                            |
+| Build command    | `npm ci && npm run build --workspace=packages/widget` |
+| Output directory | `packages/widget/dist`                                |
+| Health check     | _(not required for Static sites)_                     |
 
 After deploying, Railway will expose `jade-widget.js` at the root of the
 service domain, e.g.:
@@ -460,6 +463,7 @@ custom headers), the widget package ships with a minimal production-safe static
 server at `packages/widget/server.js`.
 
 The server:
+
 - Serves every file in `packages/widget/dist/` over HTTP.
 - Listens on `process.env.PORT` (Railway sets this automatically).
 - Responds `200 { "ok": true }` at `GET /healthz` for Railway health probes.
@@ -469,15 +473,13 @@ The server:
 
 #### Railway service settings for Option B
 
-| Setting | Value |
-|---|---|
-| Build command | `npm ci && npm run build --workspace=packages/widget` |
-| Start command | `npm run start --workspace=packages/widget` |
-| Health check path | `/healthz` |
+| Setting           | Value                                                 |
+| ----------------- | ----------------------------------------------------- |
+| Build command     | `npm ci && npm run build --workspace=packages/widget` |
+| Start command     | `npm run start --workspace=packages/widget`           |
+| Health check path | `/healthz`                                            |
 
-Alternatively, set the service root directory to `packages/widget` and Railway
-will pick up `packages/widget/railway.toml` automatically (no dashboard
-overrides needed).
+Do not point the backend Railway domain at this Node static server. If API traffic reaches the widget server it returns `421 WRONG_SERVICE` with remediation details so the misroute is visible in DevTools.
 
 ---
 
@@ -532,14 +534,14 @@ for that service with `/jade-widget.js` appended:
    ```html
    <!DOCTYPE html>
    <html>
-   <body>
-   <script src="https://<widget-service-domain>/jade-widget.js"></script>
-   <script>
-     window.JadeWidget.init({
-       apiBaseUrl: 'https://<backend-service-domain>',
-     });
-   </script>
-   </body>
+     <body>
+       <script src="https://<widget-service-domain>/jade-widget.js"></script>
+       <script>
+         window.JadeWidget.init({
+           apiBaseUrl: 'https://<backend-service-domain>',
+         });
+       </script>
+     </body>
    </html>
    ```
 
@@ -553,12 +555,12 @@ for that service with `/jade-widget.js` appended:
 The widget itself has no environment variables — it is a static file.  
 The **backend** service that the widget talks to requires:
 
-| Variable | Required | Description |
-|---|---|---|
-| `MONGODB_URL` | Yes | MongoDB connection string (`${{ MongoDB.MONGO_URL }}` on Railway) |
-| `OPENAI_API_KEY` | Yes | OpenAI API key |
-| `JWT_SECRET` | Yes | Long random secret for JWT signing |
-| `CORS_ORIGIN` | Recommended | Comma-separated list of origins allowed to call the API, e.g. `https://event-flow.co.uk` |
+| Variable         | Required    | Description                                                                              |
+| ---------------- | ----------- | ---------------------------------------------------------------------------------------- |
+| `MONGODB_URL`    | Yes         | MongoDB connection string (`${{ MongoDB.MONGO_URL }}` on Railway)                        |
+| `OPENAI_API_KEY` | Yes         | OpenAI API key                                                                           |
+| `JWT_SECRET`     | Yes         | Long random secret for JWT signing                                                       |
+| `CORS_ORIGIN`    | Recommended | Comma-separated list of origins allowed to call the API, e.g. `https://event-flow.co.uk` |
 
 > See [Environment variable reference](#environment-variable-reference) above for the full list.
 
@@ -566,11 +568,11 @@ The **backend** service that the widget talks to requires:
 
 ### Multi-service Railway project summary
 
-| Service | Type | Build command | Start / Output |
-|---|---|---|---|
-| `@jadeassist/backend` | Node | `npm ci && npm run build --workspace=packages/backend` | `npm run start --workspace=packages/backend` |
-| `@jadeassist/widget` (Static) | Static | `npm ci && npm run build --workspace=packages/widget` | Output dir: `packages/widget/dist` |
-| `@jadeassist/widget` (Node) | Node | `npm ci && npm run build --workspace=packages/widget` | `npm run start --workspace=packages/widget` |
+| Service                       | Type   | Build command                                          | Start / Output                               |
+| ----------------------------- | ------ | ------------------------------------------------------ | -------------------------------------------- |
+| `@jadeassist/backend`         | Node   | `npm ci && npm run build --workspace=packages/backend` | `npm run start --workspace=packages/backend` |
+| `@jadeassist/widget` (Static) | Static | `npm ci && npm run build --workspace=packages/widget`  | Output dir: `packages/widget/dist`           |
+| `@jadeassist/widget` (Node)   | Node   | `npm ci && npm run build --workspace=packages/widget`  | `npm run start --workspace=packages/widget`  |
 
 ---
 
@@ -617,6 +619,7 @@ so there is nothing you need to run manually to initialise the database.
 
 After adding the MongoDB service and setting `MONGODB_URL` (see Step 2 above), simply
 deploy or restart the `@jadeassist/backend` service. On first boot it will:
+
 1. Connect to MongoDB via `MONGODB_URL`.
 2. Seed the suppliers collection if it is empty.
 3. Serve all API endpoints normally.
@@ -635,7 +638,6 @@ You should see `"status": "healthy"` with `services.database: "up"`.
 
 Railway routes traffic through a proxy that sets the `X-Forwarded-For` header.
 The backend calls `app.set('trust proxy', 1)` at startup so that
-`express-rate-limit` reads the correct client IP.  **No manual configuration is
+`express-rate-limit` reads the correct client IP. **No manual configuration is
 needed** — this is included in the deployed code and eliminates the
 `ERR_ERL_UNEXPECTED_X_FORWARDED_FOR` warning from the logs.
-

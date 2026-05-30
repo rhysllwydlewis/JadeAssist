@@ -121,6 +121,12 @@ const server = http.createServer((req, res) => {
       },
       expectedBackendPath: '/api/widget/chat',
       currentService: 'jadeassist-widget-static',
+      remediation: [
+        'Deploy the backend service from the repo-root railway.toml or packages/backend.',
+        'Set the widget apiBaseUrl to the backend service domain, not the widget/static domain.',
+        'Verify GET /healthz on the backend domain returns a JadeAssist API health response.',
+      ],
+      timestamp: new Date().toISOString(),
     });
     return;
   }

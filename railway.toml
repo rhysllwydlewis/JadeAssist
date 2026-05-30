@@ -1,33 +1,25 @@
-# railway.toml — Widget service configuration (repo root)
+# railway.toml — Backend service configuration (repo root)
 #
-# This file is read by the @jadeassist/widget Railway service.
-# The widget service Root Directory MUST be set to "." (repo root) in the
-# Railway dashboard so that:
-#   1. Railway reads THIS file.
-#   2. The Docker build context includes package-lock.json (at repo root) and
-#      all workspace packages, which are required for `npm ci` to succeed.
+# This root config intentionally deploys the JadeAssist BACKEND API. Railway
+# services are often created with Root Directory set to "." by default; if this
+# file deploys the widget static server, the public backend domain can answer
+# /api/widget/chat with 421 WRONG_SERVICE (the live EventFlow failure mode).
 #
-# In a multi-service Railway project there are TWO services:
+# Safe Railway setup:
+#   @jadeassist/backend  -> Root Directory: .  -> railway.toml (this file)
+#   @jadeassist/widget   -> Static site / CDN for packages/widget/dist
 #
-#   Service              | Root Directory    | railway.toml used
-#   ---------------------|-------------------|------------------------------------
-#   @jadeassist/backend  | packages/backend  | packages/backend/railway.toml  ✓
-#   @jadeassist/widget   | .  (repo root)    | railway.toml (this file)        ✓
-#
-# !! Do NOT set the backend service Root Directory to "." (repo root) — it will
-#    read this file and try to build/start the widget instead of the backend. !!
-#
-# The @jadeassist/widget service does NOT need OPENAI_API_KEY or JWT_SECRET.
-# See RAILWAY.md for the full setup guide.
-# ─────────────────────────────────────────────────────────────────────────────
+# The backend service requires OPENAI_API_KEY, JWT_SECRET, and MONGODB_URL for
+# full chat functionality. Without them it starts in controlled minimal mode so
+# /healthz remains available and feature routes return clear JSON errors.
 
 [build]
-builder = "dockerfile"
-dockerfilePath = "packages/widget/Dockerfile"
-watchPaths = ["packages/widget/**", "packages/shared/**"]
+builder = "nixpacks"
+buildCommand = "npm run build --workspace=packages/backend"
+watchPaths = ["packages/backend/**", "packages/shared/**", "package.json", "package-lock.json", "tsconfig.json"]
 
 [deploy]
-startCommand = "node server.js"
+startCommand = "npm run start --workspace=packages/backend"
 healthcheckPath = "/healthz"
 healthcheckTimeout = 30
 restartPolicyType = "on_failure"

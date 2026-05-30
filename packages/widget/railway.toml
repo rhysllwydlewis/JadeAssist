@@ -1,18 +1,15 @@
-# railway.toml — Widget service (packages/widget directory)
+# railway.toml — Widget service reference (packages/widget directory)
 #
-# ╔══════════════════════════════════════════════════════════════════╗
-# ║  ⚠️  THIS FILE IS NOT THE ACTIVE RAILWAY CONFIGURATION          ║
-# ║                                                                  ║
-# ║  The @jadeassist/widget service Root Directory MUST be set to   ║
-# ║  "." (repo root) in the Railway dashboard, NOT "packages/widget"║
-# ║                                                                  ║
-# ║  If Root Directory is "packages/widget", the Docker build will  ║
-# ║  FAIL — the build context won't include the root               ║
-# ║  package-lock.json that npm ci requires.                        ║
-# ║                                                                  ║
-# ║  See RAILWAY.md for the correct Railway dashboard settings.     ║
-# ╚══════════════════════════════════════════════════════════════════╝
+# This file is intentionally documentation-only. The repo-root railway.toml now
+# deploys the backend API so the backend Railway domain can never accidentally
+# serve the widget static server and return 421 WRONG_SERVICE for
+# /api/widget/chat.
 #
-# Active configuration when Root Directory is "." (repo root):
-#   railway.toml (repo root)  →  builder = "dockerfile"
-#                                dockerfilePath = "packages/widget/Dockerfile"
+# Recommended widget hosting:
+#   1. Build:  npm ci && npm run build --workspace=packages/widget
+#   2. Serve:  packages/widget/dist as a Railway Static site, GitHub Pages, or CDN
+#   3. Embed:  <script src="https://<widget-host>/jade-widget.js"></script>
+#   4. Point:  apiBaseUrl at the backend domain, e.g.
+#              https://jadeassistbackend-production.up.railway.app
+#
+# Do not use the backend service/domain to host this static widget bundle.

@@ -70,22 +70,28 @@ export class ApiClient {
       }),
     });
 
+    const data = await this.parseJsonResponse(response);
+
+    if (response.status === 421 && data?.error?.code === 'WRONG_SERVICE') {
+      throw new Error(
+        'The JadeAssist widget is pointed at the widget/static Railway service instead of the backend API service. Update apiBaseUrl to the backend service domain.'
+      );
+    }
+
     if (response.status === 429) {
-      throw new Error('429: Rate limit exceeded. Please wait and try again.');
+      throw new Error(data?.error?.message || '429: Rate limit exceeded. Please wait and try again.');
     }
 
     if (response.status === 401 || response.status === 403) {
-      throw new Error(`${response.status}: Authentication failed.`);
+      throw new Error(data?.error?.message || `${response.status}: Authentication failed.`);
     }
 
     if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+      throw new Error(data?.error?.message || `API error: ${response.status}`);
     }
 
-    const data: ChatApiResponse = await response.json();
-
-    if (!data.success || !data.data) {
-      throw new Error(data.error?.message || 'API request failed');
+    if (!data?.success || !data.data) {
+      throw new Error(data?.error?.message || 'API request failed');
     }
 
     return {
@@ -98,6 +104,20 @@ export class ApiClient {
         quickReplies: data.data.suggestions,
       },
     };
+  }
+
+  private async parseJsonResponse(response: Response): Promise<ChatApiResponse | null> {
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      return null;
+    }
+
+    try {
+      return (await response.json()) as ChatApiResponse;
+    } catch (error) {
+      console.warn('Failed to parse JadeAssist API response:', error);
+      return null;
+    }
   }
 
   private async mockResponse(
