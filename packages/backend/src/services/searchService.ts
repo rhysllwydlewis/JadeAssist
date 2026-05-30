@@ -71,17 +71,21 @@ const CATEGORY_ALIASES: Record<string, SupplierCategory> = {
   catering: 'catering',
   food: 'catering',
   photographer: 'photographer',
+  photographers: 'photographer',
   photography: 'photographer',
   photo: 'photographer',
   video: 'videographer',
   videographer: 'videographer',
+  videographers: 'videographer',
   florist: 'florist',
+  florists: 'florist',
   flowers: 'florist',
   entertainment: 'entertainment',
   music: 'entertainment',
   dj: 'entertainment',
   decor: 'decorator',
   decorator: 'decorator',
+  decorators: 'decorator',
   transport: 'transport',
   accommodation: 'accommodation',
   stationery: 'stationery',
@@ -90,6 +94,23 @@ const CATEGORY_ALIASES: Record<string, SupplierCategory> = {
 };
 
 const VALID_CATEGORIES = new Set<string>(SUPPLIER_CATEGORIES);
+const LOCATION_NAMES = [
+  'London',
+  'Cardiff',
+  'Wales',
+  'South Wales',
+  'Manchester',
+  'Birmingham',
+  'Bristol',
+  'Edinburgh',
+  'Glasgow',
+  'Leeds',
+  'Yorkshire',
+  'South West',
+  'North West',
+  'Midlands',
+  'Scotland',
+];
 
 function normalise(value: string | undefined): string {
   return (value ?? '').trim().toLowerCase();
@@ -117,8 +138,12 @@ function inferLocation(query: string, explicit?: string): string | undefined {
   if (explicit?.trim()) return explicit.trim();
 
   const q = normalise(query);
-  const locations = ['London', 'Cardiff', 'Wales', 'Manchester', 'Birmingham', 'Bristol', 'Edinburgh', 'Glasgow', 'Leeds', 'South West', 'North West', 'Midlands', 'Scotland'];
-  return locations.find((location) => q.includes(location.toLowerCase()));
+  return LOCATION_NAMES.find((location) => q.includes(location.toLowerCase()));
+}
+
+function shouldIncludeWebsiteResults(query: string, category?: SupplierCategory): boolean {
+  const q = normalise(query);
+  return !category || ['guide', 'guides', 'help', 'website', 'dashboard', 'pricing', 'supplier', 'suppliers'].some((term) => q.includes(term));
 }
 
 function supplierToResult(supplier: Supplier): SearchResult {
@@ -164,6 +189,15 @@ function websiteMatches(result: SearchResult, query: string): boolean {
   return `${result.title} ${result.description} ${result.url ?? ''}`.toLowerCase().includes(q);
 }
 
+function dedupe(results: SearchResult[]): SearchResult[] {
+  const unique = new Map<string, SearchResult>();
+  for (const result of results) {
+    const key = `${result.source}:${result.type}:${result.id}`;
+    if (!unique.has(key)) unique.set(key, result);
+  }
+  return [...unique.values()];
+}
+
 class SearchService {
   async search(request: SearchRequest): Promise<SearchResult[]> {
     const limit = Math.min(Math.max(request.limit ?? 8, 1), 20);
@@ -172,16 +206,27 @@ class SearchService {
     const location = inferLocation(query, request.location);
     const results: SearchResult[] = [];
 
-    const localSuppliers = await SupplierModel.search({
+    const localPrimary = await SupplierModel.search({
       category,
       region: location,
+      query: !category && !location ? query : undefined,
       limit,
     }).catch((error) => {
       logger.warn({ error, query, category, location }, 'Local supplier search failed');
       return [] as Supplier[];
     });
 
-    results.push(...localSuppliers.map(supplierToResult));
+    results.push(...localPrimary.map(supplierToResult));
+
+    // If a strict category+location search has no local hits, broaden safely so
+    // Jade can still offer useful nearby/category suggestions rather than none.
+    if (results.length === 0 && category && location) {
+      const [sameCategory, sameLocation] = await Promise.all([
+        SupplierModel.search({ category, limit: Math.ceil(limit / 2) }).catch(() => [] as Supplier[]),
+        SupplierModel.search({ region: location, limit: Math.ceil(limit / 2) }).catch(() => [] as Supplier[]),
+      ]);
+      results.push(...sameCategory.map(supplierToResult), ...sameLocation.map(supplierToResult));
+    }
 
     if (catalogService.isConfigured && results.length < limit) {
       try {
@@ -197,17 +242,12 @@ class SearchService {
       }
     }
 
-    if (!category || ['guide', 'guides', 'help', 'website'].some((term) => normalise(query).includes(term))) {
-      results.push(...WEBSITE_INDEX.filter((item) => websiteMatches(item, query)));
+    if (shouldIncludeWebsiteResults(query, category)) {
+      const websiteHits = WEBSITE_INDEX.filter((item) => websiteMatches(item, query));
+      results.push(...(websiteHits.length > 0 ? websiteHits : WEBSITE_INDEX.filter((item) => item.id === 'website-suppliers')));
     }
 
-    const unique = new Map<string, SearchResult>();
-    for (const result of results) {
-      const key = `${result.source}:${result.type}:${result.id}`;
-      if (!unique.has(key)) unique.set(key, result);
-    }
-
-    return [...unique.values()].slice(0, limit);
+    return dedupe(results).slice(0, limit);
   }
 
   formatForPrompt(results: SearchResult[]): string {
