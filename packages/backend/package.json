@@ -9,7 +9,7 @@
     "start": "node dist/index.js",
     "clean": "rm -rf dist *.tsbuildinfo",
     "typecheck": "tsc --noEmit",
-    "test": "ts-node --project tsconfig.json src/tests/planningEngine.validation.ts && ts-node --project tsconfig.json src/tests/env.validation.ts && ts-node --project tsconfig.json src/tests/cors.validation.ts && ts-node --project tsconfig.json src/tests/widgetCors.validation.ts && ts-node --project tsconfig.json src/tests/widgetChat.validation.ts && ts-node --project tsconfig.json src/tests/widgetChatRoute.validation.ts && ts-node --project tsconfig.json src/tests/dbErrors.validation.ts && ts-node --project tsconfig.json src/tests/llmErrors.validation.ts && ts-node --project tsconfig.json src/tests/planningContext.validation.ts"
+    "test": "ts-node --project tsconfig.json src/tests/planningEngine.validation.ts && ts-node --project tsconfig.json src/tests/env.validation.ts && ts-node --project tsconfig.json src/tests/cors.validation.ts && ts-node --project tsconfig.json src/tests/widgetCors.validation.ts && ts-node --project tsconfig.json src/tests/widgetChat.validation.ts && ts-node --project tsconfig.json src/tests/widgetChatRoute.validation.ts && ts-node --project tsconfig.json src/tests/dbErrors.validation.ts && ts-node --project tsconfig.json src/tests/llmErrors.validation.ts && ts-node --project tsconfig.json src/tests/planningContext.validation.ts && ts-node --project tsconfig.json src/tests/searchService.validation.ts"
   },
   "dependencies": {
     "@jadeassist/shared": "1.0.0",
