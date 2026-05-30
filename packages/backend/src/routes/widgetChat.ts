@@ -208,6 +208,7 @@ router.post(
           createdAt: now,
         },
         suggestions: planningResponse.suggestions,
+        searchResults: planningResponse.searchResults,
         conversation: {
           eventType: planningResponse.context.eventType,
           eventDate: planningResponse.context.eventDate,
