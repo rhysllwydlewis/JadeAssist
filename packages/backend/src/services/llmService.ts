@@ -99,8 +99,6 @@ class LLMService {
     this.model = env.llm.model;
   }
 
-  /** Lazily initialize the OpenAI client so startup never crashes when the
-   *  API key is absent. Throws at call-time if not configured. */
   private get client(): OpenAI {
     if (!this._client) {
       if (!env.llm.apiKey) {
@@ -111,9 +109,6 @@ class LLMService {
     return this._client;
   }
 
-  /**
-   * Send a chat completion request
-   */
   async chat(messages: LLMMessage[], options?: LLMOptions): Promise<LLMResponse> {
     if (!env.llm.apiKey) {
       throw new Error('LLM_NOT_CONFIGURED: OPENAI_API_KEY is not configured');
@@ -126,13 +121,8 @@ class LLMService {
 
       const chatMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
         { role: 'system', content: systemPrompt },
-        ...messages.map((msg) => ({
-          role: msg.role,
-          content: msg.content,
-        })),
+        ...messages.map((msg) => ({ role: msg.role, content: msg.content })),
       ];
-
-      logger.debug({ messageCount: messages.length }, 'Sending LLM request');
 
       const response = await this.client.chat.completions.create({
         model: this.model,
@@ -141,21 +131,20 @@ class LLMService {
         max_tokens: maxTokens,
       });
 
-      const content = response.choices[0]?.message?.content || '';
-      const tokensUsed = response.usage?.total_tokens || 0;
-
-      logger.info({ tokensUsed, model: this.model }, 'LLM response received');
-
       return {
-        content,
-        tokensUsed,
+        content: response.choices[0]?.message?.content || '',
+        tokensUsed: response.usage?.total_tokens || 0,
         model: this.model,
       };
     } catch (error) {
       logger.error({ error }, 'LLM request failed');
 
       if (isOpenAIInsufficientQuotaError(error)) {
-        throw new Error('OPENAI_INSUFFICIENT_QUOTA: Provider quota is unavailable for this project.');
+        return {
+          content: "I'm using JadeAssist's built-in planning guide at the moment.\n\nThe best first step is to build the event brief around five details: event type, date or timeframe, guest count, budget and location. Once those are known, focus on venue, food and drink, guest experience, supplier scope and a 10% contingency.\n\nWhat detail would you like to work through first: budget, venue or timeline?",
+          tokensUsed: 0,
+          model: 'jadeassist-local-planning-guide',
+        };
       }
 
       if (isOpenAIRateLimitError(error)) {
@@ -170,17 +159,10 @@ class LLMService {
     }
   }
 
-  /**
-   * Generate a single response without conversation history
-   */
   async generate(prompt: string, options?: LLMOptions): Promise<LLMResponse> {
     return this.chat([{ role: 'user', content: prompt }], options);
   }
 
-  /**
-   * Returns false when OPENAI_API_KEY is not configured rather than throwing,
-   * so health checks remain non-fatal in auto/minimal mode.
-   */
   async healthCheck(): Promise<boolean> {
     if (!env.llm.apiKey) {
       return false;
@@ -195,5 +177,4 @@ class LLMService {
   }
 }
 
-// Export singleton instance
 export const llmService = new LLMService();
