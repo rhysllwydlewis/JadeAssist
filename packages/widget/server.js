@@ -12,6 +12,11 @@
  *   GET /healthz          -> 200 { ok: true }
  *   GET /jade-widget.js   -> serves the built widget bundle (immutable cache)
  *   GET /*                -> serves any file from dist/ (fallback: 404)
+ *
+ * IMPORTANT:
+ *   This is the WIDGET STATIC SERVICE only. It does not implement the backend
+ *   API. If /api/widget/chat reaches this service, Railway/domain routing is
+ *   misconfigured and the widget is pointing at the wrong service/domain.
  */
 
 'use strict';
@@ -22,6 +27,7 @@ const path = require('path');
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const DIST_DIR = path.join(__dirname, 'dist');
+const EVENTFLOW_ORIGINS = new Set(['https://event-flow.co.uk', 'https://www.event-flow.co.uk']);
 
 /** Map file extensions to MIME types */
 const MIME_TYPES = {
@@ -54,17 +60,68 @@ function cacheHeader(filename) {
   return 'public, max-age=3600';
 }
 
+function applyEventFlowCors(req, headers) {
+  const origin = req.headers.origin;
+  if (origin && EVENTFLOW_ORIGINS.has(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin;
+    headers['Vary'] = 'Origin';
+    headers['Access-Control-Allow-Credentials'] = 'true';
+  }
+  return headers;
+}
+
+function sendJson(req, res, status, body, extraHeaders = {}) {
+  const payload = JSON.stringify(body);
+  res.writeHead(
+    status,
+    applyEventFlowCors(req, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Content-Length': Buffer.byteLength(payload),
+      'Cache-Control': 'no-store',
+      ...extraHeaders,
+    })
+  );
+  res.end(payload);
+}
+
 const server = http.createServer((req, res) => {
   const url = req.url ? req.url.split('?')[0] : '/';
 
   // Health endpoint (Railway readiness / liveness probe)
   if (url === '/healthz') {
-    const body = JSON.stringify({ ok: true });
-    res.writeHead(200, {
-      'Content-Type': 'application/json',
-      'Content-Length': Buffer.byteLength(body),
+    sendJson(req, res, 200, { ok: true, service: 'jadeassist-widget-static' });
+    return;
+  }
+
+  // If the backend API reaches the widget static server, fail loudly and with
+  // CORS headers so the browser exposes the useful diagnostic instead of a
+  // misleading CORS/preflight error. This does not replace the backend; it
+  // proves the Railway domain or EventFlow apiBaseUrl is pointing at the wrong
+  // service.
+  if (url.startsWith('/api/')) {
+    if (req.method === 'OPTIONS') {
+      res.writeHead(
+        204,
+        applyEventFlowCors(req, {
+          'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Requested-With',
+          'Cache-Control': 'no-store',
+        })
+      );
+      res.end();
+      return;
+    }
+
+    sendJson(req, res, 421, {
+      success: false,
+      error: {
+        code: 'WRONG_SERVICE',
+        message:
+          'This Railway service is serving the JadeAssist widget bundle, not the JadeAssist backend API. Point the widget apiBaseUrl at the backend service domain.',
+      },
+      expectedBackendPath: '/api/widget/chat',
+      currentService: 'jadeassist-widget-static',
     });
-    res.end(body);
     return;
   }
 
