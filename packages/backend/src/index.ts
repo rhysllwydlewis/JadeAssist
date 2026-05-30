@@ -20,6 +20,7 @@ import chatRouter from './routes/chat';
 import planningRouter from './routes/planning';
 import assistRouter from './routes/assist';
 import catalogRouter from './routes/catalog';
+import searchRouter from './routes/search';
 import widgetChatRouter from './routes/widgetChat';
 
 // Create Express app
@@ -144,11 +145,13 @@ if (env.minimalMode) {
   app.use('/api/chat', unconfiguredHandler);
   app.use('/api/planning', unconfiguredHandler);
   app.use('/api/v1/assist', unconfiguredHandler);
+  app.use('/api/search', unconfiguredHandler);
   app.use('/api/widget/chat', unconfiguredHandler);
 } else {
   app.use('/api/chat', chatRouter);
   app.use('/api/planning', planningRouter);
   app.use('/api/v1/assist', assistRouter);
+  app.use('/api/search', searchRouter);
   app.use('/api/widget/chat', widgetChatRouter);
 }
 
@@ -224,6 +227,7 @@ const server = app.listen(env.port, () => {
       health: `http://localhost:${env.port}/health`,
       healthz: `http://localhost:${env.port}/healthz`,
       assist: `http://localhost:${env.port}/api/v1/assist`,
+      search: `http://localhost:${env.port}/api/search`,
       widgetChat: `http://localhost:${env.port}/api/widget/chat`,
     },
     '📍 API endpoints'

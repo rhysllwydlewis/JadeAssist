@@ -7,6 +7,7 @@ import { llmService, LLMMessage } from './llmService';
 import { ConversationModel } from '../models/Conversation';
 import { EventType, TimelineItem, ChecklistItem, EVENT_TYPE_METADATA } from '@jadeassist/shared';
 import { logger } from '../utils/logger';
+import { searchService, SearchResult } from './searchService';
 import {
   buildDynamicSystemPrompt,
   buildEnrichedUserMessage,
@@ -39,6 +40,38 @@ export interface PlanningResponse {
   requiresMoreInfo: boolean;
   context: PlanningContext;
   missingDetails: string[];
+  searchResults?: SearchResult[];
+}
+
+function shouldSearch(message: string): boolean {
+  const lower = message.toLowerCase();
+  return [
+    'supplier',
+    'suppliers',
+    'venue',
+    'venues',
+    'caterer',
+    'catering',
+    'photographer',
+    'florist',
+    'dj',
+    'music',
+    'transport',
+    'guide',
+    'website',
+    'find',
+    'search',
+    'recommend',
+    'recommendation',
+  ].some((term) => lower.includes(term));
+}
+
+function buildSearchQuery(context: PlanningContext, message: string): string {
+  const parts = [message];
+  if (context.eventType) parts.push(context.eventType);
+  if (context.location) parts.push(context.location);
+  if (context.guestCount) parts.push(`${context.guestCount} guests`);
+  return parts.join(' ');
 }
 
 class PlanningEngineService {
@@ -105,20 +138,31 @@ class PlanningEngineService {
         });
       }
 
+      const searchResults = shouldSearch(trimmedMessage)
+        ? await searchService.search({
+            query: buildSearchQuery(enrichedContext, trimmedMessage),
+            location: enrichedContext.location,
+            limit: 6,
+          })
+        : [];
+
       const llmMessages: LLMMessage[] = messages.slice(-10).map((msg) => ({
         role: msg.role as 'user' | 'assistant' | 'system',
         content: msg.content.slice(0, 2500),
       }));
 
+      const enrichedUserMessage = buildEnrichedUserMessage(enrichedContext, trimmedMessage);
       llmMessages.push({
         role: 'user',
-        content: buildEnrichedUserMessage(enrichedContext, trimmedMessage),
+        content: searchResults.length > 0
+          ? `${enrichedUserMessage}\n\n[Relevant EventFlow search results]\n${searchService.formatForPrompt(searchResults)}`
+          : enrichedUserMessage,
       });
 
       const response = await llmService.chat(llmMessages, {
-        systemPrompt: buildDynamicSystemPrompt(enrichedContext),
+        systemPrompt: `${buildDynamicSystemPrompt(enrichedContext)}\n\nWhen EventFlow search results are provided, use them naturally in the answer. Be clear when a result is from the local supplier database or EventFlow website index. Do not invent supplier names, URLs, prices, availability or ratings beyond the supplied results.`,
         temperature: missingDetails.length > 0 ? 0.55 : 0.7,
-        maxTokens: missingDetails.length > 0 ? 550 : 900,
+        maxTokens: searchResults.length > 0 ? 1000 : missingDetails.length > 0 ? 550 : 900,
       });
 
       if (!response.content.trim()) {
@@ -134,7 +178,7 @@ class PlanningEngineService {
         );
       }
 
-      return this.parseResponse(response.content, enrichedContext);
+      return this.parseResponse(response.content, enrichedContext, searchResults);
     } catch (error) {
       logger.error({ error, context }, 'Planning request failed');
       throw error;
@@ -240,7 +284,11 @@ class PlanningEngineService {
   /**
    * Parse LLM response and extract structured data
    */
-  private parseResponse(content: string, context: PlanningContext): PlanningResponse {
+  private parseResponse(
+    content: string,
+    context: PlanningContext,
+    searchResults: SearchResult[] = []
+  ): PlanningResponse {
     const missingDetails = getMissingDetails(context);
     const needsMoreInfo = detectInformationGaps(content, context);
     const suggestions = extractContextualSuggestions(content, context);
@@ -251,6 +299,7 @@ class PlanningEngineService {
       requiresMoreInfo: needsMoreInfo,
       context,
       missingDetails,
+      searchResults,
     };
   }
 
