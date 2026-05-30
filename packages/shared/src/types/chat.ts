@@ -17,6 +17,12 @@ export interface Conversation {
   id: string;
   userId: string;
   eventType?: string;
+  eventDate?: Date;
+  guestCount?: number;
+  budget?: number;
+  location?: string;
+  planningStage?: string;
+  contextCompleteness?: number;
   startedAt: Date;
   updatedAt: Date;
   messages?: Message[];
@@ -32,4 +38,14 @@ export interface ChatResponse {
   conversationId: string;
   message: Message;
   suggestions?: string[];
+  conversation?: {
+    eventType?: string;
+    eventDate?: Date;
+    guestCount?: number;
+    budget?: number;
+    location?: string;
+    planningStage?: string;
+    contextCompleteness?: number;
+    missingDetails?: string[];
+  };
 }

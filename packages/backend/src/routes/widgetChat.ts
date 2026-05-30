@@ -135,8 +135,8 @@ const widgetRateLimiter = rateLimit({
 
 const widgetChatRequestSchema = z.object({
   message: z.string().trim().min(1).max(5000),
-  conversationId: z.string().optional(),
-  userId: z.string().optional(),
+  conversationId: z.string().uuid().optional(),
+  userId: z.string().trim().min(1).max(120).optional(),
 });
 
 router.post(
@@ -208,6 +208,16 @@ router.post(
           createdAt: now,
         },
         suggestions: planningResponse.suggestions,
+        conversation: {
+          eventType: planningResponse.context.eventType,
+          eventDate: planningResponse.context.eventDate,
+          guestCount: planningResponse.context.guestCount,
+          budget: planningResponse.context.budget,
+          location: planningResponse.context.location,
+          planningStage: planningResponse.context.planningStage,
+          contextCompleteness: planningResponse.context.contextCompleteness,
+          missingDetails: planningResponse.missingDetails,
+        },
       },
       timestamp: now,
     });
