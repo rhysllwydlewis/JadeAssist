@@ -59,6 +59,11 @@ const envSchema = z.object({
   EVENTFLOW_CATALOG_BASE_URL: z.string().optional(),
   EVENTFLOW_CATALOG_API_KEY: z.string().optional(),
 
+  // Optional external discovery providers for supplier search fallback
+  BRAVE_SEARCH_API_KEY: z.string().optional(),
+  SERPAPI_API_KEY: z.string().optional(),
+  GOOGLE_PLACES_API_KEY: z.string().optional(),
+
   // CORS — comma-separated list of allowed origins, '*' for all, or empty to
   // use the built-in production fallback.
   CORS_ORIGIN: z.string().default(''),
@@ -96,7 +101,9 @@ if (strictMode && missingRequiredVars.length > 0) {
 }
 
 if (minimalMode) {
-  console.warn(`⚠️  JADEASSIST_MINIMAL_MODE resolved to ${forcedMinimalMode ? 'forced minimal' : 'auto minimal'} mode.`);
+  console.warn(
+    `⚠️  JADEASSIST_MINIMAL_MODE resolved to ${forcedMinimalMode ? 'forced minimal' : 'auto minimal'} mode.`
+  );
 
   if (missingRequiredVars.length > 0) {
     console.warn(`⚠️  Missing vars: ${missingRequiredVars.join(', ')}`);
@@ -149,6 +156,19 @@ export const env = {
       baseUrl: parsedEnv.data.EVENTFLOW_CATALOG_BASE_URL,
       apiKey: parsedEnv.data.EVENTFLOW_CATALOG_API_KEY,
     },
+  },
+
+  // External discovery providers
+  searchProviders: {
+    braveSearchApiKey: hasValue(parsedEnv.data.BRAVE_SEARCH_API_KEY)
+      ? parsedEnv.data.BRAVE_SEARCH_API_KEY
+      : undefined,
+    serpApiKey: hasValue(parsedEnv.data.SERPAPI_API_KEY)
+      ? parsedEnv.data.SERPAPI_API_KEY
+      : undefined,
+    googlePlacesApiKey: hasValue(parsedEnv.data.GOOGLE_PLACES_API_KEY)
+      ? parsedEnv.data.GOOGLE_PLACES_API_KEY
+      : undefined,
   },
 
   // CORS

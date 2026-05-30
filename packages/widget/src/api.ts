@@ -2,7 +2,7 @@
  * API client for chat communication
  */
 
-import { WidgetMessage } from './types';
+import { WidgetMessage, WidgetSearchResult } from './types';
 
 export interface ConversationBriefMetadata {
   eventType?: string;
@@ -13,18 +13,6 @@ export interface ConversationBriefMetadata {
   planningStage?: string;
   contextCompleteness?: number;
   missingDetails?: string[];
-}
-
-export interface WidgetSearchResult {
-  id: string;
-  type: 'supplier' | 'venue' | 'website';
-  title: string;
-  description: string;
-  location?: string;
-  category?: string;
-  url?: string;
-  rating?: number;
-  source: 'local-db' | 'eventflow-catalog' | 'website-index';
 }
 
 export interface ChatApiResponse {
@@ -72,7 +60,12 @@ export class ApiClient {
   async sendMessage(
     message: string,
     conversationId?: string
-  ): Promise<{ conversationId: string; message: WidgetMessage; conversation?: ConversationBriefMetadata; searchResults?: WidgetSearchResult[] }> {
+  ): Promise<{
+    conversationId: string;
+    message: WidgetMessage;
+    conversation?: ConversationBriefMetadata;
+    searchResults?: WidgetSearchResult[];
+  }> {
     if (this.demoMode) {
       return this.mockResponse(message);
     }
@@ -104,7 +97,9 @@ export class ApiClient {
     }
 
     if (response.status === 429) {
-      throw new Error(data?.error?.message || '429: Rate limit exceeded. Please wait and try again.');
+      throw new Error(
+        data?.error?.message || '429: Rate limit exceeded. Please wait and try again.'
+      );
     }
 
     if (response.status === 401 || response.status === 403) {
@@ -147,9 +142,12 @@ export class ApiClient {
     }
   }
 
-  private async mockResponse(
-    userMessage: string
-  ): Promise<{ conversationId: string; message: WidgetMessage; conversation?: ConversationBriefMetadata; searchResults?: WidgetSearchResult[] }> {
+  private async mockResponse(userMessage: string): Promise<{
+    conversationId: string;
+    message: WidgetMessage;
+    conversation?: ConversationBriefMetadata;
+    searchResults?: WidgetSearchResult[];
+  }> {
     await new Promise((resolve) => setTimeout(resolve, 700 + Math.random() * 400));
 
     const conversationId = 'demo-' + Date.now();
@@ -163,7 +161,9 @@ export class ApiClient {
       conversation: {
         eventType: this.demoState.eventType,
         guestCount: this.demoState.guestCount ? Number(this.demoState.guestCount) : undefined,
-        budget: this.demoState.budget ? Number(this.demoState.budget.replace(/[^0-9]/g, '')) || undefined : undefined,
+        budget: this.demoState.budget
+          ? Number(this.demoState.budget.replace(/[^0-9]/g, '')) || undefined
+          : undefined,
         location: this.demoState.location,
         planningStage: this.demoState.eventType ? 'brief-building' : 'discovery',
         contextCompleteness: Object.values(this.demoState).filter(Boolean).length * 20,
@@ -183,7 +183,12 @@ export class ApiClient {
       this.demoState.eventType = 'wedding';
     } else if (lower.includes('birthday')) {
       this.demoState.eventType = 'birthday';
-    } else if (lower.includes('corporate') || lower.includes('away day') || lower.includes('away-day') || lower.includes('work event')) {
+    } else if (
+      lower.includes('corporate') ||
+      lower.includes('away day') ||
+      lower.includes('away-day') ||
+      lower.includes('work event')
+    ) {
       this.demoState.eventType = 'corporate';
     } else if (lower.includes('conference') || lower.includes('seminar')) {
       this.demoState.eventType = 'conference';
@@ -216,19 +221,41 @@ export class ApiClient {
 
     if (lower.includes('london')) {
       this.demoState.location = 'London';
-    } else if (lower.includes('scotland') || lower.includes('edinburgh') || lower.includes('glasgow')) {
+    } else if (
+      lower.includes('scotland') ||
+      lower.includes('edinburgh') ||
+      lower.includes('glasgow')
+    ) {
       this.demoState.location = 'Scotland';
     } else if (lower.includes('wales') || lower.includes('cardiff')) {
       this.demoState.location = 'Wales';
-    } else if (lower.includes('north west') || lower.includes('manchester') || lower.includes('liverpool')) {
+    } else if (
+      lower.includes('north west') ||
+      lower.includes('manchester') ||
+      lower.includes('liverpool')
+    ) {
       this.demoState.location = 'North West';
-    } else if (lower.includes('yorkshire') || lower.includes('leeds') || lower.includes('sheffield')) {
+    } else if (
+      lower.includes('yorkshire') ||
+      lower.includes('leeds') ||
+      lower.includes('sheffield')
+    ) {
       this.demoState.location = 'Yorkshire';
-    } else if (lower.includes('south east') || lower.includes('surrey') || lower.includes('kent') || lower.includes('sussex')) {
+    } else if (
+      lower.includes('south east') ||
+      lower.includes('surrey') ||
+      lower.includes('kent') ||
+      lower.includes('sussex')
+    ) {
       this.demoState.location = 'South East';
     } else if (lower.includes('midlands') || lower.includes('birmingham')) {
       this.demoState.location = 'Midlands';
-    } else if (lower.includes('south west') || lower.includes('bristol') || lower.includes('cornwall') || lower.includes('devon')) {
+    } else if (
+      lower.includes('south west') ||
+      lower.includes('bristol') ||
+      lower.includes('cornwall') ||
+      lower.includes('devon')
+    ) {
       this.demoState.location = 'South West';
     }
 
@@ -244,12 +271,16 @@ export class ApiClient {
 
     if (
       (lower.includes('yes') && lower.includes('please')) ||
-      lower === 'help' || lower === 'start' || lower === 'hi' ||
-      lower === 'hello' || lower === 'hey'
+      lower === 'help' ||
+      lower === 'start' ||
+      lower === 'hi' ||
+      lower === 'hello' ||
+      lower === 'hey'
     ) {
       if (!state.eventType) {
         return {
-          content: "I'd love to help you plan your event! What type of event are you organising? 🎉",
+          content:
+            "I'd love to help you plan your event! What type of event are you organising? 🎉",
           quickReplies: ['Wedding', 'Birthday Party', 'Corporate Event', 'Anniversary', 'Other'],
         };
       }
@@ -264,14 +295,27 @@ export class ApiClient {
     return this.buildDetailedDemoResponse(lower, state);
   }
 
-  private buildDetailedDemoResponse(lower: string, state: DemoConversationState): { content: string; quickReplies?: string[] } {
+  private buildDetailedDemoResponse(
+    lower: string,
+    state: DemoConversationState
+  ): { content: string; quickReplies?: string[] } {
     const event = state.eventType || 'event';
     const loc = state.location || 'your area';
 
-    if (lower.includes('venue') || lower.includes('supplier') || lower.includes('search') || lower.includes('recommend')) {
+    if (
+      lower.includes('venue') ||
+      lower.includes('supplier') ||
+      lower.includes('search') ||
+      lower.includes('recommend')
+    ) {
       return {
         content: `In live mode I can search EventFlow suppliers and website sections. For demo mode, here is the supplier approach I would use for a ${event} in ${loc}:\n\n- Shortlist 3 options so you can compare like-for-like.\n- Ask for full written quotes, not headline prices.\n- Check insurance, cancellation terms, setup times and what is included.\n- For venues, confirm capacity, access, curfew and wet-weather options.\n\nIn live mode, I would return actual supplier or website results from EventFlow where available.`,
-        quickReplies: ['Budget breakdown', 'Venue checklist', 'Planning timeline', 'Supplier questions'],
+        quickReplies: [
+          'Budget breakdown',
+          'Venue checklist',
+          'Planning timeline',
+          'Supplier questions',
+        ],
       };
     }
 
@@ -282,7 +326,12 @@ export class ApiClient {
       };
     }
 
-    if (lower.includes('timeline') || lower.includes('schedule') || lower.includes('when') || lower.includes('plan')) {
+    if (
+      lower.includes('timeline') ||
+      lower.includes('schedule') ||
+      lower.includes('when') ||
+      lower.includes('plan')
+    ) {
       return {
         content: `A sensible ${event} planning order is:\n\n- Confirm budget, guest count and location.\n- Shortlist and secure the venue/date.\n- Book key suppliers that affect availability.\n- Confirm guest communication, timings and layout.\n- In the final month, lock final numbers, balances and the day schedule.`,
         quickReplies: ['Find suppliers', 'Budget breakdown', 'Venue checklist'],
@@ -290,7 +339,8 @@ export class ApiClient {
     }
 
     return {
-      content: 'I can help with that. To give you useful advice, what type of event are you planning?',
+      content:
+        'I can help with that. To give you useful advice, what type of event are you planning?',
       quickReplies: ['Wedding', 'Birthday Party', 'Corporate Event', 'Anniversary', 'Other'],
     };
   }

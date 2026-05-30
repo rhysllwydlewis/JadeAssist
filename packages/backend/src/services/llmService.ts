@@ -63,7 +63,7 @@ function latestUserMessage(messages: LLMMessage[]): string {
 }
 
 function knownContextValue(message: string, label: string): string | undefined {
-  const context = /\[Known context: ([\s\S]*?)\]$/i.exec(message)?.[1];
+  const context = /\[(?:Known context|Context): ([\s\S]*?)\]/i.exec(message)?.[1];
   if (!context) return undefined;
 
   const pair = context
@@ -79,6 +79,42 @@ function hasAny(message: string, terms: string[]): boolean {
   return terms.some((term) => lower.includes(term));
 }
 
+function extractSearchResultLines(message: string): string[] {
+  const section = /\[Relevant EventFlow search results\]\n([\s\S]*)$/i.exec(message)?.[1];
+  if (!section) return [];
+
+  return section
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => /^\d+\.\s+/.test(line))
+    .slice(0, 5);
+}
+
+function buildRecommendationFallback(
+  prefix: string,
+  latest: string,
+  brief: string
+): string | undefined {
+  const resultLines = extractSearchResultLines(latest);
+  if (resultLines.length === 0) return undefined;
+
+  const asksForVenue = hasAny(latest, ['venue', 'venues', 'room', 'space', 'location']);
+  const asksForAccommodation = hasAny(latest, ['hotel', 'hotels', 'accommodation', 'stay']);
+  const asksToFind = hasAny(latest, ['find', 'recommend', 'recommendation', 'shortlist', 'near']);
+
+  if (!asksToFind && !asksForVenue && !asksForAccommodation) return undefined;
+
+  const heading = asksForAccommodation
+    ? `Here are accommodation starting points I found for your ${brief}:`
+    : `Here are supplier/search starting points I found for your ${brief}:`;
+
+  const recommendations = resultLines
+    .map((line) => `- ${line.replace(/^\d+\.\s+/, '')}`)
+    .join('\n');
+
+  return `${prefix}\n\n${heading}\n\n${recommendations}\n\nBest next step: open 2–3 links or profiles that fit the style, location and guest logistics, then ask each for capacity, availability, minimum spend/package pricing, what's included, and any music/access restrictions. If a result is an online-search fallback, use it to discover live suppliers; if it is an EventFlow profile link, you can visit that supplier profile directly. Availability and pricing can change, so treat this as a shortlist to verify rather than a confirmed booking.`;
+}
+
 export function buildLocalPlanningGuide(messages: LLMMessage[]): string {
   const latest = latestUserMessage(messages);
   const eventType = knownContextValue(latest, 'Event Type') ?? 'event';
@@ -90,9 +126,13 @@ export function buildLocalPlanningGuide(messages: LLMMessage[]): string {
     location ? `in ${location}` : undefined,
     guests ? `for ${guests} guests` : undefined,
     budget ? `with a ${budget} budget` : undefined,
-  ].filter(Boolean).join(' ');
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   const prefix = "I'm using JadeAssist's built-in planning guide at the moment.";
+  const recommendationFallback = buildRecommendationFallback(prefix, latest, brief);
+  if (recommendationFallback) return recommendationFallback;
 
   if (hasAny(latest, ['budget', 'cost', 'price', 'spend', 'afford'])) {
     return `${prefix}\n\nFor your ${brief}, use this practical starting split:\n\n- Venue: 25–35%\n- Food and drink: 30–40%\n- Main guest experience: 10–20%\n- Styling and extras: 10–15%\n- Contingency: keep 10% back\n\nBest next step: confirm guest count and venue quotes first, because those two items control most of the budget.`;
@@ -167,7 +207,16 @@ class LLMService {
    */
   async chat(messages: LLMMessage[], options?: LLMOptions): Promise<LLMResponse> {
     if (!env.llm.apiKey) {
-      throw new Error('LLM_NOT_CONFIGURED: OPENAI_API_KEY is not configured');
+      const content = buildLocalPlanningGuide(messages);
+      logger.warn(
+        { model: 'jadeassist-local-planning-guide' },
+        'Using local planning guide because OPENAI_API_KEY is not configured'
+      );
+      return {
+        content,
+        tokensUsed: 0,
+        model: 'jadeassist-local-planning-guide',
+      };
     }
 
     try {
@@ -207,7 +256,10 @@ class LLMService {
 
       if (isOpenAIInsufficientQuotaError(error)) {
         const content = buildLocalPlanningGuide(messages);
-        logger.warn({ model: 'jadeassist-local-planning-guide' }, 'Using local planning guide fallback');
+        logger.warn(
+          { model: 'jadeassist-local-planning-guide' },
+          'Using local planning guide fallback'
+        );
         return {
           content,
           tokensUsed: 0,
