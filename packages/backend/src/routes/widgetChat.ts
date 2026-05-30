@@ -1,11 +1,9 @@
 /**
  * Widget chat route — public endpoint for the embedded JadeAssist widget.
  *
- * Unlike POST /api/chat (which requires JWT + UUID userId), this endpoint is
- * intentionally unauthenticated so that anonymous visitors on public sites
- * (e.g. event-flow.co.uk) can chat without logging in.
- *
- * Abuse protection is provided by a stricter per-IP rate limiter.
+ * This route is intentionally public so anonymous EventFlow visitors can chat
+ * with Jade without logging in. Abuse protection is provided by a stricter
+ * per-IP limiter on POST requests.
  */
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
@@ -21,8 +19,36 @@ import { isDbSchemaMissingError } from '../utils/dbErrors';
 
 const router = Router();
 
-// ── Rate limiter — stricter than the global limiter ──────────────────────────
-// 10 requests per minute per IP (vs 20/min for authenticated /api/chat).
+const routeDiagnostics = {
+  service: 'jadeassist-backend',
+  package: '@jadeassist/backend',
+  widgetChatPath: '/api/widget/chat',
+};
+
+function methodNotAllowed(req: Request, res: Response): void {
+  res.status(405).json({
+    success: false,
+    error: {
+      code: 'METHOD_NOT_ALLOWED',
+      message: `${req.method} is not supported on /api/widget/chat. Use POST for chat messages.`,
+    },
+    allowedMethods: ['OPTIONS', 'POST'],
+    ...routeDiagnostics,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+// Route-level compatibility guards. App-level CORS middleware supplies the
+// Access-Control-* headers; these handlers prevent Railway/browser probes from
+// showing this live endpoint as a missing-route 404.
+router.options('/', (_req: Request, res: Response) => {
+  res.sendStatus(204);
+});
+router.get('/', methodNotAllowed);
+router.head('/', (_req: Request, res: Response) => {
+  res.status(405).end();
+});
+
 const widgetRateLimiter = rateLimit({
   windowMs: RATE_LIMITS.WIDGET_CHAT.windowMs,
   max: RATE_LIMITS.WIDGET_CHAT.max,
@@ -40,20 +66,12 @@ const widgetRateLimiter = rateLimit({
   },
 });
 
-// ── Request schema ────────────────────────────────────────────────────────────
-// userId is optional and does NOT need to be a UUID — anonymous visitors are
-// welcome.  conversationId is optional but, if provided, is used as-is so the
-// widget can maintain continuity across turns (within a single page session).
 const widgetChatRequestSchema = z.object({
   message: z.string().min(1).max(5000),
   conversationId: z.string().optional(),
   userId: z.string().optional(),
 });
 
-/**
- * POST /api/widget/chat
- * Send a message via the embedded widget without requiring authentication.
- */
 router.post(
   '/',
   widgetRateLimiter,
@@ -67,8 +85,6 @@ router.post(
       userId?: string;
     };
 
-    // Resolve identifiers — fall back to anonymous/random values so the
-    // planning engine always has something to work with.
     const resolvedUserId = userId ?? authReq.userId ?? 'anonymous';
     const resolvedConversationId = conversationId ?? randomUUID();
 
@@ -80,10 +96,7 @@ router.post(
     let planningResponse;
     try {
       planningResponse = await planningEngine.processRequest(
-        {
-          conversationId: resolvedConversationId,
-          userId: resolvedUserId,
-        },
+        { conversationId: resolvedConversationId, userId: resolvedUserId },
         message
       );
     } catch (err) {
@@ -98,8 +111,7 @@ router.post(
           error: {
             code: 'DB_NOT_INITIALIZED',
             message:
-              'The database is not available. ' +
-              'Please check that MONGODB_URL is set correctly and the MongoDB service is running.',
+              'The database is not available. Please check that MONGODB_URL is set correctly and the MongoDB service is running.',
           },
           timestamp: new Date().toISOString(),
         });
@@ -107,16 +119,13 @@ router.post(
       }
 
       logger.warn({ err, conversationId: resolvedConversationId }, 'Widget chat planning error');
-
-      const fallbackContent = isRateLimit
-        ? "I'm getting a lot of requests right now — please give me a moment and try again. ⏳"
-        : "I'm having trouble connecting to my planning system right now. Please try again in a moment.";
-
       res.status(isRateLimit ? 429 : 503).json({
         success: false,
         error: {
           code: isRateLimit ? 'RATE_LIMIT_EXCEEDED' : 'LLM_ERROR',
-          message: fallbackContent,
+          message: isRateLimit
+            ? "I'm getting a lot of requests right now — please give me a moment and try again."
+            : "I'm having trouble connecting to my planning system right now. Please try again in a moment.",
         },
         timestamp: new Date().toISOString(),
       });
@@ -124,7 +133,6 @@ router.post(
     }
 
     const now = new Date().toISOString();
-
     res.status(200).json({
       success: true,
       data: {
