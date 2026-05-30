@@ -63,17 +63,26 @@ CORS_ORIGIN=https://event-flow.co.uk,https://www.event-flow.co.uk
 
 If `CORS_ORIGIN` is omitted in production, the backend falls back to the two EventFlow origins above. Explicitly setting `CORS_ORIGIN` is still recommended so the deployed configuration is obvious.
 
-## EventFlow embed snippet
+## EventFlow embed contract
 
-The EventFlow site should initialise the widget in one traceable place rather than scattering inline snippets across pages.
+The EventFlow site should initialise the widget in one traceable file rather than scattering snippets across pages.
 
-Recommended configuration:
+Recommended EventFlow-side file:
 
-```html
-<script src="https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@<pinned-commit-or-release>/packages/widget/dist/jade-widget.js" defer></script>
-<script>
-  window.addEventListener('DOMContentLoaded', function () {
-    if (!window.JadeWidget) return;
+```text
+public/assets/js/integrations/jadeassist-widget.js
+```
+
+That file should load only after the widget bundle is available and should initialise JadeAssist with the production backend:
+
+```js
+(function initJadeAssistWidget() {
+  'use strict';
+
+  function boot() {
+    if (!window.JadeWidget || window.__eventflowJadeAssistBooted) return;
+    window.__eventflowJadeAssistBooted = true;
+
     window.JadeWidget.init({
       apiBaseUrl: 'https://jadeassistbackend-production.up.railway.app',
       assistantName: 'Jade',
@@ -83,11 +92,24 @@ Recommended configuration:
       offsetBottom: '80px',
       offsetRight: '24px'
     });
-  });
-</script>
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
+  } else {
+    boot();
+  }
+})();
 ```
 
-Use a pinned release or commit instead of `@main` for production so EventFlow does not receive unreviewed widget changes automatically.
+Then EventFlow can load both scripts using normal external script tags:
+
+```html
+<script src="https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@<pinned-commit-or-release>/packages/widget/dist/jade-widget.js" defer></script>
+<script src="/assets/js/integrations/jadeassist-widget.js" defer></script>
+```
+
+Use a pinned release or commit instead of `@main` for production so EventFlow does not receive unreviewed widget changes automatically. Avoid inline initialisation on EventFlow production pages where possible, as it is harder to audit and may conflict with Content Security Policy.
 
 ## Manual production smoke test
 
