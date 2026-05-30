@@ -209,6 +209,7 @@ router.post(
         },
         suggestions: planningResponse.suggestions,
         searchResults: planningResponse.searchResults,
+        assistantResponse: planningResponse.assistantResponse,
         conversation: {
           eventType: planningResponse.context.eventType,
           eventDate: planningResponse.context.eventDate,
