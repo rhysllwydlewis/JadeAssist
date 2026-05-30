@@ -1,4 +1,4 @@
-(function(p){"use strict";const g={apiBaseUrl:"",authToken:"",assistantName:"Jade",greetingText:"Hi! 👋 I'm Jade, your event planning assistant. Can I help you plan your special day?",greetingTooltipText:"👋 Hi! Need help planning your event?",avatarUrl:"https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/assets/avatar-woman.png",primaryColor:"#0B8073",accentColor:"#13B6A2",fontFamily:'-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',showDelayMs:1e3,offsetBottom:"80px",offsetRight:"24px",offsetLeft:"",offsetBottomMobile:"",offsetRightMobile:"",offsetLeftMobile:"",scale:1,debug:!1},l={STATE:"jade-widget-state",MESSAGES:"jade-widget-messages",CONVERSATION_ID:"jade-widget-conversation-id",GREETING_DISMISSED:"jade-widget-greeting-dismissed",SOUND_ENABLED:"jade-widget-sound-enabled",SOUND_VOLUME:"jade-widget-sound-volume"};class d{static saveState(e){try{const s={...this.loadState(),...e};localStorage.setItem(l.STATE,JSON.stringify(s))}catch(t){console.warn("Failed to save widget state:",t)}}static loadState(){try{const e=localStorage.getItem(l.STATE);return e?JSON.parse(e):{}}catch(e){return console.warn("Failed to load widget state:",e),{}}}static saveMessages(e){try{localStorage.setItem(l.MESSAGES,JSON.stringify(e))}catch(t){console.warn("Failed to save messages:",t)}}static loadMessages(){try{const e=localStorage.getItem(l.MESSAGES);return e?JSON.parse(e):[]}catch(e){return console.warn("Failed to load messages:",e),[]}}static saveConversationId(e){try{localStorage.setItem(l.CONVERSATION_ID,e)}catch(t){console.warn("Failed to save conversation ID:",t)}}static loadConversationId(){try{return localStorage.getItem(l.CONVERSATION_ID)}catch(e){return console.warn("Failed to load conversation ID:",e),null}}static clearAll(){try{localStorage.removeItem(l.STATE),localStorage.removeItem(l.MESSAGES),localStorage.removeItem(l.CONVERSATION_ID),localStorage.removeItem(l.GREETING_DISMISSED)}catch(e){console.warn("Failed to clear storage:",e)}}static isGreetingDismissed(){try{return localStorage.getItem(l.GREETING_DISMISSED)==="true"}catch(e){return console.warn("Failed to check greeting dismissed state:",e),!1}}static setGreetingDismissed(){try{localStorage.setItem(l.GREETING_DISMISSED,"true")}catch(e){console.warn("Failed to save greeting dismissed state:",e)}}static loadSoundEnabled(){try{const e=localStorage.getItem(l.SOUND_ENABLED);return e===null?!1:e==="true"}catch(e){return console.warn("Failed to load sound enabled state:",e),!1}}static saveSoundEnabled(e){try{localStorage.setItem(l.SOUND_ENABLED,String(e))}catch(t){console.warn("Failed to save sound enabled state:",t)}}static loadSoundVolume(){try{const e=localStorage.getItem(l.SOUND_VOLUME);if(e===null)return .5;const t=parseFloat(e);return isNaN(t)?.5:Math.min(1,Math.max(0,t))}catch(e){return console.warn("Failed to load sound volume:",e),.5}}static saveSoundVolume(e){try{localStorage.setItem(l.SOUND_VOLUME,String(e))}catch(t){console.warn("Failed to save sound volume:",t)}}}class b{constructor(e,t){this.demoState={},this.baseUrl=e||"",this.authToken=t||"",this.demoMode=!e}async sendMessage(e,t){var i,o,u,c,h;if(this.demoMode)return this.mockResponse(e);const s={"Content-Type":"application/json"};this.authToken&&(s.Authorization=`Bearer ${this.authToken}`);const n=await fetch(`${this.baseUrl}/api/widget/chat`,{method:"POST",headers:s,body:JSON.stringify({message:e,conversationId:t,userId:"anonymous"})}),a=await this.parseJsonResponse(n);if(n.status===421&&((i=a==null?void 0:a.error)==null?void 0:i.code)==="WRONG_SERVICE")throw new Error("The JadeAssist widget is pointed at the widget/static Railway service instead of the backend API service. Update apiBaseUrl to the backend service domain.");if(n.status===429)throw new Error(((o=a==null?void 0:a.error)==null?void 0:o.message)||"429: Rate limit exceeded. Please wait and try again.");if(n.status===401||n.status===403)throw new Error(((u=a==null?void 0:a.error)==null?void 0:u.message)||`${n.status}: Authentication failed.`);if(!n.ok)throw new Error(((c=a==null?void 0:a.error)==null?void 0:c.message)||`API error: ${n.status}`);if(!(a!=null&&a.success)||!a.data)throw new Error(((h=a==null?void 0:a.error)==null?void 0:h.message)||"API request failed");return{conversationId:a.data.conversationId,message:{id:a.data.message.id,role:"assistant",content:a.data.message.content,timestamp:Date.now(),quickReplies:a.data.suggestions}}}async parseJsonResponse(e){if(!(e.headers.get("content-type")||"").includes("application/json"))return null;try{return await e.json()}catch(s){return console.warn("Failed to parse JadeAssist API response:",s),null}}async mockResponse(e){await new Promise(i=>setTimeout(i,700+Math.random()*400));const t="demo-"+Date.now(),s=e.toLowerCase();this.updateDemoState(s);const{content:n,quickReplies:a}=this.buildDemoResponse(s);return{conversationId:t,message:{id:"msg-"+Date.now(),role:"assistant",content:n,timestamp:Date.now(),quickReplies:a}}}updateDemoState(e){e.includes("wedding")||e.includes("civil partnership")?this.demoState.eventType="wedding":e.includes("birthday")?this.demoState.eventType="birthday":e.includes("corporate")||e.includes("away day")||e.includes("away-day")||e.includes("work event")?this.demoState.eventType="corporate":e.includes("conference")||e.includes("seminar")?this.demoState.eventType="conference":e.includes("anniversary")?this.demoState.eventType="anniversary":(e.includes("party")||e.includes("celebration"))&&(this.demoState.eventType="party"),/under\s*[£$]?5k\b/i.test(e)||/under\s*£?5,000\b/.test(e)?this.demoState.budget="under £5,000":/\b[£$]?50k\b|\b50,000\b/.test(e)?this.demoState.budget="£50,000+":/\b[£$]?20k\b|\b20,000\b/.test(e)?this.demoState.budget="£20,000–£50,000":/\b[£$]?10k\b|\b10,000\b/.test(e)?this.demoState.budget="£10,000–£20,000":/\b[£$]?5k\b|\b5,000\b/.test(e)&&(this.demoState.budget="£5,000–£10,000");const t=/\b(\d{1,3}(?:,\d{3})*|\d+)\s*(guests?|people|attendees?|pax)\b/.exec(e);t?this.demoState.guestCount=t[1].replace(/,/g,""):e.includes("under 30")||e.includes("intimate")?this.demoState.guestCount="20–30":(e.includes("150+")||e.includes("large"))&&(this.demoState.guestCount="150+"),e.includes("london")?this.demoState.location="London":e.includes("scotland")||e.includes("edinburgh")||e.includes("glasgow")?this.demoState.location="Scotland":e.includes("wales")||e.includes("cardiff")?this.demoState.location="Wales":e.includes("north west")||e.includes("manchester")||e.includes("liverpool")?this.demoState.location="North West":e.includes("yorkshire")||e.includes("leeds")||e.includes("sheffield")?this.demoState.location="Yorkshire":e.includes("south east")||e.includes("surrey")||e.includes("kent")||e.includes("sussex")?this.demoState.location="South East":e.includes("midlands")||e.includes("birmingham")?this.demoState.location="Midlands":(e.includes("south west")||e.includes("bristol")||e.includes("cornwall")||e.includes("devon"))&&(this.demoState.location="South West"),e.includes("this year")?this.demoState.eventDate="this year":e.includes("next year")&&(this.demoState.eventDate="next year")}buildDemoResponse(e){const t=this.demoState;if((e.includes("yes")&&e.includes("please")||e==="help"||e==="start"||e==="hi"||e==="hello"||e==="hey")&&!t.eventType)return{content:"I'd love to help you plan your event! What type of event are you organising? 🎉",quickReplies:["Wedding","Birthday Party","Corporate Event","Anniversary","Other"]};if(e.includes("no")&&e.includes("thanks"))return{content:"No problem — I'm here whenever you're ready. Feel free to come back any time! 😊"};if(e.includes("wedding")||t.eventType==="wedding")return e.includes("cost")||e.includes("price")||e.includes("budget")||e.includes("expensive")||e.includes("afford")?{content:`Here's a realistic cost breakdown for a wedding in ${t.location||"the UK"}:
+(function(p){"use strict";const g={apiBaseUrl:"",authToken:"",assistantName:"Jade",greetingText:"Hi! 👋 I'm Jade, your event planning assistant. Can I help you plan your special day?",greetingTooltipText:"👋 Hi! Need help planning your event?",avatarUrl:"https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/assets/avatar-woman.png",primaryColor:"#0B8073",accentColor:"#13B6A2",fontFamily:'-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',showDelayMs:1e3,offsetBottom:"80px",offsetRight:"24px",offsetLeft:"",offsetBottomMobile:"",offsetRightMobile:"",offsetLeftMobile:"",scale:1,debug:!1},l={STATE:"jade-widget-state",MESSAGES:"jade-widget-messages",CONVERSATION_ID:"jade-widget-conversation-id",GREETING_DISMISSED:"jade-widget-greeting-dismissed",SOUND_ENABLED:"jade-widget-sound-enabled",SOUND_VOLUME:"jade-widget-sound-volume"};class d{static saveState(e){try{const i={...this.loadState(),...e};localStorage.setItem(l.STATE,JSON.stringify(i))}catch(a){console.warn("Failed to save widget state:",a)}}static loadState(){try{const e=localStorage.getItem(l.STATE);return e?JSON.parse(e):{}}catch(e){return console.warn("Failed to load widget state:",e),{}}}static saveMessages(e){try{localStorage.setItem(l.MESSAGES,JSON.stringify(e))}catch(a){console.warn("Failed to save messages:",a)}}static loadMessages(){try{const e=localStorage.getItem(l.MESSAGES);return e?JSON.parse(e):[]}catch(e){return console.warn("Failed to load messages:",e),[]}}static saveConversationId(e){try{localStorage.setItem(l.CONVERSATION_ID,e)}catch(a){console.warn("Failed to save conversation ID:",a)}}static loadConversationId(){try{return localStorage.getItem(l.CONVERSATION_ID)}catch(e){return console.warn("Failed to load conversation ID:",e),null}}static clearAll(){try{localStorage.removeItem(l.STATE),localStorage.removeItem(l.MESSAGES),localStorage.removeItem(l.CONVERSATION_ID),localStorage.removeItem(l.GREETING_DISMISSED)}catch(e){console.warn("Failed to clear storage:",e)}}static isGreetingDismissed(){try{return localStorage.getItem(l.GREETING_DISMISSED)==="true"}catch(e){return console.warn("Failed to check greeting dismissed state:",e),!1}}static setGreetingDismissed(){try{localStorage.setItem(l.GREETING_DISMISSED,"true")}catch(e){console.warn("Failed to save greeting dismissed state:",e)}}static loadSoundEnabled(){try{const e=localStorage.getItem(l.SOUND_ENABLED);return e===null?!1:e==="true"}catch(e){return console.warn("Failed to load sound enabled state:",e),!1}}static saveSoundEnabled(e){try{localStorage.setItem(l.SOUND_ENABLED,String(e))}catch(a){console.warn("Failed to save sound enabled state:",a)}}static loadSoundVolume(){try{const e=localStorage.getItem(l.SOUND_VOLUME);if(e===null)return .5;const a=parseFloat(e);return isNaN(a)?.5:Math.min(1,Math.max(0,a))}catch(e){return console.warn("Failed to load sound volume:",e),.5}}static saveSoundVolume(e){try{localStorage.setItem(l.SOUND_VOLUME,String(e))}catch(a){console.warn("Failed to save sound volume:",a)}}}class b{constructor(e,a){this.demoState={},this.baseUrl=e||"",this.authToken=a||"",this.demoMode=!e}async sendMessage(e,a){var s,n,u,c,h;if(this.demoMode)return this.mockResponse(e);const i={"Content-Type":"application/json"};this.authToken&&(i.Authorization=`Bearer ${this.authToken}`);const o=await fetch(`${this.baseUrl}/api/widget/chat`,{method:"POST",headers:i,body:JSON.stringify({message:e,conversationId:a,userId:"anonymous"})}),t=await this.parseJsonResponse(o);if(o.status===421&&((s=t==null?void 0:t.error)==null?void 0:s.code)==="WRONG_SERVICE")throw new Error("The JadeAssist widget is pointed at the widget/static Railway service instead of the backend API service. Update apiBaseUrl to the backend service domain.");if(o.status===429)throw new Error(((n=t==null?void 0:t.error)==null?void 0:n.message)||"429: Rate limit exceeded. Please wait and try again.");if(o.status===401||o.status===403)throw new Error(((u=t==null?void 0:t.error)==null?void 0:u.message)||`${o.status}: Authentication failed.`);if(!o.ok)throw new Error(((c=t==null?void 0:t.error)==null?void 0:c.message)||`API error: ${o.status}`);if(!(t!=null&&t.success)||!t.data)throw new Error(((h=t==null?void 0:t.error)==null?void 0:h.message)||"API request failed");return{conversationId:t.data.conversationId,conversation:t.data.conversation,message:{id:t.data.message.id,role:"assistant",content:t.data.message.content,timestamp:Date.now(),quickReplies:t.data.suggestions}}}async parseJsonResponse(e){if(!(e.headers.get("content-type")||"").includes("application/json"))return null;try{return await e.json()}catch(i){return console.warn("Failed to parse JadeAssist API response:",i),null}}async mockResponse(e){await new Promise(s=>setTimeout(s,700+Math.random()*400));const a="demo-"+Date.now(),i=e.toLowerCase();this.updateDemoState(i);const{content:o,quickReplies:t}=this.buildDemoResponse(i);return{conversationId:a,conversation:{eventType:this.demoState.eventType,guestCount:this.demoState.guestCount?Number(this.demoState.guestCount):void 0,budget:this.demoState.budget&&Number(this.demoState.budget.replace(/[^0-9]/g,""))||void 0,location:this.demoState.location,planningStage:this.demoState.eventType?"brief-building":"discovery",contextCompleteness:Object.values(this.demoState).filter(Boolean).length*20},message:{id:"msg-"+Date.now(),role:"assistant",content:o,timestamp:Date.now(),quickReplies:t}}}updateDemoState(e){e.includes("wedding")||e.includes("civil partnership")?this.demoState.eventType="wedding":e.includes("birthday")?this.demoState.eventType="birthday":e.includes("corporate")||e.includes("away day")||e.includes("away-day")||e.includes("work event")?this.demoState.eventType="corporate":e.includes("conference")||e.includes("seminar")?this.demoState.eventType="conference":e.includes("anniversary")?this.demoState.eventType="anniversary":(e.includes("party")||e.includes("celebration"))&&(this.demoState.eventType="party"),/under\s*[£$]?5k\b/i.test(e)||/under\s*£?5,000\b/.test(e)?this.demoState.budget="under £5,000":/\b[£$]?50k\b|\b50,000\b/.test(e)?this.demoState.budget="£50,000+":/\b[£$]?20k\b|\b20,000\b/.test(e)?this.demoState.budget="£20,000–£50,000":/\b[£$]?10k\b|\b10,000\b/.test(e)?this.demoState.budget="£10,000–£20,000":/\b[£$]?5k\b|\b5,000\b/.test(e)&&(this.demoState.budget="£5,000–£10,000");const a=/\b(\d{1,3}(?:,\d{3})*|\d+)\s*(guests?|people|attendees?|pax)\b/.exec(e);a?this.demoState.guestCount=a[1].replace(/,/g,""):e.includes("under 30")||e.includes("intimate")?this.demoState.guestCount="20–30":(e.includes("150+")||e.includes("large"))&&(this.demoState.guestCount="150+"),e.includes("london")?this.demoState.location="London":e.includes("scotland")||e.includes("edinburgh")||e.includes("glasgow")?this.demoState.location="Scotland":e.includes("wales")||e.includes("cardiff")?this.demoState.location="Wales":e.includes("north west")||e.includes("manchester")||e.includes("liverpool")?this.demoState.location="North West":e.includes("yorkshire")||e.includes("leeds")||e.includes("sheffield")?this.demoState.location="Yorkshire":e.includes("south east")||e.includes("surrey")||e.includes("kent")||e.includes("sussex")?this.demoState.location="South East":e.includes("midlands")||e.includes("birmingham")?this.demoState.location="Midlands":(e.includes("south west")||e.includes("bristol")||e.includes("cornwall")||e.includes("devon"))&&(this.demoState.location="South West"),e.includes("this year")?this.demoState.eventDate="this year":e.includes("next year")&&(this.demoState.eventDate="next year")}buildDemoResponse(e){const a=this.demoState;if((e.includes("yes")&&e.includes("please")||e==="help"||e==="start"||e==="hi"||e==="hello"||e==="hey")&&!a.eventType)return{content:"I'd love to help you plan your event! What type of event are you organising? 🎉",quickReplies:["Wedding","Birthday Party","Corporate Event","Anniversary","Other"]};if(e.includes("no")&&e.includes("thanks"))return{content:"No problem — I'm here whenever you're ready. Feel free to come back any time! 😊"};if(e.includes("wedding")||a.eventType==="wedding"){if(e.includes("cost")||e.includes("price")||e.includes("budget")||e.includes("expensive")||e.includes("afford"))return{content:`Here's a realistic cost breakdown for a wedding in ${a.location||"the UK"}:
 
 **Average UK wedding: £30,000** (range: £8,000 to £100,000+)
 
@@ -21,7 +21,7 @@
 3. Go for a buffet or sharing platters rather than silver service
 4. Limit the evening guest list to reduce per-head costs
 
-What's your approximate total budget?`,quickReplies:["Under £10k","£10k–£20k","£20k–£50k","£50k+"]}:e.includes("venue")?{content:`Choosing your venue is the most important early decision — it sets your date, capacity, and overall feel.
+What's your approximate total budget?`,quickReplies:["Under £10k","£10k–£20k","£20k–£50k","£50k+"]};if(e.includes("venue"))return{content:`Choosing your venue is the most important early decision — it sets your date, capacity, and overall feel.
 
 **Key questions to ask every venue:**
 - Is it licensed for civil ceremonies, or ceremony-only?
@@ -31,7 +31,7 @@ What's your approximate total budget?`,quickReplies:["Under £10k","£10k–£20
 - Is there on-site accommodation?
 - What's the wet weather contingency?
 
-**Popular venue styles in ${t.location||"your area"}:**
+**Popular venue styles in ${a.location||"your area"}:**
 - **Country house hotels** — all-in-one convenience, £4,000–£12,000
 - **Barns & rural estates** — rustic charm, dry hire from £2,500
 - **City hotels** — central for guests, £3,000–£15,000
@@ -39,7 +39,7 @@ What's your approximate total budget?`,quickReplies:["Under £10k","£10k–£20
 
 **Pro tip:** Always visit at least 3 venues before committing — and popular dates book 12–18 months ahead.
 
-How many guests are you expecting?`,quickReplies:["Under 50","50–100","100–150","150+"]}:e.includes("photographer")||e.includes("photography")?{content:`Wedding photography is one area where it genuinely pays to invest — you'll have these photos forever.
+How many guests are you expecting?`,quickReplies:["Under 50","50–100","100–150","150+"]};if(e.includes("photographer")||e.includes("photography"))return{content:`Wedding photography is one area where it genuinely pays to invest — you'll have these photos forever.
 
 **Typical UK rates:**
 - Budget: £800–£1,500
@@ -62,7 +62,7 @@ How many guests are you expecting?`,quickReplies:["Under 50","50–100","100–1
 - What happens if you have an emergency on our day?
 - When will we receive our photos?
 
-Where are you based? I can give region-specific advice.`,quickReplies:["London/South East","North of England","Midlands","Scotland/Wales"]}:e.includes("catering")||e.includes("food")||e.includes("menu")?{content:`Food is what guests remember most — it's worth getting right.
+Where are you based? I can give region-specific advice.`,quickReplies:["London/South East","North of England","Midlands","Scotland/Wales"]};if(e.includes("catering")||e.includes("food")||e.includes("menu"))return{content:`Food is what guests remember most — it's worth getting right.
 
 **Typical per-head costs (UK):**
 - Buffet / food stations: £45–£75/head
@@ -81,532 +81,59 @@ Where are you based? I can give region-specific advice.`,quickReplies:["London/S
 **Dietary requirements to address:**
 - Vegan/vegetarian (should be a full dish, not an afterthought)
 - Halal/Kosher (specialist caterer required)
-- Coeliac (dedicated prep area, not just gluten-removed)
-- Nut allergies (full allergen awareness)
+- Nut allergies/coeliac (cross-contamination controls)
 
-Is your venue dry hire, or does it have in-house catering?`,quickReplies:["Dry hire venue","In-house catering","Dietary requirements","Drinks packages"]}:e.includes("checklist")||e.includes("timeline")||e.includes("when")?{content:`Here's a milestone-based wedding planning timeline:
+How many guests are you feeding?`,quickReplies:["Under 50","50–100","100–150","150+"]};if(e.includes("timeline")||e.includes("when")||e.includes("schedule")||e.includes("plan"))return{content:`Here's a strong wedding planning timeline:
 
-**First 4 weeks:**
-- Set total budget and draft guest list
-- Book venue (most popular venues book 12–18 months ahead)
-- Book registrar/officiant
-
-**3–6 months out:**
-- Book photographer & videographer
-- Book band or DJ
-- Order wedding dress/suit (4–6 months for alterations)
-- Send save-the-dates
-- Book caterer and florist
-
-**2–3 months out:**
-- Send formal invitations
-- Arrange wedding insurance
-- Book hair & make-up
-- Plan order of service
-
-**4–6 weeks out:**
-- Chase RSVPs, finalise headcount
-- Give final numbers to caterer
-- Create table plan
-- Confirm all suppliers
-
-**Week of the wedding:**
-- Confirm day-of schedule with all suppliers
-- Prepare supplier payment envelopes
-- Delegate key tasks to wedding party 💍`,quickReplies:["Supplier checklist","Budget breakdown","Guest management","Day-of schedule"]}:e.includes("legal")||e.includes("registrar")||e.includes("notice")||e.includes("licence")||e.includes("banns")?{content:`Here are the legal requirements for getting married in the UK:
-
-**England & Wales:**
-- Give notice of marriage at your local register office (minimum 28 days before)
-- Both parties attend in person; must have lived in the district for 7+ days
-- Cost: ~£35 per person
-- For a licensed venue: the registrar attends your venue (fee: £400–£600)
-- Church of England: banns read in church for 3 consecutive Sundays beforehand
-
-**Scotland (different rules):**
-- Submit notice to the registrar at least 29 days before
-- More flexibility on outdoor/unlicensed locations
-
-**After the wedding:**
-- Collect your marriage certificate from the registrar
-- Update passport, driving licence, bank accounts, employer records as needed
-
-Are you getting married in England, Wales, Scotland, or Northern Ireland?`,quickReplies:["England/Wales","Scotland","Northern Ireland","Destination wedding"]}:e.includes("florist")||e.includes("flowers")?{content:`Flowers can transform a space — and costs vary enormously.
-
-**Typical wedding floristry budgets:**
-- Budget: £1,000–£2,500 (simple, seasonal flowers)
-- Mid-range: £2,500–£5,000
-- Premium: £5,000–£15,000+
-
-**Key floral elements:**
-- Bridal bouquet: £150–£400
-- Bridesmaid bouquets: £60–£120 each
-- Buttonholes: £15–£35 each
-- Ceremony arch/focal flowers: £500–£3,000
-- Table centres: £60–£200 each
-
-**Cost-saving tips:**
-- Choose in-season, British-grown flowers
-- Use greenery-heavy designs (very stylish and cheaper)
-- Repurpose ceremony flowers at the reception
-- Opt for potted plants guests can take home
-
-What's your approximate floristry budget?`,quickReplies:["Under £1,000","£1,000–£3,000","£3,000–£6,000","£6,000+"]}:t.eventDate?t.guestCount?t.budget?{content:"What aspect of your wedding would you like to explore?",quickReplies:["Venue advice","Catering & food","Photography","Legal requirements","Planning timeline"]}:{content:"What's your approximate total budget? Don't worry about being exact — a rough range is all I need to start prioritising.",quickReplies:["Under £10k","£10k–£20k","£20k–£50k","£50k+"]}:{content:`Your guest list is the single most important number in wedding planning — it drives your venue choice, catering costs, and almost every supplier quote.
-
-Roughly how many guests are you thinking?
-
-(Average UK wedding: around £30,000 — but great weddings happen at every budget!)`,quickReplies:["Under 30 (intimate)","30–80 (medium)","80–150 (large)","150+ (very large)"]}:{content:`Congratulations! A wedding is such a special occasion — I'd love to help you plan it beautifully. 💍
-
-To start narrowing things down, do you have a date or timeframe in mind?`,quickReplies:["This year","Next year","In 2+ years","Haven't decided yet"]};if(e.includes("birthday")||t.eventType==="birthday")return e.includes("18")||e.includes("eighteenth")?{content:`An 18th birthday is a milestone! Here's what to plan:
-
-**Typical costs (50–100 guests):**
-- Venue hire: £300–£2,000
-- Catering (buffet/street food): £15–£35/head
-- DJ: £300–£800
-- Decorations: £150–£500
-
-**Popular formats:**
-- **Venue party** (bar, nightclub, function room) — budget £1,500–£5,000 for 50–100 guests
-- **Marquee at home** — personal, £2,000–£8,000
-- **Restaurant buyout** — intimate, great food, £50–£100/head
-- **Activity party** (escape rooms, bowling, go-kart) then dinner
-
-How many guests are you expecting?`,quickReplies:["Under 30","30–60","60–100","100+"]}:e.includes("50")||e.includes("fiftieth")||e.includes("milestone")?{content:`A 50th deserves a proper celebration! These tend to be more sophisticated.
-
-**Popular formats:**
-- **Dinner party** (restaurant or private dining room) — intimate, elegant, £60–£120/head
-- **Drinks reception + dinner** — £4,000–£12,000 for 60–80 guests
-- **Surprise party** — requires a trusted co-conspirator!
-- **Destination celebration** — long weekend abroad with close friends
-
-**What makes milestone birthdays memorable:**
-- A personalised element (photo montage, custom menu)
-- Good music — live jazz, acoustic, or a brilliant playlist
-- Quality food over quantity
-- A clear "moment" — speeches, a toast, something to mark the occasion
-
-How many people are you inviting?`,quickReplies:["Under 20","20–40","40–80","80+"]}:t.guestCount?{content:`For a birthday party with ${t.guestCount||"your group"}:
-
-**Key things to lock in first:**
-1. **Venue** — private dining room, function room, or hired space
-2. **Date** — at least 4–6 weeks ahead for a good venue
-3. **Catering style** — sit-down, buffet, or street food?
-
-**Typical all-in costs:**
-- Budget: £500–£2,000 (DIY elements, small space)
-- Mid-range: £2,000–£6,000 (venue + caterer + DJ)
-- Premium: £6,000+ (full-service planning)
-
-What's your approximate budget?`,quickReplies:["Under £2k","£2k–£5k","£5k–£10k","£10k+"]}:{content:`A birthday celebration — wonderful! 🎂
-
-The guest list size shapes everything — venue size, catering format, entertainment. Are you thinking intimate or a bigger party?`,quickReplies:["Intimate (under 20)","Small (20–50)","Medium (50–100)","Large (100+)"]};if(e.includes("corporate")||e.includes("away day")||e.includes("away-day")||e.includes("work event")||t.eventType==="corporate")return e.includes("away day")||e.includes("away-day")||e.includes("team building")||e.includes("team day")?{content:`Team away-days done well are genuinely motivating. Here's how to get it right:
-
-**Formats that work:**
-- **Activity + debrief** (escape rooms, cooking class, sports) — great for up to 40 people
-- **Off-site strategy day** — focuses minds, being away from the office is key
-- **Combination day** — morning workshop + afternoon activity + group dinner
-
-**Typical costs:**
-- Venue hire (half/full day): £500–£3,000
-- Activity (per person): £30–£120
-- Catering (working lunch): £20–£45/head
-- Evening dinner: £45–£85/head
-
-**What makes them work:**
-- Clear objectives shared in advance
-- Mix of structured and unstructured time
-- Activities that don't exclude anyone (physical ability, dietary needs)
-- Quality food — it really matters
-
-How many people in the team?`,quickReplies:["Under 20","20–50","50–100","100+"]}:e.includes("conference")||e.includes("seminar")?{content:`Conferences require detailed logistics. Here's what to focus on:
-
-**Venue requirements:**
-- Main plenary room (theatre or cabaret seating?)
-- Breakout rooms for parallel sessions
-- Registration area with queuing space
-- Separate catering areas (noise!)
-- A/V booth and tech area
-- Green room for speakers
-
-**Technology checklist:**
-- PA system + lapel/handheld/podium microphones
-- Large-format display or projection
-- Reliable WiFi (separate delegate network recommended)
-- Live streaming capability if needed
-
-**Typical costs per delegate:**
-- Venue + AV: £50–£150/head
-- Catering (refreshments + lunch): £35–£75/head
-
-**Key lead times:**
-- Venue: 6–18 months depending on size
-- Keynote speakers: 3–12 months
-- Save-the-date: 3 months before; formal invite 6–8 weeks
-
-How many delegates, and when is the event?`,quickReplies:["Under 50","50–150","150–300","300+"]}:e.includes("product launch")||e.includes("launch")?{content:`Product launches need to create a moment — something worth talking about.
-
-**Core elements:**
-1. **Brand-appropriate venue** — the space should reflect the product
-2. **A clear story arc** — arrival → reveal → celebration
-3. **Media management** — press list, embargo, photography, social plan
-4. **Product demo area** — hands-on experience
-
-**Venue considerations:**
-- A/V support (blackout, large screens, surround sound)
-- Photogenic for press photography
-- Central location for press and key guests
-
-**Timeline:**
-- T–8 weeks: Confirm venue and A/V
-- T–6 weeks: Press list and embargo communications
-- T–2 weeks: Full tech rehearsal
-- T–1 day: Set up and test everything
-
-How many guests are you inviting?`,quickReplies:["Under 50","50–150","150+","Press-only event"]}:{content:"Corporate events cover a huge range. What type are you planning?",quickReplies:["Conference / seminar","Team away-day","Product launch","Client dinner","Awards evening"]};if(e.includes("anniversary")||t.eventType==="anniversary")return{content:`A beautiful occasion to celebrate! 🥂
-
-**Popular formats:**
-- **Intimate dinner** (private dining, £60–£120/head) — elegant and memorable
-- **Vow renewal** + reception — popular for 10th, 25th, 50th anniversaries
-- **Garden party** — seasonal, relaxed, great for larger groups
-- **Surprise party** — requires trusted accomplices!
-
-**Traditional milestones:**
-- 10th: Tin · 15th: Crystal · 20th: China · 25th: Silver · 30th: Pearl · 40th: Ruby · 50th: Gold · 60th: Diamond
-
-**What makes it special:**
-- Return to the original venue if available
-- Recreate the original menu
-- Commission a personalised piece of art or jewellery
-
-Is this a milestone anniversary? And are you thinking intimate or a larger gathering?`,quickReplies:["Intimate dinner","Small gathering (20–40)","Larger celebration","Vow renewal"]};if(e.includes("budget")||e.includes("cost")||e.includes("price")||e.includes("how much")||e.includes("expensive")||e.includes("afford"))return{content:`Here are realistic UK cost ranges:
-
-**Weddings:**
-- Budget: £10,000–£15,000
-- Mid-range: £20,000–£35,000
-- Premium: £50,000–£100,000+
-
-**Birthday parties (50 guests):**
-- Budget: £1,500–£3,000
-- Mid-range: £3,000–£8,000
-- Premium: £8,000+
-
-**Corporate events (100 delegates):**
-- Half-day: £5,000–£15,000
-- Full day + dinner: £15,000–£40,000
-
-**The 3 biggest cost levers:**
-1. **Guest count** — adding 20 wedding guests can add £2,000–£4,000
-2. **Day of week** — Friday/Sunday vs. Saturday saves 20–30% on the venue
-3. **Catering style** — buffet vs. silver service differs by £30–£50/head
-
-What's your approximate budget for ${t.eventType||"an event"}?`,quickReplies:["Under £5k","£5k–£10k","£10k–£20k","£20k–£50k","£50k+"]};if(e.includes("venue")||e.includes("where")&&(e.includes("hold")||e.includes("host"))){const s=t.location||"the UK",n=t.eventType||"your event";return{content:`Finding the right venue is the most critical early decision.
-
-**Key questions to ask every venue:**
-- Maximum capacity (seated vs. standing)?
-- Exclusive hire, or will other events run simultaneously?
-- In-house catering (mandatory or optional)?
-- What's included in the hire fee?
-- Alcohol licence? Noise curfew?
-- Parking / nearby transport?
-- Fully accessible?
-
-**Venue styles in ${s}:**
-- **Hotels** — convenient, often all-inclusive
-- **Country houses / estates** — beautiful settings
-- **Barns & agricultural spaces** — character, usually dry hire
-- **Civic / heritage buildings** — unique, often great value
-- **Restaurants with private rooms** — great for smaller events
-
-**For ${n}:** Visit at least 3 venues before committing. Always get a full written quote including extras. Check the cancellation policy carefully.
-
-How many guests are you planning for?`,quickReplies:["Under 50","50–100","100–150","150+"]}}return e.includes("catering")||e.includes("caterer")||e.includes("food")||e.includes("menu")||e.includes("buffet")?{content:`Food is what guests remember — it's worth getting right.
-
-**Catering styles and typical UK costs:**
-- Canapes only (drinks reception): £20–£40/head
-- Buffet / sharing platters: £35–£65/head
-- BBQ / street food: £30–£55/head
-- 2-course sit-down: £55–£85/head
-- 3-course sit-down: £65–£110/head
-- Premium silver service: £100–£150+/head
-
-**Drinks (budget separately):**
-- Wine and beer package: £20–£35/head
-- Full open bar (5 hours): £40–£70/head
-
-**Dietary requirements — always ask guests:**
-- Vegan/vegetarian (proper dish, not an afterthought)
-- Halal (dedicated certified caterer or certified supplier)
-- Kosher (specialist caterer required)
-- Gluten-free/coeliac (separate prep area)
-- Nut allergies (full allergen awareness, labelled dishes)
-
-**Pro tip:** Ask the caterer for a tasting before committing — reputable caterers offer this for weddings and larger events.
-
-What type of event is this for?`,quickReplies:["Wedding catering","Corporate catering","Birthday party food","Dietary requirements"]}:e.includes("photographer")||e.includes("photography")?{content:`Finding the right photographer is crucial — these are memories you'll have forever.
-
-**Typical UK rates:**
-- Budget: £800–£1,500
-- Mid-range: £1,500–£2,500
-- Premium: £2,500–£4,500+
-
-**What to look for:**
-- Portfolio showing consistent quality across varied lighting
-- Experience with your type of event and venue
-- Public liability insurance
-- Backup camera (equipment fails)
-- Clear contract with delivery timelines
-
-**Questions to ask:**
-- Can I see a full gallery from a recent similar event?
-- What's your shooting style (documentary, posed, or both)?
-- What happens if you're ill on the day?
-- Do you offer pre-event shoots?
-
-**Where to find vetted photographers:**
-- Hitched.co.uk, Rock My Wedding (weddings)
-- Bridebook.com
-- SWPP (Society of Wedding & Portrait Photographers)
-
-What region are you in?`,quickReplies:["London/South East","North of England","Midlands","Scotland/Wales"]}:e.includes("florist")||e.includes("flowers")||e.includes("floral")?{content:`Flowers can transform a space — and costs vary enormously.
-
-**Typical wedding floristry budgets:**
-- Budget: £1,000–£2,500 (simple, seasonal flowers)
-- Mid-range: £2,500–£5,000
-- Premium: £5,000–£15,000+
-
-**Key floral elements:**
-- Bridal bouquet: £150–£400
-- Bridesmaid bouquets: £60–£120 each
-- Buttonholes: £15–£35 each
-- Ceremony arch: £500–£3,000
-- Table centres: £60–£200 each
-
-**Cost-saving tips:**
-- Choose in-season, British-grown flowers
-- Use greenery-heavy designs (stylish and cheaper)
-- Repurpose ceremony flowers at the reception
-
-**What to ask your florist:**
-- Can they work within your budget?
-- What's in season for your date?
-- Do they handle set-up and breakdown?
-
-What's your approximate floristry budget?`,quickReplies:["Under £1,000","£1,000–£3,000","£3,000–£6,000","£6,000+"]}:e.includes("dj")||e.includes("band")||e.includes("music")||e.includes("entertainment")?{content:`Entertainment sets the energy of your event — worth investing in.
-
-**Music options and typical UK costs:**
-
-**DJ:**
-- Budget: £300–£600
-- Mid-range: £600–£1,200
-- Premium: £1,200–£3,000+
-- Usually includes: PA system, lighting rig, wireless microphone
-
-**Live band:**
-- 3-piece function band: £1,200–£2,500
-- 4–5 piece band: £2,000–£4,000
-- 6-piece+ (with brass): £3,500–£8,000+
-- Most include 2–3 sets + DJ service between sets
-
-**Other popular options:**
-- String quartet / jazz trio (ceremony): £600–£1,500
-- Solo acoustic act: £300–£700
-- Photo booth: £600–£1,200
-- Silent disco: £600–£1,500 (great for noise-restricted venues)
-
-**Pro tips:**
-- Always see a band live or ask for a recent live video
-- Confirm PA and lighting is included
-- Check your venue's noise restrictions
-- For weddings, confirm they'll learn your first dance song
-
-What type of entertainment are you looking for?`,quickReplies:["DJ only","Live band","Both DJ + band","Ceremony music only"]}:e.includes("timeline")||e.includes("checklist")||e.includes("when should")||e.includes("how far in advance")||e.includes("lead time")?{content:`Here's a planning timeline for ${t.eventType||"your event"}:
-
-**18+ months before:**
+**12–18 months out**
 - Set budget and guest list
-- Secure your venue
+- Book venue and registrar/church
+- Book photographer/videographer
 
-**12–18 months before:**
-- Book registrar/officiant (if applicable)
-- Book photographer and videographer
-- Book band or DJ
+**9–12 months**
+- Catering, florist, entertainment
+- Dress/suits
+- Save the dates
 
-**6–12 months before:**
-- Send save-the-dates
-- Book caterer and florist
-- Order attire (4–6 months for alterations)
-- Book accommodation block for guests
+**6 months**
+- Invitations
+- Menu tasting
+- Decor plan
+- Transport/accommodation blocks
 
-**3–6 months before:**
-- Send formal invitations
-- Arrange event insurance
-- Finalise menu and table layout
+**3 months**
+- Final fittings
+- Supplier confirmations
+- Seating plan draft
 
-**4–8 weeks before:**
-- Chase RSVPs, finalise headcount
-- Give final numbers to caterer
-- Confirm all suppliers
+**Final month**
+- Final numbers to venue/caterer
+- Emergency kit
+- Day schedule
 
-**Week before:**
-- Final briefing to all suppliers
-- Prepare payments
-- Delegate day-of tasks
+What date or month are you aiming for?`,quickReplies:["This year","Next year","Not sure yet"]}}return e.includes("corporate")||e.includes("work")||e.includes("conference")||a.eventType==="corporate"||a.eventType==="conference"?{content:`Corporate events need clarity on purpose first: is this for team building, client engagement, training, product launch, or networking?
 
-Would you like a more specific checklist for your event type?`,quickReplies:["Wedding checklist","Corporate event","Birthday party","Supplier checklist"]}:e.includes("insurance")||e.includes("cancel")||e.includes("cancellation")||e.includes("contract")||e.includes("legal")?{content:`Event insurance is often overlooked but genuinely important.
+**Core planning areas:**
+- **Venue**: access, parking, AV, breakout rooms, Wi-Fi capacity
+- **Catering**: coffee breaks, lunch, dietary requirements
+- **AV/tech**: screens, microphones, hybrid streaming, tech support
+- **Branding**: signage, staging, registration desk
+- **Risk**: insurance, accessibility, fire routes, first aid
 
-**What good event insurance covers:**
-- **Cancellation & rescheduling** (illness, bereavement, adverse weather, venue failure)
-- **Supplier failure** (photographer doesn't turn up, caterer goes bust)
-- **Public liability** (essential for public or venue-hire events)
-- **Personal accident** (injury to guests)
+Typical UK corporate day rates range from **£45–£120 per delegate** before major production/AV.
 
-**Typical UK costs:**
-- Wedding insurance: £60–£200 (up to £30,000 cancellation cover)
-- Corporate event: £100–£500 depending on size
-
-**When to get it:** As soon as you start paying deposits.
-
-**Recommended providers:**
-- Dreamsaver, Wedinsure (wedding specialists)
-- John Lewis Finance (event insurance)
-- Hiscox (corporate events)
-
-**Contract tips:**
-- Every supplier needs a written contract
-- Check what happens if THEY cancel
-- Confirm deposit terms and final payment dates
-- Understand force majeure clauses
-
-Do you have a specific insurance or contract question?`,quickReplies:["Wedding insurance","Supplier contracts","Public liability","Cancellation terms"]}:e.includes("dietary")||e.includes("vegan")||e.includes("halal")||e.includes("kosher")||e.includes("coeliac")||e.includes("gluten")||e.includes("allerg")?{content:`Managing dietary requirements well is a mark of a thoughtful host.
-
-**How to collect requirements:**
-- Ask on your RSVP form (list common options + a free text field)
-- Collect 4–6 weeks before the event
-- Share a master spreadsheet with your caterer
-
-**What your caterer needs to handle:**
-- **Vegetarian/vegan**: A proper dish, not just removal of meat
-- **Halal**: Certified halal meat, no cross-contamination
-- **Kosher**: Specialist kosher caterer with separate equipment
-- **Coeliac**: Dedicated prep area (cross-contamination is a real risk)
-- **Nut allergies**: Full allergen awareness, clearly labelled dishes
-- **Dairy-free**: Ensure caterer distinguishes from lactose intolerance
-
-**Questions to ask your caterer:**
-- Are staff trained in allergen awareness?
-- Do you have a dedicated allergen-free prep area?
-- Can you provide allergen information for every dish?
-
-**Accessibility too:**
-- Step-free access for wheelchair users
-- Induction loops for hearing-impaired guests
-- Reserved tables near the front for elderly guests
-
-Would you like advice on wording your RSVP form?`,quickReplies:["RSVP form wording","Finding halal caterers","Coeliac-safe menus","Accessibility checklist"]}:e.includes("invit")||e.includes("stationery")||e.includes("save the date")||e.includes("save-the-date")||e.includes("rsvp")?{content:`Invitations set the tone for your event before guests even arrive.
-
-**For weddings — typical suite:**
-- Save-the-dates (send 9–12 months before)
-- Formal invitations + RSVP cards (send 8–10 weeks before)
-- Order of service booklets
-- Table plan and place cards
+What's the main purpose of the event?`,quickReplies:["Team away-day","Conference","Product launch","Client event"]}:e.includes("birthday")||e.includes("party")||e.includes("anniversary")||a.eventType==="birthday"||a.eventType==="party"||a.eventType==="anniversary"?{content:`Lovely — for a private celebration, the biggest decisions are usually venue, food, entertainment, and guest experience.
 
 **Typical UK costs:**
-- DIY/digital: £0–£300
-- Mid-range printed suite (50 invites): £300–£800
-- Premium letterpress/foil (50 invites): £600–£2,000
+- Venue hire: £300–£3,000+
+- Buffet/casual catering: £20–£55/head
+- DJ: £300–£900
+- Live music: £800–£3,000
+- Decor/balloons/florals: £250–£2,000
 
-**Digital vs. printed:**
-- Online RSVPs save money and are eco-friendly
-- Printed invitations feel more premium for weddings
-- Many couples do printed invitations + digital save-the-dates
+**Best next step:** decide the vibe first — relaxed, premium, themed, family-friendly, or late-night party.
 
-**What to include:**
-- Full names, date, time, and location
-- Dress code
-- RSVP method and deadline
-- Dietary requirement section
-- Accommodation information
-- Gift list (tactfully)
-
-**When to send:**
-- Save-the-dates: 9–12 months ahead
-- Formal invitations: 8–10 weeks before
-- RSVP deadline: 4–6 weeks before
-
-Are you looking for wording advice or supplier recommendations?`,quickReplies:["Invitation wording","Digital invites","Printed stationery","RSVP management"]}:e.includes("speech")||e.includes("speeches")||e.includes("toast")||e.includes("best man")||e.includes("maid of honour")?{content:`Speeches are one of the most memorable parts of a celebration.
-
-**Traditional wedding speech order (UK):**
-1. Father of the bride (welcomes groom's family, talks about the bride)
-2. Groom or couple (thanks guests, praises partner, thanks families)
-3. Best man (humorous anecdotes, toasts the couple)
-
-**Modern variations:**
-- Bride and/or both partners speak (increasingly common)
-- Maid of honour speaks
-- Video messages from guests who can't attend
-
-**Length guidance:**
-- Each speech: 3–5 minutes (5 is plenty, 8 is too long)
-- Total speeches: under 25 minutes
-
-**Tips for speechmakers:**
-- Write it fully, then speak from bullet points
-- Practise out loud at least 3 times and time it
-- Have water nearby
-- Make eye contact with the couple, not just the room
-- End with a clear, memorable toast
-
-**Structure:**
-1. Attention-grabbing opening
-2. 1–2 personal stories/anecdotes
-3. Acknowledge families and key guests
-4. Heartfelt toast
-
-Would you like help with specific speech content?`,quickReplies:["Father of bride speech","Best man speech","Couple speech","Maid of honour speech"]}:e.includes("dress code")||e.includes("what to wear")||e.includes("black tie")||e.includes("smart casual")||e.includes("lounge suit")?{content:`Dress codes can be confusing — here's a clear guide:
-
-**Black tie**
-- Men: black dinner jacket (tuxedo), black bow tie, white dress shirt
-- Women: floor-length gown or very formal cocktail dress
-- When: evening galas, awards dinners, formal weddings
-
-**Black tie optional / cocktail**
-- Men: dark lounge suit is perfectly fine
-- Women: cocktail dress (knee to midi), smart jumpsuit
-
-**Lounge suit** (most UK weddings)
-- Men: suit and tie (jacket + smart trousers also fine)
-- Women: dress, skirt/top, smart trousers or suit
-
-**Smart casual**
-- Men: chinos + open-collar shirt or blazer (no jeans unless stated)
-- Women: casual dress, smart jeans + nice top, or relaxed midi dress
-
-**Practical tips:**
-- Always specify dress code on the invitation
-- For outdoor events, suggest appropriate footwear (heels + lawn = disaster!)
-- For winter weddings, suggest guests bring a wrap/jacket
-
-Do you need help wording the dress code on your invitations?`,quickReplies:["Wording for invitations","Black tie event tips","Summer garden party","Smart casual guidance"]}:e.includes("honeymoon")||e.includes("holiday")&&t.eventType==="wedding"||e.includes("travel")&&t.eventType==="wedding"?{content:`Honeymoon planning is one of the most enjoyable parts of wedding prep!
-
-**When to book:** 6–12 months ahead for popular destinations.
-
-**Popular UK honeymoon styles:**
-- **Long-haul** (Maldives, Bali, Thailand, Mauritius): £4,000–£12,000+
-- **European** (Amalfi, Santorini, Tuscany, French Riviera): £2,000–£6,000
-- **City break** (Paris, Venice, Prague, Lisbon): £1,500–£4,000
-- **UK & Ireland** (Scottish Highlands, Cotswolds, Lake District): £500–£2,500
-
-**Tips:**
-- Always tell the hotel it's your honeymoon — often leads to upgrades
-- Consider a "minimoon" shortly after the wedding + main trip later
-- Use a specialist honeymoon travel agent for better rates
-- Check your passport expiry before booking
-
-**Before you travel:**
-- Travel insurance (essential)
-- Visa requirements if you've changed your name
-- Currency and cards
-- Any required vaccinations
-
-Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","Italy / Greece","City break","UK staycation"]}:t.eventType?t.budget?t.location?{content:`I can help with many aspects of planning your ${t.eventType||"event"}${t.location?` in ${t.location}`:""}. What would you like to focus on?`,quickReplies:["Venue advice","Budget breakdown","Supplier search","Planning timeline","Legal requirements"]}:{content:`Almost there! Where will your ${t.eventType} be held? Knowing the region lets me give you location-specific venue suggestions and help you find local suppliers.`,quickReplies:["London","South East","North West","Yorkshire","Midlands","Scotland"]}:{content:`To give you the most specific advice for your ${t.eventType}, it really helps to know your budget range. What's your approximate total budget?`,quickReplies:["Under £5k","£5k–£10k","£10k–£20k","£20k–£50k","£50k+"]}:{content:"I'm here to help with every aspect of event planning — venues, budgets, suppliers, timelines, legal requirements, and more. To get started with the most relevant advice, what type of event are you planning?",quickReplies:["Wedding","Birthday Party","Corporate Event","Anniversary","Other"]}}}function y(r,e,t,s,n,a,i,o,u,c){return`
+How many guests are you expecting?`,quickReplies:["Under 30","30–60","60–100","100+"]}:{content:"I can help with that. To give you useful advice, I need one key detail first: what type of event are you planning?",quickReplies:["Wedding","Birthday Party","Corporate Event","Anniversary","Other"]}}}function v(r,e,a,i,o,t,s,n,u,c){return`
     * {
       box-sizing: border-box;
       margin: 0;
@@ -616,7 +143,7 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
     :host {
       all: initial;
       display: block;
-      font-family: ${t};
+      font-family: ${a};
       font-size: 14px;
       line-height: 1.5;
       color: #1f2937;
@@ -624,9 +151,9 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
       -moz-osx-font-smoothing: grayscale;
       
       /* CSS Custom Properties for positioning - can be overridden by consumers */
-      --jade-offset-bottom: ${s};
-      --jade-offset-right: ${n};
-      --jade-offset-left: ${a};
+      --jade-offset-bottom: ${i};
+      --jade-offset-right: ${o};
+      --jade-offset-left: ${t};
       --jade-scale: ${c};
       --jade-primary-color: ${r};
       --jade-accent-color: ${e};
@@ -634,12 +161,12 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
 
     .jade-widget-container {
       position: fixed;
-      bottom: var(--jade-offset-bottom, ${s});
-      ${a?`left: var(--jade-offset-left, ${a});`:`right: var(--jade-offset-right, ${n});`}
-      ${a?"right: auto;":""}
+      bottom: var(--jade-offset-bottom, ${i});
+      ${t?`left: var(--jade-offset-left, ${t});`:`right: var(--jade-offset-right, ${o});`}
+      ${t?"right: auto;":""}
       z-index: 999999;
       transform: scale(var(--jade-scale, ${c}));
-      transform-origin: ${a?"left":"right"} bottom;
+      transform-origin: ${t?"left":"right"} bottom;
     }
 
     /* Avatar Button */
@@ -740,7 +267,7 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
     .jade-greeting-tooltip {
       position: absolute;
       bottom: 84px;
-      ${a?"left: 0;":"right: 0;"}
+      ${t?"left: 0;":"right: 0;"}
       background: white;
       padding: 18px 42px 18px 22px;
       border-radius: 16px;
@@ -770,7 +297,7 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
       content: '';
       position: absolute;
       bottom: -8px;
-      ${a?"left: 24px;":"right: 24px;"}
+      ${t?"left: 24px;":"right: 24px;"}
       width: 16px;
       height: 16px;
       background: white;
@@ -820,7 +347,7 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
     .jade-chat-popup {
       position: absolute;
       bottom: 84px;
-      ${a?"left: 0;":"right: 0;"}
+      ${t?"left: 0;":"right: 0;"}
       width: 400px;
       height: 600px;
       border-radius: 22px;
@@ -1592,15 +1119,15 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
     @media (max-width: 480px) {
       :host {
         /* Mobile-specific CSS custom properties */
-        --jade-offset-bottom: ${i||s};
-        --jade-offset-right: ${o||(n==="24px"?"16px":n)};
-        --jade-offset-left: ${u||(a&&a==="24px"?"16px":a)};
+        --jade-offset-bottom: ${s||i};
+        --jade-offset-right: ${n||(o==="24px"?"16px":o)};
+        --jade-offset-left: ${u||(t&&t==="24px"?"16px":t)};
       }
       
       .jade-widget-container {
         bottom: var(--jade-offset-bottom);
-        ${a?"left: var(--jade-offset-left);":"right: var(--jade-offset-right);"}
-        ${a?"right: auto;":""}
+        ${t?"left: var(--jade-offset-left);":"right: var(--jade-offset-right);"}
+        ${t?"right: auto;":""}
       }
 
       .jade-chat-popup {
@@ -1626,7 +1153,7 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
     .jade-hidden {
       display: none !important;
     }
-  `}const v='<svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><line x1="1" y1="1" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';class x{constructor(e={}){this.isMenuOpen=!1,this.showClearConfirm=!1,this.showExportToast=!1,this.config={...g,...e},this.apiClient=new b(this.config.apiBaseUrl,this.config.authToken),this.config.debug&&(console.log("[JadeWidget] Initializing with config:",this.config),console.log("[JadeWidget] Avatar URL:",this.config.avatarUrl));try{localStorage.setItem("__jade_test__","1"),localStorage.removeItem("__jade_test__")}catch{console.warn("[JadeWidget] localStorage is unavailable – chat history, sound settings and session state will not be persisted across page loads.")}this.escapeKeyHandler=a=>{a.key==="Escape"&&(this.showClearConfirm?(this.showClearConfirm=!1,this.render()):this.isMenuOpen?(this.isMenuOpen=!1,this.render()):this.state.isOpen&&this.closeChat())},this.soundEnabled=d.loadSoundEnabled(),this.soundVolume=d.loadSoundVolume();const t=d.loadState(),s=d.loadMessages(),n=d.loadConversationId();this.state={isOpen:t.isOpen||!1,isMinimized:t.isMinimized||!1,showGreeting:!1,conversationId:n||void 0,messages:s.length>0?s:this.getInitialMessages()},this.container=document.createElement("div"),this.container.className="jade-widget-root",this.shadowRoot=this.container.attachShadow({mode:"open"}),this.render(),this.attachEventListeners()}getInitialMessages(){return[{id:"initial",role:"assistant",content:this.config.greetingText,timestamp:Date.now(),quickReplies:["Yes, please","No, thanks"]}]}render(){const e=y(this.config.primaryColor,this.config.accentColor,this.config.fontFamily,this.config.offsetBottom,this.config.offsetRight,this.config.offsetLeft,this.config.offsetBottomMobile,this.config.offsetRightMobile,this.config.offsetLeftMobile,this.config.scale);this.shadowRoot.innerHTML=`
+  `}const x='<svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><line x1="1" y1="1" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';class y{constructor(e={}){this.isMenuOpen=!1,this.showClearConfirm=!1,this.showExportToast=!1,this.config={...g,...e},this.apiClient=new b(this.config.apiBaseUrl,this.config.authToken),this.config.debug&&(console.log("[JadeWidget] Initializing with config:",this.config),console.log("[JadeWidget] Avatar URL:",this.config.avatarUrl));try{localStorage.setItem("__jade_test__","1"),localStorage.removeItem("__jade_test__")}catch{console.warn("[JadeWidget] localStorage is unavailable – chat history, sound settings and session state will not be persisted across page loads.")}this.escapeKeyHandler=t=>{t.key==="Escape"&&(this.showClearConfirm?(this.showClearConfirm=!1,this.render()):this.isMenuOpen?(this.isMenuOpen=!1,this.render()):this.state.isOpen&&this.closeChat())},this.soundEnabled=d.loadSoundEnabled(),this.soundVolume=d.loadSoundVolume();const a=d.loadState(),i=d.loadMessages(),o=d.loadConversationId();this.state={isOpen:a.isOpen||!1,isMinimized:a.isMinimized||!1,showGreeting:!1,conversationId:o||void 0,messages:i.length>0?i:this.getInitialMessages()},this.container=document.createElement("div"),this.container.className="jade-widget-root",this.shadowRoot=this.container.attachShadow({mode:"open"}),this.render(),this.attachEventListeners()}getInitialMessages(){return[{id:"initial",role:"assistant",content:this.config.greetingText,timestamp:Date.now(),quickReplies:["Yes, please","No, thanks"]}]}render(){const e=v(this.config.primaryColor,this.config.accentColor,this.config.fontFamily,this.config.offsetBottom,this.config.offsetRight,this.config.offsetLeft,this.config.offsetBottomMobile,this.config.offsetRightMobile,this.config.offsetLeftMobile,this.config.scale);this.shadowRoot.innerHTML=`
       <style>${e}</style>
       <div class="jade-widget-container">
         ${this.renderAvatar()}
@@ -1634,14 +1161,14 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
         ${this.state.isOpen?this.renderChatPopup():""}
       </div>
     `}renderAvatar(){const e=this.config.avatarUrl?`<img src="${this.escapeHtml(this.config.avatarUrl)}" alt="Chat Assistant" class="jade-avatar-icon jade-avatar-img" />
-         <span class="jade-avatar-icon jade-avatar-fallback" style="display:none;">💬</span>`:'<span class="jade-avatar-icon">💬</span>',t=this.state.showGreeting&&!this.state.isOpen?'<span class="jade-avatar-badge" aria-label="1 new notification">1</span>':"";return`
+         <span class="jade-avatar-icon jade-avatar-fallback" style="display:none;">💬</span>`:'<span class="jade-avatar-icon">💬</span>',a=this.state.showGreeting&&!this.state.isOpen?'<span class="jade-avatar-badge" aria-label="1 new notification">1</span>':"";return`
       <button class="jade-avatar-button" aria-label="Toggle chat" data-action="toggle-chat">
         ${e}
-        ${t}
+        ${a}
       </button>
     `}renderGreeting(){return this.config.greetingTooltipText?`
       <div class="jade-greeting-tooltip" data-action="open-chat" role="tooltip" aria-live="polite">
-        <button class="jade-greeting-close" aria-label="Dismiss greeting" data-action="close-greeting">${v}</button>
+        <button class="jade-greeting-close" aria-label="Dismiss greeting" data-action="close-greeting">${x}</button>
         <div class="jade-greeting-text">${this.escapeHtml(this.config.greetingTooltipText)}</div>
       </div>
     `:""}renderChatPopup(){return`
@@ -1748,25 +1275,25 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
       </div>
     `}renderMessages(){return`
       <div class="jade-chat-messages" data-messages-container>
-        ${this.state.messages.map(t=>this.renderMessage(t)).join("")}
+        ${this.state.messages.map(a=>this.renderMessage(a)).join("")}
       </div>
-    `}renderMessage(e){const t=e.role==="user",s=new Date(e.timestamp).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),n=!t&&e.quickReplies?`
+    `}renderMessage(e){const a=e.role==="user",i=new Date(e.timestamp).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),o=!a&&e.quickReplies?`
       <div class="jade-quick-replies">
-        ${e.quickReplies.map(o=>`<button class="jade-quick-reply-btn" data-action="quick-reply" data-reply="${this.escapeHtml(o)}">${this.escapeHtml(o)}</button>`).join("")}
+        ${e.quickReplies.map(n=>`<button class="jade-quick-reply-btn" data-action="quick-reply" data-reply="${this.escapeHtml(n)}">${this.escapeHtml(n)}</button>`).join("")}
       </div>
-    `:"",a=t?this.escapeHtml(e.content):this.renderMarkdown(e.content),i=t?"👤":this.config.avatarUrl?`<img src="${this.escapeHtml(this.config.avatarUrl)}" alt="${this.escapeHtml(this.config.assistantName)}" class="jade-msg-avatar-img" />`:"💬";return`
+    `:"",t=a?this.escapeHtml(e.content):this.renderMarkdown(e.content),s=a?"👤":this.config.avatarUrl?`<img src="${this.escapeHtml(this.config.avatarUrl)}" alt="${this.escapeHtml(this.config.assistantName)}" class="jade-msg-avatar-img" />`:"💬";return`
       <div class="jade-message jade-message-${e.role}" data-message-id="${e.id}">
         <div class="jade-message-avatar ${e.role}">
-          ${i}
+          ${s}
         </div>
         <div class="jade-message-content">
-          <div class="jade-message-bubble">${a}</div>
-          <div class="jade-message-time">${s}</div>
-          ${n}
+          <div class="jade-message-bubble">${t}</div>
+          <div class="jade-message-time">${i}</div>
+          ${o}
         </div>
       </div>
-    `}renderMarkdown(e){const n=this.escapeHtml(e).replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").replace(/\*([^*\n]+?)\*/g,(u,c)=>`<em>${c}</em>`).replace(/`([^`\n]+?)`/g,'<code class="jade-inline-code">$1</code>').split(`
-`),a=[];let i=!1,o=null;for(let u=0;u<n.length;u++){const c=n[u],h=/^[-*•]\s+(.*)/.exec(c),f=/^\d+\.\s+(.*)/.exec(c);h?((!i||o!=="ul")&&(i&&a.push(o==="ol"?"</ol>":"</ul>"),a.push('<ul class="jade-md-list">'),i=!0,o="ul"),a.push(`<li>${h[1]}</li>`)):f?((!i||o!=="ol")&&(i&&a.push(o==="ul"?"</ul>":"</ol>"),a.push('<ol class="jade-md-list">'),i=!0,o="ol"),a.push(`<li>${f[1]}</li>`)):(i&&(a.push(o==="ol"?"</ol>":"</ul>"),i=!1,o=null),c.trim()===""?a.push("<br>"):a.push(c))}return i&&a.push(o==="ol"?"</ol>":"</ul>"),a.join(`
+    `}renderMarkdown(e){const o=this.escapeHtml(e).replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").replace(/\*([^*\n]+?)\*/g,(u,c)=>`<em>${c}</em>`).replace(/`([^`\n]+?)`/g,'<code class="jade-inline-code">$1</code>').split(`
+`),t=[];let s=!1,n=null;for(let u=0;u<o.length;u++){const c=o[u],h=/^[-*•]\s+(.*)/.exec(c),f=/^\d+\.\s+(.*)/.exec(c);h?((!s||n!=="ul")&&(s&&t.push(n==="ol"?"</ol>":"</ul>"),t.push('<ul class="jade-md-list">'),s=!0,n="ul"),t.push(`<li>${h[1]}</li>`)):f?((!s||n!=="ol")&&(s&&t.push(n==="ul"?"</ul>":"</ol>"),t.push('<ol class="jade-md-list">'),s=!0,n="ol"),t.push(`<li>${f[1]}</li>`)):(s&&(t.push(n==="ol"?"</ol>":"</ul>"),s=!1,n=null),c.trim()===""?t.push("<br>"):t.push(c))}return s&&t.push(n==="ol"?"</ol>":"</ul>"),t.join(`
 `)}renderInputArea(){return`
       <div class="jade-chat-input-area">
         <div class="jade-chat-input-wrapper">
@@ -1786,7 +1313,7 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
         </div>
         <div class="jade-char-count" aria-live="polite" aria-atomic="true"></div>
       </div>
-    `}attachEventListeners(){this.shadowRoot.addEventListener("click",s=>{const a=s.target.closest("[data-action]"),i=a==null?void 0:a.getAttribute("data-action");if(this.config.debug&&i&&console.log("[JadeWidget] Menu action dispatched:",i),i==="toggle-chat")this.toggleChat();else if(i==="open-chat")this.openChat();else if(i==="close-chat")this.closeChat();else if(i==="minimize-chat")this.minimizeChat();else if(i==="close-greeting")s.stopPropagation(),this.closeGreeting();else if(i==="send")this.handleSend();else if(i==="quick-reply"){const o=a==null?void 0:a.getAttribute("data-reply");o&&this.handleQuickReply(o)}else if(i==="toggle-menu")s.stopPropagation(),this.isMenuOpen=!this.isMenuOpen,this.render(),this.isMenuOpen&&setTimeout(()=>{const o=this.shadowRoot.querySelector('.jade-menu-panel [role="menuitem"]');o==null||o.focus()},50);else if(i==="export-chat")this.isMenuOpen=!1,this.render(),this.exportChat();else if(i==="toggle-sound")s.stopPropagation(),this.soundEnabled=!this.soundEnabled,d.saveSoundEnabled(this.soundEnabled),this.soundEnabled&&this.unlockAudioContext(),this.render();else if(i==="show-clear-confirm")this.isMenuOpen=!1,this.showClearConfirm=!0,this.render(),setTimeout(()=>{const o=this.shadowRoot.querySelector(".jade-modal-btn--cancel");o==null||o.focus()},50);else if(i==="cancel-clear-chat")this.showClearConfirm=!1,this.render();else if(i==="confirm-clear-chat")this.showClearConfirm=!1,this.performClearChat();else if(i==="modal-stop"){s.stopPropagation();return}this.isMenuOpen&&i!=="toggle-menu"&&!(a!=null&&a.closest(".jade-menu-panel"))&&(this.isMenuOpen=!1,this.render())}),this.shadowRoot.addEventListener("keydown",s=>{const n=s,a=s.target;a.hasAttribute("data-input")&&n.key==="Enter"&&!n.shiftKey&&(s.preventDefault(),this.handleSend()),a.classList.contains("jade-menu-btn")&&(n.key==="Enter"||n.key===" ")&&(s.preventDefault(),this.isMenuOpen=!this.isMenuOpen,this.render(),this.isMenuOpen&&setTimeout(()=>{const i=this.shadowRoot.querySelector('.jade-menu-panel [role="menuitem"]');i==null||i.focus()},50))}),this.shadowRoot.addEventListener("input",s=>{const n=s.target;if(n.hasAttribute("data-input")){const a=n;a.style.height="auto",a.style.height=Math.min(a.scrollHeight,100)+"px";const i=this.shadowRoot.querySelector(".jade-char-count");if(i){const o=a.value.length;o>1e3*.8?(i.textContent=`${o}/1000`,i.classList.add("jade-char-count-visible")):(i.textContent="",i.classList.remove("jade-char-count-visible"))}}else if(n.getAttribute("data-action")==="volume-change"){const i=parseInt(n.value,10)/100;this.soundVolume=i,d.saveSoundVolume(i);const o=this.shadowRoot.querySelector(".jade-volume-value");o&&(o.textContent=`${Math.round(i*100)}%`)}}),document.addEventListener("keydown",this.escapeKeyHandler);const e=this.shadowRoot.querySelector(".jade-avatar-img");e&&(e.addEventListener("error",()=>{this.config.debug&&console.error("[JadeWidget] Failed to load avatar image:",this.config.avatarUrl),e.setAttribute("style","display:none;");const s=this.shadowRoot.querySelector(".jade-avatar-fallback");s&&s.setAttribute("style","display:flex;")}),e.addEventListener("load",()=>{this.config.debug&&console.log("[JadeWidget] Avatar image loaded successfully:",this.config.avatarUrl)}));const t=this.shadowRoot.querySelector(".jade-header-avatar-img");t&&(t.addEventListener("error",()=>{this.config.debug&&console.error("[JadeWidget] Failed to load header avatar image:",this.config.avatarUrl);const s=t.parentElement;s&&(s.innerHTML="💬")}),t.addEventListener("load",()=>{this.config.debug&&console.log("[JadeWidget] Header avatar image loaded successfully:",this.config.avatarUrl)}))}toggleChat(){this.state.isOpen?this.closeChat():this.openChat()}openChat(){this.state.isOpen=!0,this.state.showGreeting=!1,this.greetingTimeout&&clearTimeout(this.greetingTimeout),d.setGreetingDismissed(),d.saveState({isOpen:!0,showGreeting:!1}),this.render(),this.scrollToBottom(),this.focusInput()}closeChat(){this.state.isOpen=!1,this.isMenuOpen=!1,this.showClearConfirm=!1,d.saveState({isOpen:!1}),this.render()}minimizeChat(){this.state.isMinimized=!0,this.state.isOpen=!1,this.isMenuOpen=!1,this.showClearConfirm=!1,d.saveState({isOpen:!1,isMinimized:!0}),this.render()}closeGreeting(){this.state.showGreeting=!1,d.setGreetingDismissed(),this.render()}async handleSend(){const e=this.shadowRoot.querySelector("[data-input]");if(!e)return;const t=e.value.trim();if(!t)return;const s={id:"user-"+Date.now(),role:"user",content:t,timestamp:Date.now()};this.state.messages.push(s),d.saveMessages(this.state.messages),e.value="",e.style.height="auto",this.render(),this.scrollToBottom(),this.soundEnabled&&this.unlockAudioContext(),this.showTypingIndicator();try{const n=await this.apiClient.sendMessage(t,this.state.conversationId);this.state.conversationId||(this.state.conversationId=n.conversationId,d.saveConversationId(n.conversationId)),this.state.messages.push(n.message),d.saveMessages(this.state.messages),this.playNotificationSound(),this.removeTypingIndicator(),this.render(),this.scrollToBottom(),this.focusInput()}catch(n){console.error("Failed to send message:",n),this.removeTypingIndicator();const a=n instanceof Error?n.message:"";let i;a.includes("429")||a.toLowerCase().includes("rate limit")?i="I'm getting a lot of requests right now — please wait a moment and try again. ⏳":a.includes("401")||a.includes("403")?i="I couldn't authenticate your request. Please refresh the page and try again.":a.includes("503")||a.includes("Failed to fetch")?i="I'm having trouble connecting right now. Please check your connection and try again.":i="I'm sorry, something went wrong. Please try again.";const o={id:"error-"+Date.now(),role:"assistant",content:i,timestamp:Date.now()};this.state.messages.push(o),d.saveMessages(this.state.messages),this.render(),this.scrollToBottom()}}handleQuickReply(e){const t=this.shadowRoot.querySelector("[data-input]");t&&(t.value=e,this.handleSend())}showTypingIndicator(){this.removeTypingIndicator();const e=this.shadowRoot.querySelector("[data-messages-container]");if(e){const t=document.createElement("div");t.className="jade-message jade-message-assistant",t.setAttribute("data-typing-indicator",""),t.innerHTML=`
+    `}attachEventListeners(){this.shadowRoot.addEventListener("click",i=>{const t=i.target.closest("[data-action]"),s=t==null?void 0:t.getAttribute("data-action");if(this.config.debug&&s&&console.log("[JadeWidget] Menu action dispatched:",s),s==="toggle-chat")this.toggleChat();else if(s==="open-chat")this.openChat();else if(s==="close-chat")this.closeChat();else if(s==="minimize-chat")this.minimizeChat();else if(s==="close-greeting")i.stopPropagation(),this.closeGreeting();else if(s==="send")this.handleSend();else if(s==="quick-reply"){const n=t==null?void 0:t.getAttribute("data-reply");n&&this.handleQuickReply(n)}else if(s==="toggle-menu")i.stopPropagation(),this.isMenuOpen=!this.isMenuOpen,this.render(),this.isMenuOpen&&setTimeout(()=>{const n=this.shadowRoot.querySelector('.jade-menu-panel [role="menuitem"]');n==null||n.focus()},50);else if(s==="export-chat")this.isMenuOpen=!1,this.render(),this.exportChat();else if(s==="toggle-sound")i.stopPropagation(),this.soundEnabled=!this.soundEnabled,d.saveSoundEnabled(this.soundEnabled),this.soundEnabled&&this.unlockAudioContext(),this.render();else if(s==="show-clear-confirm")this.isMenuOpen=!1,this.showClearConfirm=!0,this.render(),setTimeout(()=>{const n=this.shadowRoot.querySelector(".jade-modal-btn--cancel");n==null||n.focus()},50);else if(s==="cancel-clear-chat")this.showClearConfirm=!1,this.render();else if(s==="confirm-clear-chat")this.showClearConfirm=!1,this.performClearChat();else if(s==="modal-stop"){i.stopPropagation();return}this.isMenuOpen&&s!=="toggle-menu"&&!(t!=null&&t.closest(".jade-menu-panel"))&&(this.isMenuOpen=!1,this.render())}),this.shadowRoot.addEventListener("keydown",i=>{const o=i,t=i.target;t.hasAttribute("data-input")&&o.key==="Enter"&&!o.shiftKey&&(i.preventDefault(),this.handleSend()),t.classList.contains("jade-menu-btn")&&(o.key==="Enter"||o.key===" ")&&(i.preventDefault(),this.isMenuOpen=!this.isMenuOpen,this.render(),this.isMenuOpen&&setTimeout(()=>{const s=this.shadowRoot.querySelector('.jade-menu-panel [role="menuitem"]');s==null||s.focus()},50))}),this.shadowRoot.addEventListener("input",i=>{const o=i.target;if(o.hasAttribute("data-input")){const t=o;t.style.height="auto",t.style.height=Math.min(t.scrollHeight,100)+"px";const s=this.shadowRoot.querySelector(".jade-char-count");if(s){const n=t.value.length;n>1e3*.8?(s.textContent=`${n}/1000`,s.classList.add("jade-char-count-visible")):(s.textContent="",s.classList.remove("jade-char-count-visible"))}}else if(o.getAttribute("data-action")==="volume-change"){const s=parseInt(o.value,10)/100;this.soundVolume=s,d.saveSoundVolume(s);const n=this.shadowRoot.querySelector(".jade-volume-value");n&&(n.textContent=`${Math.round(s*100)}%`)}}),document.addEventListener("keydown",this.escapeKeyHandler);const e=this.shadowRoot.querySelector(".jade-avatar-img");e&&(e.addEventListener("error",()=>{this.config.debug&&console.error("[JadeWidget] Failed to load avatar image:",this.config.avatarUrl),e.setAttribute("style","display:none;");const i=this.shadowRoot.querySelector(".jade-avatar-fallback");i&&i.setAttribute("style","display:flex;")}),e.addEventListener("load",()=>{this.config.debug&&console.log("[JadeWidget] Avatar image loaded successfully:",this.config.avatarUrl)}));const a=this.shadowRoot.querySelector(".jade-header-avatar-img");a&&(a.addEventListener("error",()=>{this.config.debug&&console.error("[JadeWidget] Failed to load header avatar image:",this.config.avatarUrl);const i=a.parentElement;i&&(i.innerHTML="💬")}),a.addEventListener("load",()=>{this.config.debug&&console.log("[JadeWidget] Header avatar image loaded successfully:",this.config.avatarUrl)}))}toggleChat(){this.state.isOpen?this.closeChat():this.openChat()}openChat(){this.state.isOpen=!0,this.state.showGreeting=!1,this.greetingTimeout&&clearTimeout(this.greetingTimeout),d.setGreetingDismissed(),d.saveState({isOpen:!0,showGreeting:!1}),this.render(),this.scrollToBottom(),this.focusInput()}closeChat(){this.state.isOpen=!1,this.isMenuOpen=!1,this.showClearConfirm=!1,d.saveState({isOpen:!1}),this.render()}minimizeChat(){this.state.isMinimized=!0,this.state.isOpen=!1,this.isMenuOpen=!1,this.showClearConfirm=!1,d.saveState({isOpen:!1,isMinimized:!0}),this.render()}closeGreeting(){this.state.showGreeting=!1,d.setGreetingDismissed(),this.render()}async handleSend(){const e=this.shadowRoot.querySelector("[data-input]");if(!e)return;const a=e.value.trim();if(!a)return;const i={id:"user-"+Date.now(),role:"user",content:a,timestamp:Date.now()};this.state.messages.push(i),d.saveMessages(this.state.messages),e.value="",e.style.height="auto",this.render(),this.scrollToBottom(),this.soundEnabled&&this.unlockAudioContext(),this.showTypingIndicator();try{const o=await this.apiClient.sendMessage(a,this.state.conversationId);this.state.conversationId||(this.state.conversationId=o.conversationId,d.saveConversationId(o.conversationId)),this.state.messages.push(o.message),d.saveMessages(this.state.messages),this.playNotificationSound(),this.removeTypingIndicator(),this.render(),this.scrollToBottom(),this.focusInput()}catch(o){console.error("Failed to send message:",o),this.removeTypingIndicator();const t=o instanceof Error?o.message:"";let s;t.includes("429")||t.toLowerCase().includes("rate limit")?s="I'm getting a lot of requests right now — please wait a moment and try again. ⏳":t.includes("401")||t.includes("403")?s="I couldn't authenticate your request. Please refresh the page and try again.":t.includes("503")||t.includes("Failed to fetch")?s="I'm having trouble connecting right now. Please check your connection and try again.":s="I'm sorry, something went wrong. Please try again.";const n={id:"error-"+Date.now(),role:"assistant",content:s,timestamp:Date.now()};this.state.messages.push(n),d.saveMessages(this.state.messages),this.render(),this.scrollToBottom()}}handleQuickReply(e){const a=this.shadowRoot.querySelector("[data-input]");a&&(a.value=e,this.handleSend())}showTypingIndicator(){this.removeTypingIndicator();const e=this.shadowRoot.querySelector("[data-messages-container]");if(e){const a=document.createElement("div");a.className="jade-message jade-message-assistant",a.setAttribute("data-typing-indicator",""),a.innerHTML=`
         <div class="jade-message-avatar assistant">💬</div>
         <div class="jade-message-content">
           <div class="jade-message-bubble">
@@ -1797,4 +1324,4 @@ Where are you thinking of going?`,quickReplies:["Maldives / Bali / Thailand","It
             </div>
           </div>
         </div>
-      `,e.appendChild(t),this.scrollToBottom()}}removeTypingIndicator(){const e=this.shadowRoot.querySelector("[data-typing-indicator]");e&&e.remove()}unlockAudioContext(){try{this.audioCtx||(this.audioCtx=new(window.AudioContext||window.webkitAudioContext)),this.audioCtx.state==="suspended"&&this.audioCtx.resume().catch(()=>{})}catch{}}playNotificationSound(){if(this.soundEnabled){this.config.debug&&console.log("[JadeWidget] Playing notification sound (volume:",this.soundVolume,")");try{this.audioCtx||(this.audioCtx=new(window.AudioContext||window.webkitAudioContext));const e=this.audioCtx,t=()=>{const s=e.createGain();s.gain.setValueAtTime(0,e.currentTime),s.gain.linearRampToValueAtTime(this.soundVolume*.3,e.currentTime+.02),s.gain.exponentialRampToValueAtTime(1e-4,e.currentTime+.5),s.connect(e.destination),[880,1108].forEach((a,i)=>{const o=e.createOscillator();o.type="sine",o.frequency.setValueAtTime(a,e.currentTime+i*.12),o.connect(s),o.start(e.currentTime+i*.12),o.stop(e.currentTime+i*.12+.35)})};e.state==="suspended"?(this.config.debug&&console.warn("[JadeWidget] AudioContext suspended – attempting resume before chime"),e.resume().then(t).catch(()=>{console.info("[JadeWidget] Notification sound skipped – AudioContext could not be resumed (likely no prior user gesture)")})):t()}catch{}}}exportChat(){const e={exportedAt:new Date().toISOString(),messages:this.state.messages.map(i=>({role:i.role,content:i.content,timestamp:new Date(i.timestamp).toISOString()}))},t=JSON.stringify(e,null,2),s=new Blob([t],{type:"application/json"}),n=URL.createObjectURL(s),a=document.createElement("a");a.href=n,a.download=`jade-chat-${new Date().toISOString().slice(0,10)}.json`,document.body.appendChild(a),a.click(),document.body.removeChild(a),setTimeout(()=>URL.revokeObjectURL(n),500),this.exportToastTimeout&&clearTimeout(this.exportToastTimeout),this.showExportToast=!0,this.render(),this.exportToastTimeout=window.setTimeout(()=>{this.showExportToast=!1,this.render()},3e3)}performClearChat(){d.clearAll(),this.isMenuOpen=!1,this.showClearConfirm=!1,this.state={isOpen:!1,isMinimized:!1,showGreeting:!1,messages:this.getInitialMessages()},this.render()}scrollToBottom(){setTimeout(()=>{const e=this.shadowRoot.querySelector("[data-messages-container]");e&&(e.scrollTop=e.scrollHeight)},100)}focusInput(){setTimeout(()=>{const e=this.shadowRoot.querySelector("[data-input]");e&&e.focus()},100)}escapeHtml(e){const t=document.createElement("div");return t.textContent=e,t.innerHTML}shouldShowGreeting(){const e=d.loadMessages(),t=e.length===0||e.length===1;return!this.state.isOpen&&t&&!d.isGreetingDismissed()}mount(e){(e||document.body).appendChild(this.container),this.shouldShowGreeting()&&(this.greetingTimeout=window.setTimeout(()=>{this.state.showGreeting=!0,this.render()},1e3))}unmount(){this.container.remove(),this.greetingTimeout&&clearTimeout(this.greetingTimeout),this.exportToastTimeout&&clearTimeout(this.exportToastTimeout),this.audioCtx&&(this.audioCtx.close().catch(()=>{}),this.audioCtx=void 0),document.removeEventListener("keydown",this.escapeKeyHandler)}open(){this.openChat()}close(){this.closeChat()}toggle(){this.toggleChat()}reset(){d.clearAll(),this.state={isOpen:!1,isMinimized:!1,showGreeting:!1,messages:this.getInitialMessages()},this.render()}}function w(r){var t;(t=window.JadeWidget)!=null&&t.instance&&window.JadeWidget.instance.unmount();const e=(r==null?void 0:r.showDelayMs)??g.showDelayMs;setTimeout(()=>{const s=new x(r);s.mount(),window.JadeWidget&&(window.JadeWidget.instance=s)},e)}const m={init:w};typeof window<"u"&&(window.JadeWidget=m),p.default=m,Object.defineProperties(p,{__esModule:{value:!0},[Symbol.toStringTag]:{value:"Module"}})})(this.JadeWidget=this.JadeWidget||{});
+      `,e.appendChild(a),this.scrollToBottom()}}removeTypingIndicator(){const e=this.shadowRoot.querySelector("[data-typing-indicator]");e&&e.remove()}unlockAudioContext(){try{this.audioCtx||(this.audioCtx=new(window.AudioContext||window.webkitAudioContext)),this.audioCtx.state==="suspended"&&this.audioCtx.resume().catch(()=>{})}catch{}}playNotificationSound(){if(this.soundEnabled){this.config.debug&&console.log("[JadeWidget] Playing notification sound (volume:",this.soundVolume,")");try{this.audioCtx||(this.audioCtx=new(window.AudioContext||window.webkitAudioContext));const e=this.audioCtx,a=()=>{const i=e.createGain();i.gain.setValueAtTime(0,e.currentTime),i.gain.linearRampToValueAtTime(this.soundVolume*.3,e.currentTime+.02),i.gain.exponentialRampToValueAtTime(1e-4,e.currentTime+.5),i.connect(e.destination),[880,1108].forEach((t,s)=>{const n=e.createOscillator();n.type="sine",n.frequency.setValueAtTime(t,e.currentTime+s*.12),n.connect(i),n.start(e.currentTime+s*.12),n.stop(e.currentTime+s*.12+.35)})};e.state==="suspended"?(this.config.debug&&console.warn("[JadeWidget] AudioContext suspended – attempting resume before chime"),e.resume().then(a).catch(()=>{console.info("[JadeWidget] Notification sound skipped – AudioContext could not be resumed (likely no prior user gesture)")})):a()}catch{}}}exportChat(){const e={exportedAt:new Date().toISOString(),messages:this.state.messages.map(s=>({role:s.role,content:s.content,timestamp:new Date(s.timestamp).toISOString()}))},a=JSON.stringify(e,null,2),i=new Blob([a],{type:"application/json"}),o=URL.createObjectURL(i),t=document.createElement("a");t.href=o,t.download=`jade-chat-${new Date().toISOString().slice(0,10)}.json`,document.body.appendChild(t),t.click(),document.body.removeChild(t),setTimeout(()=>URL.revokeObjectURL(o),500),this.exportToastTimeout&&clearTimeout(this.exportToastTimeout),this.showExportToast=!0,this.render(),this.exportToastTimeout=window.setTimeout(()=>{this.showExportToast=!1,this.render()},3e3)}performClearChat(){d.clearAll(),this.isMenuOpen=!1,this.showClearConfirm=!1,this.state={isOpen:!1,isMinimized:!1,showGreeting:!1,messages:this.getInitialMessages()},this.render()}scrollToBottom(){setTimeout(()=>{const e=this.shadowRoot.querySelector("[data-messages-container]");e&&(e.scrollTop=e.scrollHeight)},100)}focusInput(){setTimeout(()=>{const e=this.shadowRoot.querySelector("[data-input]");e&&e.focus()},100)}escapeHtml(e){const a=document.createElement("div");return a.textContent=e,a.innerHTML}shouldShowGreeting(){const e=d.loadMessages(),a=e.length===0||e.length===1;return!this.state.isOpen&&a&&!d.isGreetingDismissed()}mount(e){(e||document.body).appendChild(this.container),this.shouldShowGreeting()&&(this.greetingTimeout=window.setTimeout(()=>{this.state.showGreeting=!0,this.render()},1e3))}unmount(){this.container.remove(),this.greetingTimeout&&clearTimeout(this.greetingTimeout),this.exportToastTimeout&&clearTimeout(this.exportToastTimeout),this.audioCtx&&(this.audioCtx.close().catch(()=>{}),this.audioCtx=void 0),document.removeEventListener("keydown",this.escapeKeyHandler)}open(){this.openChat()}close(){this.closeChat()}toggle(){this.toggleChat()}reset(){d.clearAll(),this.state={isOpen:!1,isMinimized:!1,showGreeting:!1,messages:this.getInitialMessages()},this.render()}}function w(r){var a;(a=window.JadeWidget)!=null&&a.instance&&window.JadeWidget.instance.unmount();const e=(r==null?void 0:r.showDelayMs)??g.showDelayMs;setTimeout(()=>{const i=new y(r);i.mount(),window.JadeWidget&&(window.JadeWidget.instance=i)},e)}const m={init:w};typeof window<"u"&&(window.JadeWidget=m),p.default=m,Object.defineProperties(p,{__esModule:{value:!0},[Symbol.toStringTag]:{value:"Module"}})})(this.JadeWidget=this.JadeWidget||{});
