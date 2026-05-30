@@ -10,8 +10,11 @@
 #   @jadeassist/widget   -> Static site / CDN for packages/widget/dist
 #
 # The backend service requires OPENAI_API_KEY, JWT_SECRET, and MONGODB_URL for
-# full chat functionality. Without them it starts in controlled minimal mode so
-# /healthz remains available and feature routes return clear JSON errors.
+# full chat functionality. Railway starts with JADEASSIST_MINIMAL_MODE=true by
+# default so first-time deploys and missing-secret deploys still boot, /healthz
+# stays available, and feature routes return clear JSON 503 errors. Once the
+# required secrets are present, set JADEASSIST_MINIMAL_MODE=false or override the
+# start command to run in strict mode.
 
 [build]
 builder = "nixpacks"
@@ -19,7 +22,7 @@ buildCommand = "npm run build --workspace=packages/backend"
 watchPaths = ["packages/backend/**", "packages/shared/**", "package.json", "package-lock.json", "tsconfig.json"]
 
 [deploy]
-startCommand = "npm run start --workspace=packages/backend"
+startCommand = "JADEASSIST_MINIMAL_MODE=${JADEASSIST_MINIMAL_MODE:-true} npm run start --workspace=packages/backend"
 healthcheckPath = "/healthz"
 healthcheckTimeout = 30
 restartPolicyType = "on_failure"
