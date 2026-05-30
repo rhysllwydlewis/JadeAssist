@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "tsc && vite build && node validate-build.js",
     "build:novalidate": "tsc && vite build",
-    "validate": "node validate-build.js",
+    "validate": "node validate-build.js && node validate-server-routing.js",
     "start": "node server.js",
     "clean": "rm -rf dist *.tsbuildinfo",
     "typecheck": "tsc --noEmit"
