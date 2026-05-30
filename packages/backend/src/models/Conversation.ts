@@ -120,6 +120,7 @@ function toMessage(doc: MessageDoc): Message {
 // ── Repository ────────────────────────────────────────────────────────────────
 
 export interface CreateConversationParams {
+  id?: string;
   userId: string;
   eventType?: string;
   eventDate?: Date;
@@ -134,6 +135,7 @@ export class ConversationModel {
   /** Create a new conversation */
   static async create(params: CreateConversationParams): Promise<Conversation> {
     const doc = await ConversationMongoose.create({
+      _id: params.id,
       userId: params.userId,
       eventType: params.eventType,
       eventDate: params.eventDate,
@@ -218,6 +220,7 @@ export class ConversationModel {
     }
 
     return this.create({
+      id,
       userId,
       ...context,
     });
