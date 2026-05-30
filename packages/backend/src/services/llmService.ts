@@ -24,6 +24,73 @@ export interface LLMOptions {
   systemPrompt?: string;
 }
 
+type ProviderErrorShape = {
+  status?: unknown;
+  code?: unknown;
+  type?: unknown;
+  message?: unknown;
+  error?: {
+    code?: unknown;
+    type?: unknown;
+    message?: unknown;
+  };
+};
+
+function readString(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+function normalise(value: unknown): string {
+  return readString(value).trim().toLowerCase();
+}
+
+function providerError(error: unknown): ProviderErrorShape {
+  return (error ?? {}) as ProviderErrorShape;
+}
+
+function providerErrorMessage(error: unknown): string {
+  const err = providerError(error);
+  return readString(err.error?.message) || readString(err.message);
+}
+
+function providerStatus(error: unknown): number | undefined {
+  const status = providerError(error).status;
+  return typeof status === 'number' ? status : undefined;
+}
+
+export function isOpenAIInsufficientQuotaError(error: unknown): boolean {
+  const err = providerError(error);
+  const code = normalise(err.error?.code || err.code);
+  const type = normalise(err.error?.type || err.type);
+  const message = providerErrorMessage(error).toLowerCase();
+
+  return (
+    code === 'insufficient_quota' ||
+    type === 'insufficient_quota' ||
+    message.includes('insufficient_quota') ||
+    message.includes('current quota')
+  );
+}
+
+export function isOpenAIRateLimitError(error: unknown): boolean {
+  if (isOpenAIInsufficientQuotaError(error)) {
+    return false;
+  }
+
+  const err = providerError(error);
+  const code = normalise(err.error?.code || err.code);
+  const type = normalise(err.error?.type || err.type);
+  const message = providerErrorMessage(error).toLowerCase();
+
+  return (
+    providerStatus(error) === 429 ||
+    code.includes('rate_limit') ||
+    type.includes('rate_limit') ||
+    message.includes('rate limit') ||
+    message.includes('rate_limit')
+  );
+}
+
 class LLMService {
   private _client: OpenAI | null = null;
   private model: string;
@@ -87,12 +154,11 @@ class LLMService {
     } catch (error) {
       logger.error({ error }, 'LLM request failed');
 
-      if (
-        error instanceof Error &&
-        (error.message.includes('429') ||
-          error.message.toLowerCase().includes('rate limit') ||
-          error.message.toLowerCase().includes('rate_limit'))
-      ) {
+      if (isOpenAIInsufficientQuotaError(error)) {
+        throw new Error('OPENAI_INSUFFICIENT_QUOTA: Provider quota is unavailable for this project.');
+      }
+
+      if (isOpenAIRateLimitError(error)) {
         throw new Error('RATE_LIMIT: Too many requests — please wait a moment and try again.');
       }
 
