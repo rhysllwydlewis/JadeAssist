@@ -1,5 +1,6 @@
 /**
  * Planning Engine Service - Core event planning logic
+ * Includes resilient handling for public widget chat.
  */
 import mongoose from 'mongoose';
 import { llmService, LLMMessage } from './llmService';

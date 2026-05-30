@@ -1,4 +1,5 @@
 import {
+  buildLocalPlanningGuide,
   isOpenAIInsufficientQuotaError,
   isOpenAIRateLimitError,
 } from '../services/llmService';
@@ -59,6 +60,21 @@ assert(
   isOpenAIInsufficientQuotaError(rateLimitError) === false,
   'does not misclassify ordinary rate limits as insufficient quota'
 );
+
+section('Local planning fallback');
+
+const fallback = buildLocalPlanningGuide([
+  {
+    role: 'user',
+    content:
+      'Can you help with the budget?\n\n[Known context: Event Type: Wedding | Budget: £25,000 | Guest Count: 120 | Location: Cardiff]',
+  },
+]);
+
+assert(fallback.includes('built-in planning guide'), 'returns a clear local fallback message');
+assert(fallback.includes('Wedding') || fallback.includes('wedding'), 'uses known event context');
+assert(fallback.includes('£25,000'), 'uses known budget context');
+assert(fallback.includes('Venue'), 'gives practical budget guidance');
 
 console.log(`\n──────────────────────────────────`);
 console.log(`Results: ${passed} passed, ${failed} failed`);

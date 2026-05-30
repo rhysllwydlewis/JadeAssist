@@ -56,7 +56,6 @@ const ConversationSchema = new Schema<ConversationDoc>(
     contextCompleteness: { type: Number, min: 0, max: 100, default: 0 },
   },
   {
-    // Map Mongoose timestamp fields to the names used in the shared type
     timestamps: { createdAt: 'startedAt', updatedAt: 'updatedAt' },
   }
 );
@@ -74,12 +73,9 @@ const MessageSchema = new Schema<MessageDoc>(
   }
 );
 
-// Compound index: efficient chronological fetch per conversation
 MessageSchema.index({ conversationId: 1, createdAt: 1 });
 ConversationSchema.index({ userId: 1, updatedAt: -1 });
 ConversationSchema.index({ eventType: 1, updatedAt: -1 });
-
-// ── Mongoose models ───────────────────────────────────────────────────────────
 
 const ConversationMongoose =
   mongoose.models['Conversation'] ??
@@ -87,8 +83,6 @@ const ConversationMongoose =
 
 const MessageMongoose =
   mongoose.models['Message'] ?? mongoose.model<MessageDoc>('Message', MessageSchema);
-
-// ── Mapping helpers ───────────────────────────────────────────────────────────
 
 function toConversation(doc: ConversationDoc): Conversation {
   return {
@@ -117,8 +111,6 @@ function toMessage(doc: MessageDoc): Message {
   };
 }
 
-// ── Repository ────────────────────────────────────────────────────────────────
-
 export interface CreateConversationParams {
   id?: string;
   userId: string;
@@ -132,7 +124,6 @@ export interface CreateConversationParams {
 }
 
 export class ConversationModel {
-  /** Create a new conversation */
   static async create(params: CreateConversationParams): Promise<Conversation> {
     const doc = await ConversationMongoose.create({
       _id: params.id,
@@ -150,13 +141,11 @@ export class ConversationModel {
     return result;
   }
 
-  /** Find conversation by ID */
   static async findById(id: string): Promise<Conversation | null> {
     const doc = await ConversationMongoose.findById(id).lean<ConversationDoc>();
     return doc ? toConversation(doc) : null;
   }
 
-  /** Find conversations by user ID, newest first */
   static async findByUserId(userId: string): Promise<Conversation[]> {
     const docs = await ConversationMongoose.find({ userId })
       .sort({ updatedAt: -1 })
@@ -164,20 +153,19 @@ export class ConversationModel {
     return docs.map(toConversation);
   }
 
-  /** Update conversation event type. Kept for existing routes. */
   static async update(id: string, eventType?: string): Promise<Conversation | null> {
     const update = eventType !== undefined
       ? { $set: { eventType } }
       : { $unset: { eventType: '' } };
 
-    const doc = await ConversationMongoose.findByIdAndUpdate(id, update, { new: true })
-      .lean<ConversationDoc>();
+    const doc = await ConversationMongoose.findByIdAndUpdate(id, update, {
+      returnDocument: 'after',
+    }).lean<ConversationDoc>();
     if (!doc) return null;
     logger.info({ conversationId: id }, 'Conversation updated');
     return toConversation(doc);
   }
 
-  /** Merge structured planning context into a conversation. */
   static async updateContext(
     id: string,
     context: ConversationContextUpdate
@@ -197,7 +185,7 @@ export class ConversationModel {
     const doc = await ConversationMongoose.findByIdAndUpdate(
       id,
       { $set },
-      { new: true, upsert: false }
+      { returnDocument: 'after', upsert: false }
     ).lean<ConversationDoc>();
 
     if (!doc) return null;
@@ -205,7 +193,6 @@ export class ConversationModel {
     return toConversation(doc);
   }
 
-  /** Ensure a conversation exists for the given ID. */
   static async ensureConversation(
     id: string,
     userId: string,
@@ -219,14 +206,9 @@ export class ConversationModel {
       return existing;
     }
 
-    return this.create({
-      id,
-      userId,
-      ...context,
-    });
+    return this.create({ id, userId, ...context });
   }
 
-  /** Delete conversation (cascades to messages via application logic) */
   static async delete(id: string): Promise<boolean> {
     const result = await ConversationMongoose.deleteOne({ _id: id });
     await MessageMongoose.deleteMany({ conversationId: id });
@@ -234,7 +216,6 @@ export class ConversationModel {
     return result.deletedCount > 0;
   }
 
-  /** Add a message to a conversation */
   static async addMessage(
     conversationId: string,
     role: 'user' | 'assistant' | 'system',
@@ -242,12 +223,10 @@ export class ConversationModel {
     tokensUsed?: number
   ): Promise<Message> {
     const doc = await MessageMongoose.create({ conversationId, role, content, tokensUsed });
-    // Touch the conversation's updatedAt
     await ConversationMongoose.findByIdAndUpdate(conversationId, { $set: { updatedAt: new Date() } });
     return toMessage(doc.toObject() as MessageDoc);
   }
 
-  /** Get messages for a conversation in chronological order */
   static async getMessages(conversationId: string, limit = 40): Promise<Message[]> {
     const docs = await MessageMongoose.find({ conversationId })
       .sort({ createdAt: -1 })
