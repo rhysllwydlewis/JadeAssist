@@ -33,25 +33,54 @@ const CORE_DETAILS = ['eventType', 'eventDate', 'guestCount', 'budget', 'locatio
 type CoreDetail = (typeof CORE_DETAILS)[number];
 
 const UK_LOCATION_ALIASES: Record<string, string> = {
+  'north wales': 'North Wales',
+  'south wales': 'South Wales',
+  'west wales': 'West Wales',
+  'mid wales': 'Mid Wales',
+  'east midlands': 'East Midlands',
+  'west midlands': 'West Midlands',
+  'south east': 'South East',
+  'south west': 'South West',
+  'north east': 'North East',
+  'north west': 'North West',
+  'greater manchester': 'Greater Manchester',
   london: 'London',
   cardiff: 'Cardiff',
   swansea: 'Swansea',
   newport: 'Newport',
-  wales: 'Wales',
-  'south wales': 'South Wales',
+  wrexham: 'Wrexham',
+  bangor: 'Bangor',
+  bolton: 'Bolton',
+  plymouth: 'Plymouth',
   bristol: 'Bristol',
   birmingham: 'Birmingham',
   manchester: 'Manchester',
   liverpool: 'Liverpool',
   leeds: 'Leeds',
   sheffield: 'Sheffield',
+  newcastle: 'Newcastle',
+  nottingham: 'Nottingham',
+  leicester: 'Leicester',
+  oxford: 'Oxford',
+  cambridge: 'Cambridge',
+  york: 'York',
+  exeter: 'Exeter',
+  norwich: 'Norwich',
+  brighton: 'Brighton',
+  southampton: 'Southampton',
+  portsmouth: 'Portsmouth',
   glasgow: 'Glasgow',
   edinburgh: 'Edinburgh',
-  'south east': 'South East',
-  'south west': 'South West',
-  midlands: 'Midlands',
-  'north west': 'North West',
+  aberdeen: 'Aberdeen',
+  dundee: 'Dundee',
+  belfast: 'Belfast',
+  wales: 'Wales',
   scotland: 'Scotland',
+  england: 'England',
+  'northern ireland': 'Northern Ireland',
+  yorkshire: 'Yorkshire',
+  cornwall: 'Cornwall',
+  devon: 'Devon',
 };
 
 function compactWhitespace(value: string): string {
@@ -73,7 +102,15 @@ function parseBudget(message: string): number | undefined {
     return undefined;
   }
 
-  const match = /(?:budget|spend|cost|price|afford)?(?:\s*(?:is|of|around|about|approx(?:imately)?|up to|under|over))?\s*[£$]?\s*(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)\s*(k|thousand|grand)?\b/i.exec(lower);
+  const budgetMatch =
+    /\b(?:budget|spend|cost|price|afford)\b(?:\s*(?:is|of|around|about|approx(?:imately)?|up to|under|over|with|for|at|:))?\s*[£$]?\s*(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)\s*(k|thousand|grand)?\b/i.exec(
+      lower
+    );
+  const currencyMatch = /[£$]\s*(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)\s*(k|thousand|grand)?\b/i.exec(
+    lower
+  );
+  const suffixMatch = /\b(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)\s*(k|thousand|grand)\b/i.exec(lower);
+  const match = budgetMatch ?? currencyMatch ?? suffixMatch;
   if (!match) return undefined;
 
   const raw = Number(match[1].replace(/,/g, ''));
@@ -99,7 +136,8 @@ function parseEventType(message: string): EventType | undefined {
 
   if (/\b(wedding|marriage|civil partnership|bride|groom)\b/.test(lower)) return 'wedding';
   if (/\b(birthday|18th|21st|30th|40th|50th|60th)\b/.test(lower)) return 'birthday';
-  if (/\b(corporate|work event|team away|away day|launch|networking)\b/.test(lower)) return 'corporate';
+  if (/\b(corporate|work event|team away|away day|launch|networking)\b/.test(lower))
+    return 'corporate';
   if (/\b(conference|seminar|symposium|summit|expo)\b/.test(lower)) return 'conference';
   if (/\b(anniversary|vow renewal)\b/.test(lower)) return 'anniversary';
   if (/\b(party|celebration|private event)\b/.test(lower)) return 'party';
@@ -114,7 +152,9 @@ function parseLocation(message: string): string | undefined {
     if (lower.includes(needle)) return label;
   }
 
-  const explicit = /\b(?:in|near|around|at)\s+([A-Z][a-zA-Z\s'-]{2,40})(?:[,.!?]|$)/.exec(message);
+  const explicit = /\b(?:in|near|around|at)\s+([a-zA-Z][a-zA-Z\s'-]{2,40})(?:[,.!?]|$)/i.exec(
+    message
+  );
   if (explicit) {
     return compactWhitespace(explicit[1]);
   }
@@ -143,7 +183,10 @@ function parseEventDate(message: string): Date | undefined {
     if (!Number.isNaN(date.getTime())) return date;
   }
 
-  const monthMatch = /\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})\b/i.exec(message);
+  const monthMatch =
+    /\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})\b/i.exec(
+      message
+    );
   if (monthMatch) {
     const monthIndex = [
       'january',
@@ -271,8 +314,8 @@ export function buildDynamicSystemPrompt(context: PlanningContext): string {
 
   const missingSection =
     missingDetails.length > 0
-      ? `\n\n## Current conversation objective\nYou are still building the event brief. Ask only for the next missing detail: ${nextMissingDetail}. Do not ask for all missing details at once.`
-      : '\n\n## Current conversation objective\nThe core brief is complete. Give confident, specific, actionable planning guidance rather than asking more basic discovery questions.';
+      ? `\n\n## Current conversation objective\nSome details are still needed. Ask only for the next missing detail: ${nextMissingDetail}. Do not ask for all missing details at once.`
+      : '\n\n## Current conversation objective\nall core details are present. Give confident, specific, actionable planning guidance rather than asking more basic discovery questions.';
 
   return `${LLM_SETTINGS.SYSTEM_PROMPT}${knownSection}${missingSection}\n\n## Response format\n- Keep the answer compact enough for a website widget.\n- Use short paragraphs and bullets.\n- End with one practical next step or one focused follow-up question.`;
 }
@@ -288,7 +331,7 @@ export function buildEnrichedUserMessage(context: PlanningContext, userMessage: 
     contextParts.push(`Event Type: ${metadata.displayName}`);
   }
   if (context.budget) {
-    contextParts.push(`Budget: £${context.budget.toLocaleString()}`);
+    contextParts.push(`Budget: £${context.budget}`);
   }
   if (context.guestCount) {
     contextParts.push(`Guest Count: ${context.guestCount}`);
@@ -304,7 +347,7 @@ export function buildEnrichedUserMessage(context: PlanningContext, userMessage: 
     return userMessage;
   }
 
-  return `${userMessage}\n\n[Known context: ${contextParts.join(' | ')}]`;
+  return `${userMessage}\n\n[Context: ${contextParts.join(' | ')}]`;
 }
 
 /**
@@ -344,14 +387,6 @@ export function extractContextualSuggestions(
 ): string[] | undefined {
   if (!context.eventType) {
     return ['Wedding', 'Birthday Party', 'Corporate Event', 'Anniversary', 'Other'];
-  }
-
-  if (!context.eventDate) {
-    return ['This year', 'Next year', 'Spring 2027', 'Summer 2027', 'Not sure yet'];
-  }
-
-  if (!context.guestCount) {
-    return ['Under 50 guests', '50–100 guests', '100–150 guests', '150+ guests'];
   }
 
   if (!context.budget) {

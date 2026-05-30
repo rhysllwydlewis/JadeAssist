@@ -37,11 +37,22 @@ assert(extracted.eventDate instanceof Date, 'detects broad date timeframe');
 
 section('Avoids false positives');
 
-const guestsOnly = extractPlanningContextFromMessage('We will probably have 120 guests in Cardiff.');
+const guestsOnly = extractPlanningContextFromMessage(
+  'We will probably have 120 guests in Cardiff.'
+);
 
 assert(guestsOnly.guestCount === 120, 'still extracts guest count without budget wording');
 assert(guestsOnly.budget === undefined, 'does not treat guest count as a budget');
 assert(guestsOnly.location === 'Cardiff', 'still extracts location without budget wording');
+
+const southWalesOnly = extractPlanningContextFromMessage('Find me a venue in South Wales.');
+assert(southWalesOnly.location === 'South Wales', 'prefers South Wales over generic Wales');
+
+const northWalesOnly = extractPlanningContextFromMessage('Find me a venue in North Wales.');
+assert(northWalesOnly.location === 'North Wales', 'detects North Wales region');
+
+const boltonOnly = extractPlanningContextFromMessage('Find me a florist in Bolton.');
+assert(boltonOnly.location === 'Bolton', 'detects Bolton location');
 
 section('Merges context without overwriting known values');
 
@@ -61,8 +72,14 @@ assert(merged.location === 'Cardiff', 'adds missing location');
 
 section('Scores planning completeness');
 
-assert(getMissingDetails(merged).includes('date or timeframe') === false, 'date is no longer missing');
-assert(getContextCompleteness(merged) >= 80, 'context completeness is high once key details are known');
+assert(
+  getMissingDetails(merged).includes('date or timeframe') === false,
+  'date is no longer missing'
+);
+assert(
+  getContextCompleteness(merged) >= 80,
+  'context completeness is high once key details are known'
+);
 assert(getPlanningStage(merged) === 'action-planning', 'moves to action-planning once complete');
 
 console.log(`\n──────────────────────────────────`);

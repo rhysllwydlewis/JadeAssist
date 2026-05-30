@@ -842,6 +842,61 @@ export function getWidgetStyles(
       letter-spacing: -.01em;
     }
 
+
+    /* Search result cards */
+    .jade-search-cards {
+      display: grid;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .jade-search-card {
+      display: block;
+      padding: 10px 12px;
+      border: 1px solid rgba(11, 128, 115, 0.18);
+      border-radius: 12px;
+      background: #f8fffd;
+      color: #1f2937;
+      text-decoration: none;
+      transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+    }
+
+    .jade-search-card:hover {
+      border-color: ${primaryColor};
+      box-shadow: 0 4px 12px rgba(11, 128, 115, 0.14);
+      transform: translateY(-1px);
+    }
+
+    .jade-search-card-title {
+      display: block;
+      font-weight: 700;
+      font-size: 13px;
+      color: #0f766e;
+      margin-bottom: 3px;
+    }
+
+    .jade-search-card-meta {
+      display: block;
+      font-size: 11px;
+      color: #6b7280;
+      margin-bottom: 5px;
+    }
+
+    .jade-search-card-description {
+      display: block;
+      font-size: 12px;
+      line-height: 1.4;
+      color: #374151;
+    }
+
+    .jade-search-card-cta {
+      display: inline-block;
+      margin-top: 7px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: ${primaryColor};
+    }
+
     /* Quick Replies */
     .jade-quick-replies {
       display: flex;

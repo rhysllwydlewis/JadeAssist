@@ -53,7 +53,14 @@ function shouldSearch(message: string): boolean {
     'caterer',
     'catering',
     'photographer',
+    'videographer',
     'florist',
+    'hotel',
+    'accommodation',
+    'musician',
+    'musicians',
+    'band',
+    'singer',
     'dj',
     'music',
     'transport',
@@ -91,7 +98,10 @@ class PlanningEngineService {
 
       if (persistenceReady) {
         try {
-          const conversation = await ConversationModel.ensureConversation(context.conversationId, context.userId);
+          const conversation = await ConversationModel.ensureConversation(
+            context.conversationId,
+            context.userId
+          );
           persistedContext = {
             ...context,
             eventType: (conversation.eventType as EventType | undefined) ?? context.eventType,
@@ -154,13 +164,14 @@ class PlanningEngineService {
       const enrichedUserMessage = buildEnrichedUserMessage(enrichedContext, trimmedMessage);
       llmMessages.push({
         role: 'user',
-        content: searchResults.length > 0
-          ? `${enrichedUserMessage}\n\n[Relevant EventFlow search results]\n${searchService.formatForPrompt(searchResults)}`
-          : enrichedUserMessage,
+        content:
+          searchResults.length > 0
+            ? `${enrichedUserMessage}\n\n[Relevant EventFlow search results]\n${searchService.formatForPrompt(searchResults)}`
+            : enrichedUserMessage,
       });
 
       const response = await llmService.chat(llmMessages, {
-        systemPrompt: `${buildDynamicSystemPrompt(enrichedContext)}\n\nWhen EventFlow search results are provided, use them naturally in the answer. Be clear when a result is from the local supplier database or EventFlow website index. Do not invent supplier names, URLs, prices, availability or ratings beyond the supplied results.`,
+        systemPrompt: `${buildDynamicSystemPrompt(enrichedContext)}\n\nWhen EventFlow search results are provided, answer the user's find/recommendation request first with a concise shortlist, even if some event-brief details are still missing. Be clear when a result is from the local supplier database, EventFlow catalog, online search fallback, or EventFlow website index. Do not invent supplier names, URLs, prices, availability or ratings beyond the supplied results; ask one focused follow-up only after the shortlist.`,
         temperature: missingDetails.length > 0 ? 0.55 : 0.7,
         maxTokens: searchResults.length > 0 ? 1000 : missingDetails.length > 0 ? 550 : 900,
       });

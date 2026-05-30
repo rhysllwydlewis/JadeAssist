@@ -2,12 +2,20 @@
  * Main JadeWidget class
  */
 
-import { WidgetConfig, WidgetState, WidgetMessage, DEFAULT_CONFIG, MAX_MESSAGE_LENGTH } from './types';
+import {
+  WidgetConfig,
+  WidgetState,
+  WidgetMessage,
+  WidgetSearchResult,
+  DEFAULT_CONFIG,
+  MAX_MESSAGE_LENGTH,
+} from './types';
 import { StorageManager } from './storage';
 import { ApiClient } from './api';
 import { getWidgetStyles } from './styles';
 
-const CLOSE_ICON_SVG = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><line x1="1" y1="1" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+const CLOSE_ICON_SVG =
+  '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><line x1="1" y1="1" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
 
 export class JadeWidget {
   private config: Required<WidgetConfig>;
@@ -28,7 +36,7 @@ export class JadeWidget {
   constructor(config: WidgetConfig = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.apiClient = new ApiClient(this.config.apiBaseUrl, this.config.authToken);
-    
+
     // Debug logging
     if (this.config.debug) {
       console.log('[JadeWidget] Initializing with config:', this.config);
@@ -42,9 +50,11 @@ export class JadeWidget {
       localStorage.setItem('__jade_test__', '1');
       localStorage.removeItem('__jade_test__');
     } catch {
-      console.warn('[JadeWidget] localStorage is unavailable – chat history, sound settings and session state will not be persisted across page loads.');
+      console.warn(
+        '[JadeWidget] localStorage is unavailable – chat history, sound settings and session state will not be persisted across page loads.'
+      );
     }
-    
+
     // Bind escape key handler for proper cleanup
     this.escapeKeyHandler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -131,9 +141,10 @@ export class JadeWidget {
          <span class="jade-avatar-icon jade-avatar-fallback" style="display:none;">💬</span>`
       : '<span class="jade-avatar-icon">💬</span>';
 
-    const badgeHtml = this.state.showGreeting && !this.state.isOpen
-      ? '<span class="jade-avatar-badge" aria-label="1 new notification">1</span>'
-      : '';
+    const badgeHtml =
+      this.state.showGreeting && !this.state.isOpen
+        ? '<span class="jade-avatar-badge" aria-label="1 new notification">1</span>'
+        : '';
 
     return `
       <button class="jade-avatar-button" aria-label="Toggle chat" data-action="toggle-chat">
@@ -281,9 +292,7 @@ export class JadeWidget {
   }
 
   private renderMessages(): string {
-    const messagesHtml = this.state.messages
-      .map((msg) => this.renderMessage(msg))
-      .join('');
+    const messagesHtml = this.state.messages.map((msg) => this.renderMessage(msg)).join('');
 
     return `
       <div class="jade-chat-messages" data-messages-container>
@@ -313,6 +322,11 @@ export class JadeWidget {
     `
         : '';
 
+    const searchCardsHtml =
+      !isUser && message.searchResults && message.searchResults.length > 0
+        ? this.renderSearchResultCards(message.searchResults)
+        : '';
+
     const contentHtml = isUser
       ? this.escapeHtml(message.content)
       : this.renderMarkdown(message.content);
@@ -330,11 +344,58 @@ export class JadeWidget {
         </div>
         <div class="jade-message-content">
           <div class="jade-message-bubble">${contentHtml}</div>
+          ${searchCardsHtml}
           <div class="jade-message-time">${time}</div>
           ${quickRepliesHtml}
         </div>
       </div>
     `;
+  }
+
+  private renderSearchResultCards(results: WidgetSearchResult[]): string {
+    const cards = results
+      .filter((result) => result.url)
+      .slice(0, 4)
+      .map((result) => {
+        const sourceLabel = this.searchSourceLabel(result.source);
+        const meta = [result.location, result.category, sourceLabel].filter(Boolean).join(' • ');
+        return `
+          <a class="jade-search-card" href="${this.escapeHtml(result.url ?? '#')}" target="_blank" rel="noopener noreferrer">
+            <span class="jade-search-card-title">${this.escapeHtml(result.title)}</span>
+            ${meta ? `<span class="jade-search-card-meta">${this.escapeHtml(meta)}</span>` : ''}
+            <span class="jade-search-card-description">${this.escapeHtml(result.description)}</span>
+            <span class="jade-search-card-cta">${
+              ['online-search', 'google-places', 'serpapi-maps', 'brave-search'].includes(
+                result.source
+              )
+                ? 'Open result'
+                : 'View profile'
+            }</span>
+          </a>
+        `;
+      })
+      .join('');
+
+    return cards ? `<div class="jade-search-cards">${cards}</div>` : '';
+  }
+
+  private searchSourceLabel(source: WidgetSearchResult['source']): string {
+    switch (source) {
+      case 'local-db':
+        return 'EventFlow profile';
+      case 'eventflow-catalog':
+        return 'EventFlow catalog';
+      case 'google-places':
+        return 'Google Places';
+      case 'serpapi-maps':
+        return 'Google Maps';
+      case 'brave-search':
+        return 'Web search';
+      case 'online-search':
+        return 'Online fallback';
+      default:
+        return 'EventFlow';
+    }
   }
 
   /**
@@ -463,7 +524,9 @@ export class JadeWidget {
         if (this.isMenuOpen) {
           // Focus first menu item for keyboard accessibility
           setTimeout(() => {
-            const firstItem = this.shadowRoot.querySelector<HTMLElement>('.jade-menu-panel [role="menuitem"]');
+            const firstItem = this.shadowRoot.querySelector<HTMLElement>(
+              '.jade-menu-panel [role="menuitem"]'
+            );
             firstItem?.focus();
           }, 50);
         }
@@ -526,7 +589,9 @@ export class JadeWidget {
           this.render();
           if (this.isMenuOpen) {
             setTimeout(() => {
-              const firstItem = this.shadowRoot.querySelector<HTMLElement>('.jade-menu-panel [role="menuitem"]');
+              const firstItem = this.shadowRoot.querySelector<HTMLElement>(
+                '.jade-menu-panel [role="menuitem"]'
+              );
               firstItem?.focus();
             }, 50);
           }
@@ -542,7 +607,7 @@ export class JadeWidget {
         const textarea = target as HTMLTextAreaElement;
         textarea.style.height = 'auto';
         textarea.style.height = Math.min(textarea.scrollHeight, 100) + 'px';
-        
+
         // Update character count
         const charCount = this.shadowRoot.querySelector('.jade-char-count');
         if (charCount) {
@@ -603,7 +668,10 @@ export class JadeWidget {
       });
       headerAvatar.addEventListener('load', () => {
         if (this.config.debug) {
-          console.log('[JadeWidget] Header avatar image loaded successfully:', this.config.avatarUrl);
+          console.log(
+            '[JadeWidget] Header avatar image loaded successfully:',
+            this.config.avatarUrl
+          );
         }
       });
     }
@@ -692,10 +760,7 @@ export class JadeWidget {
 
     try {
       // Send to API
-      const response = await this.apiClient.sendMessage(
-        message,
-        this.state.conversationId
-      );
+      const response = await this.apiClient.sendMessage(message, this.state.conversationId);
 
       // Update conversation ID
       if (!this.state.conversationId) {
@@ -703,8 +768,11 @@ export class JadeWidget {
         StorageManager.saveConversationId(response.conversationId);
       }
 
-      // Add assistant message
-      this.state.messages.push(response.message);
+      // Add assistant message and attach any supplier/search cards returned by the API.
+      this.state.messages.push({
+        ...response.message,
+        searchResults: response.searchResults,
+      });
       StorageManager.saveMessages(this.state.messages);
 
       // Play notification sound for assistant message
@@ -799,7 +867,10 @@ export class JadeWidget {
   private unlockAudioContext(): void {
     try {
       if (!this.audioCtx) {
-        this.audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+        this.audioCtx = new (
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+        )();
       }
       if (this.audioCtx.state === 'suspended') {
         this.audioCtx.resume().catch(() => {
@@ -819,7 +890,10 @@ export class JadeWidget {
     }
     try {
       if (!this.audioCtx) {
-        this.audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+        this.audioCtx = new (
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+        )();
       }
       const ctx = this.audioCtx;
 
@@ -850,11 +924,16 @@ export class JadeWidget {
         if (this.config.debug) {
           console.warn('[JadeWidget] AudioContext suspended – attempting resume before chime');
         }
-        ctx.resume().then(playChime).catch(() => {
-          // Always log at info level so operators can diagnose why the
-          // notification sound is not playing without enabling debug mode.
-          console.info('[JadeWidget] Notification sound skipped – AudioContext could not be resumed (likely no prior user gesture)');
-        });
+        ctx
+          .resume()
+          .then(playChime)
+          .catch(() => {
+            // Always log at info level so operators can diagnose why the
+            // notification sound is not playing without enabling debug mode.
+            console.info(
+              '[JadeWidget] Notification sound skipped – AudioContext could not be resumed (likely no prior user gesture)'
+            );
+          });
       } else {
         playChime();
       }
@@ -939,7 +1018,7 @@ export class JadeWidget {
   public mount(target?: HTMLElement): void {
     const mountTarget = target || document.body;
     mountTarget.appendChild(this.container);
-    
+
     // Show greeting after delay if conditions are met
     if (this.shouldShowGreeting()) {
       this.greetingTimeout = window.setTimeout(() => {

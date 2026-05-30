@@ -32,6 +32,11 @@ function parseEnv(vars: Record<string, string>): {
   databaseUrl: string | undefined;
   llm: { apiKey: string | undefined; model: string; tokenLimit: number };
   auth: { jwtSecret: string | undefined; provider: string };
+  searchProviders: {
+    braveSearchApiKey: string | undefined;
+    serpApiKey: string | undefined;
+    googlePlacesApiKey: string | undefined;
+  };
 } | null {
   const origEnv = process.env;
   const origExit = process.exit;
@@ -73,18 +78,42 @@ const autoFullResult = parseEnv({
   MONGODB_URL: 'mongodb://localhost:27017/jadeassist',
   OPENAI_API_KEY: 'sk-test-key',
   JWT_SECRET: 'super-secret-string-at-least-32-chars-long',
+  BRAVE_SEARCH_API_KEY: 'brave-test-key',
+  SERPAPI_API_KEY: 'serpapi-test-key',
+  GOOGLE_PLACES_API_KEY: 'google-places-test-key',
   PORT: '3001',
   NODE_ENV: 'test',
 });
 
-assert(autoFullResult !== null, 'does not call process.exit when all required vars are present in auto mode');
-assert(autoFullResult?.minimalMode === false, 'minimalMode is false when auto mode is fully configured');
+assert(
+  autoFullResult !== null,
+  'does not call process.exit when all required vars are present in auto mode'
+);
+assert(
+  autoFullResult?.minimalMode === false,
+  'minimalMode is false when auto mode is fully configured'
+);
 assert(autoFullResult?.minimalModeSetting === 'auto', 'minimalModeSetting is auto');
 assert(autoFullResult?.serviceConfigured === true, 'serviceConfigured is true');
 assert(autoFullResult?.missingRequiredVars.length === 0, 'missingRequiredVars is empty');
 assert(autoFullResult?.llm.apiKey === 'sk-test-key', 'llm.apiKey is set');
-assert(autoFullResult?.auth.jwtSecret === 'super-secret-string-at-least-32-chars-long', 'auth.jwtSecret is set');
+assert(
+  autoFullResult?.auth.jwtSecret === 'super-secret-string-at-least-32-chars-long',
+  'auth.jwtSecret is set'
+);
 assert(autoFullResult?.port === 3001, 'port is parsed as integer');
+assert(
+  autoFullResult?.searchProviders.braveSearchApiKey === 'brave-test-key',
+  'optional Brave Search API key is exposed'
+);
+assert(
+  autoFullResult?.searchProviders.serpApiKey === 'serpapi-test-key',
+  'optional SerpApi key is exposed'
+);
+assert(
+  autoFullResult?.searchProviders.googlePlacesApiKey === 'google-places-test-key',
+  'optional Google Places API key is exposed'
+);
 
 section('Auto mode — missing required vars enters minimal mode without exit');
 
@@ -95,11 +124,29 @@ const autoMissingResult = parseEnv({
 });
 
 assert(autoMissingResult !== null, 'does not call process.exit when vars are missing in auto mode');
-assert(autoMissingResult?.minimalMode === true, 'minimalMode is true when auto mode is missing vars');
+assert(
+  autoMissingResult?.minimalMode === true,
+  'minimalMode is true when auto mode is missing vars'
+);
 assert(autoMissingResult?.serviceConfigured === false, 'serviceConfigured is false');
-assert(autoMissingResult?.missingRequiredVars.includes('MONGODB_URL') === true, 'missingRequiredVars includes MONGODB_URL');
-assert(autoMissingResult?.missingRequiredVars.includes('OPENAI_API_KEY') === true, 'missingRequiredVars includes OPENAI_API_KEY');
-assert(autoMissingResult?.missingRequiredVars.includes('JWT_SECRET') === true, 'missingRequiredVars includes JWT_SECRET');
+assert(
+  autoMissingResult?.missingRequiredVars.includes('MONGODB_URL') === true,
+  'missingRequiredVars includes MONGODB_URL'
+);
+assert(
+  autoMissingResult?.missingRequiredVars.includes('OPENAI_API_KEY') === true,
+  'missingRequiredVars includes OPENAI_API_KEY'
+);
+assert(
+  autoMissingResult?.missingRequiredVars.includes('JWT_SECRET') === true,
+  'missingRequiredVars includes JWT_SECRET'
+);
+assert(
+  autoMissingResult?.searchProviders.braveSearchApiKey === undefined &&
+    autoMissingResult?.searchProviders.serpApiKey === undefined &&
+    autoMissingResult?.searchProviders.googlePlacesApiKey === undefined,
+  'optional supplier discovery keys are not required for startup'
+);
 
 section('Default mode — behaves like auto');
 
@@ -107,13 +154,22 @@ const defaultModeResult = parseEnv({
   MONGODB_URL: 'mongodb://localhost:27017/jadeassist',
   OPENAI_API_KEY: 'sk-test-key',
   JWT_SECRET: 'super-secret-string-at-least-32-chars-long',
+  BRAVE_SEARCH_API_KEY: 'brave-test-key',
+  SERPAPI_API_KEY: 'serpapi-test-key',
+  GOOGLE_PLACES_API_KEY: 'google-places-test-key',
   PORT: '3001',
   NODE_ENV: 'test',
 });
 
 assert(defaultModeResult !== null, 'default mode starts when fully configured');
-assert(defaultModeResult?.minimalModeSetting === 'auto', 'unset JADEASSIST_MINIMAL_MODE normalises to auto');
-assert(defaultModeResult?.minimalMode === false, 'default auto mode enables feature routes when configured');
+assert(
+  defaultModeResult?.minimalModeSetting === 'auto',
+  'unset JADEASSIST_MINIMAL_MODE normalises to auto'
+);
+assert(
+  defaultModeResult?.minimalMode === false,
+  'default auto mode enables feature routes when configured'
+);
 
 section('Strict mode — all required vars present');
 
@@ -122,11 +178,17 @@ const strictResult = parseEnv({
   MONGODB_URL: 'mongodb://localhost:27017/jadeassist',
   OPENAI_API_KEY: 'sk-test-key',
   JWT_SECRET: 'super-secret-string-at-least-32-chars-long',
+  BRAVE_SEARCH_API_KEY: 'brave-test-key',
+  SERPAPI_API_KEY: 'serpapi-test-key',
+  GOOGLE_PLACES_API_KEY: 'google-places-test-key',
   PORT: '3001',
   NODE_ENV: 'test',
 });
 
-assert(strictResult !== null, 'does not call process.exit when all required vars are present in strict mode');
+assert(
+  strictResult !== null,
+  'does not call process.exit when all required vars are present in strict mode'
+);
 assert(strictResult?.minimalMode === false, 'minimalMode is false in strict mode');
 assert(strictResult?.minimalModeSetting === 'false', 'minimalModeSetting is false');
 assert(strictResult?.serviceConfigured === true, 'serviceConfigured is true in strict mode');
@@ -139,7 +201,10 @@ const strictMissingResult = parseEnv({
   NODE_ENV: 'test',
 });
 
-assert(strictMissingResult === null, 'calls process.exit when required vars are missing in strict mode');
+assert(
+  strictMissingResult === null,
+  'calls process.exit when required vars are missing in strict mode'
+);
 
 section('Forced minimal mode — starts without required vars');
 
@@ -149,10 +214,16 @@ const minimalResult = parseEnv({
   NODE_ENV: 'test',
 });
 
-assert(minimalResult !== null, 'does not call process.exit in forced minimal mode without required vars');
+assert(
+  minimalResult !== null,
+  'does not call process.exit in forced minimal mode without required vars'
+);
 assert(minimalResult?.minimalMode === true, 'minimalMode is true');
 assert(minimalResult?.forcedMinimalMode === true, 'forcedMinimalMode is true');
-assert(minimalResult?.serviceConfigured === false, 'serviceConfigured is false when vars are missing');
+assert(
+  minimalResult?.serviceConfigured === false,
+  'serviceConfigured is false when vars are missing'
+);
 
 section('Forced minimal mode — all vars provided still keeps feature routes off');
 
@@ -161,14 +232,26 @@ const minimalFullResult = parseEnv({
   MONGODB_URL: 'mongodb://localhost:27017/jadeassist',
   OPENAI_API_KEY: 'sk-test-key',
   JWT_SECRET: 'super-secret-string-at-least-32-chars-long',
+  BRAVE_SEARCH_API_KEY: 'brave-test-key',
+  SERPAPI_API_KEY: 'serpapi-test-key',
+  GOOGLE_PLACES_API_KEY: 'google-places-test-key',
   PORT: '3001',
   NODE_ENV: 'test',
 });
 
-assert(minimalFullResult !== null, 'starts successfully when all vars are present in forced minimal mode');
+assert(
+  minimalFullResult !== null,
+  'starts successfully when all vars are present in forced minimal mode'
+);
 assert(minimalFullResult?.minimalMode === true, 'forced minimal mode remains true');
-assert(minimalFullResult?.serviceConfigured === true, 'serviceConfigured is true even though feature routes are forced off');
-assert(minimalFullResult?.missingRequiredVars.length === 0, 'missingRequiredVars is empty when all vars are present');
+assert(
+  minimalFullResult?.serviceConfigured === true,
+  'serviceConfigured is true even though feature routes are forced off'
+);
+assert(
+  minimalFullResult?.missingRequiredVars.length === 0,
+  'missingRequiredVars is empty when all vars are present'
+);
 
 console.log(`\n──────────────────────────────────`);
 console.log(`Results: ${passed} passed, ${failed} failed`);

@@ -37,12 +37,32 @@ export interface WidgetState {
   messages: WidgetMessage[];
 }
 
+export interface WidgetSearchResult {
+  id: string;
+  type: 'supplier' | 'venue' | 'website';
+  title: string;
+  description: string;
+  location?: string;
+  category?: string;
+  url?: string;
+  rating?: number;
+  source:
+    | 'local-db'
+    | 'eventflow-catalog'
+    | 'website-index'
+    | 'google-places'
+    | 'serpapi-maps'
+    | 'brave-search'
+    | 'online-search';
+}
+
 export interface WidgetMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
   quickReplies?: string[];
+  searchResults?: WidgetSearchResult[];
 }
 
 // Constants
@@ -50,18 +70,21 @@ export const MAX_MESSAGE_LENGTH = 1000;
 
 // Default woman avatar URL - uses the provided avatar image
 // Place your avatar image as 'avatar-woman.png' in the assets/ folder
-const DEFAULT_AVATAR_URL = 'https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/assets/avatar-woman.png';
+const DEFAULT_AVATAR_URL =
+  'https://cdn.jsdelivr.net/gh/rhysllwydlewis/JadeAssist@main/packages/widget/assets/avatar-woman.png';
 
 export const DEFAULT_CONFIG: Required<WidgetConfig> = {
   apiBaseUrl: '',
   authToken: '',
   assistantName: 'Jade',
-  greetingText: 'Hi! 👋 I\'m Jade, your event planning assistant. Can I help you plan your special day?',
+  greetingText:
+    "Hi! 👋 I'm Jade, your event planning assistant. Can I help you plan your special day?",
   greetingTooltipText: '👋 Hi! Need help planning your event?',
   avatarUrl: DEFAULT_AVATAR_URL,
   primaryColor: '#0B8073',
   accentColor: '#13B6A2',
-  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+  fontFamily:
+    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
   showDelayMs: 1000,
   offsetBottom: '80px', // Increased from 24px to avoid back-to-top button overlap
   offsetRight: '24px',

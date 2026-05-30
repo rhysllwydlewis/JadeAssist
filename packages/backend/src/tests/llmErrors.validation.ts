@@ -52,10 +52,7 @@ const rateLimitError = {
   },
 };
 
-assert(
-  isOpenAIRateLimitError(rateLimitError) === true,
-  'detects ordinary rate limit errors'
-);
+assert(isOpenAIRateLimitError(rateLimitError) === true, 'detects ordinary rate limit errors');
 assert(
   isOpenAIInsufficientQuotaError(rateLimitError) === false,
   'does not misclassify ordinary rate limits as insufficient quota'
@@ -75,6 +72,27 @@ assert(fallback.includes('built-in planning guide'), 'returns a clear local fall
 assert(fallback.includes('Wedding') || fallback.includes('wedding'), 'uses known event context');
 assert(fallback.includes('£25,000'), 'uses known budget context');
 assert(fallback.includes('Venue'), 'gives practical budget guidance');
+
+const recommendationFallback = buildLocalPlanningGuide([
+  {
+    role: 'user',
+    content:
+      'Find me a florist in Bolton\n\n[Known context: Location: Bolton]\n\n[Relevant EventFlow search results]\n1. Google Maps: florists in Bolton (Bolton) — florist: Live map results [https://www.google.com/maps/search/?api=1&query=event%20florists%20in%20Bolton] Source: online-search\n2. Add to Event: florists in Bolton (Bolton) — florist: UK event supplier marketplace [https://www.google.com/search?q=site%3Aaddtoevent.co.uk%20event%20florists%20in%20Bolton] Source: online-search',
+  },
+]);
+
+assert(
+  recommendationFallback.includes('Google Maps: florists in Bolton'),
+  'local fallback uses supplied search recommendations'
+);
+assert(
+  recommendationFallback.includes('Add to Event: florists in Bolton'),
+  'local fallback includes multiple shortlist options'
+);
+assert(
+  recommendationFallback.includes('capacity'),
+  'local recommendation fallback gives verification next steps'
+);
 
 console.log(`\n──────────────────────────────────`);
 console.log(`Results: ${passed} passed, ${failed} failed`);
