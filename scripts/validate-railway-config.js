@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 /**
- * Guard against the production misroute where the backend Railway service
- * reads the repo-root railway.toml and deploys the widget static server.
+ * Guard against production Railway regressions:
+ * - repo root must deploy the backend workspace, not the widget server;
+ * - backend deploys must default to minimal mode so missing secrets do not
+ *   crash first-time or partially configured Railway deployments.
  */
 
 'use strict';
@@ -31,8 +33,8 @@ assert(
   'repo-root railway.toml builds the backend workspace'
 );
 assert(
-  rootConfig.includes('startCommand = "npm run start --workspace=packages/backend"'),
-  'repo-root railway.toml starts the backend workspace'
+  rootConfig.includes('JADEASSIST_MINIMAL_MODE=${JADEASSIST_MINIMAL_MODE:-true} npm run start --workspace=packages/backend'),
+  'repo-root railway.toml starts backend in boot-safe minimal mode by default'
 );
 assert(
   !rootConfig.includes('dockerfilePath = "packages/widget/Dockerfile"'),
