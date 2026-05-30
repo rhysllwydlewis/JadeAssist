@@ -25,28 +25,34 @@ const routeDiagnostics = {
   widgetChatPath: '/api/widget/chat',
 };
 
+const allowedMethods = ['OPTIONS', 'POST'] as const;
+const allowHeader = allowedMethods.join(', ');
+
 function methodNotAllowed(req: Request, res: Response): void {
+  res.set('Allow', allowHeader);
+
+  if (req.method === 'HEAD') {
+    res.status(405).end();
+    return;
+  }
+
   res.status(405).json({
     success: false,
     error: {
       code: 'METHOD_NOT_ALLOWED',
       message: `${req.method} is not supported on /api/widget/chat. Use POST for chat messages.`,
     },
-    allowedMethods: ['OPTIONS', 'POST'],
+    allowedMethods,
     ...routeDiagnostics,
     timestamp: new Date().toISOString(),
   });
 }
 
-// Route-level compatibility guards. App-level CORS middleware supplies the
-// Access-Control-* headers; these handlers prevent Railway/browser probes from
-// showing this live endpoint as a missing-route 404.
+// Route-level compatibility guard. App-level CORS middleware supplies the
+// Access-Control-* headers; this prevents Railway/browser probes from showing
+// this live endpoint as a missing-route 404.
 router.options('/', (_req: Request, res: Response) => {
-  res.sendStatus(204);
-});
-router.get('/', methodNotAllowed);
-router.head('/', (_req: Request, res: Response) => {
-  res.status(405).end();
+  res.set('Allow', allowHeader).sendStatus(204);
 });
 
 const widgetRateLimiter = rateLimit({
@@ -105,7 +111,10 @@ router.post(
       const isDbSchema = !isRateLimit && isDbSchemaMissingError(err);
 
       if (isDbSchema) {
-        logger.warn({ err, conversationId: resolvedConversationId }, 'Widget chat DB not available');
+        logger.warn(
+          { err, conversationId: resolvedConversationId },
+          'Widget chat DB not available'
+        );
         res.status(503).json({
           success: false,
           error: {
@@ -149,5 +158,7 @@ router.post(
     });
   })
 );
+
+router.all('/', methodNotAllowed);
 
 export default router;
