@@ -43,7 +43,18 @@ const allowedOrigins = resolveAllowedOrigins(env.corsOrigin, env.isProduction);
 const corsOptions: CorsOptions = {
   origin: allowedOrigins,
   credentials: allowedOrigins !== '*',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 204,
 };
+
+// Explicitly handle the embedded widget preflight before rate limiting or route
+// matching.  The EventFlow browser failure was an OPTIONS 404 for this exact
+// endpoint, so keep this dedicated guard even though the global preflight handler
+// below should also catch it.
+app.options('/api/widget/chat', cors(corsOptions), (_req: Request, res: Response) => {
+  res.sendStatus(204);
+});
 
 // Respond to OPTIONS preflight requests immediately — must be registered before
 // any route so browsers receive correct CORS headers without hitting
@@ -52,6 +63,10 @@ app.options('*', cors(corsOptions));
 
 // Attach CORS headers to every real request as well.
 app.use(cors(corsOptions));
+
+// Ensure widget chat responses always receive CORS headers before the route's
+// stricter anonymous-user limiter runs.
+app.use('/api/widget/chat', cors(corsOptions));
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -164,7 +179,9 @@ if (!env.minimalMode && env.databaseUrl) {
     .catch((err: unknown) => {
       logger.error({ err }, 'Failed to connect to MongoDB on startup');
     });
-}// Graceful shutdown
+}
+
+// Graceful shutdown
 const gracefulShutdown = async (signal: string) => {
   logger.info(`${signal} received, starting graceful shutdown`);
 
