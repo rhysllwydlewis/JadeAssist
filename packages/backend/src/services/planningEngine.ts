@@ -1,6 +1,7 @@
 /**
  * Planning Engine Service - Core event planning logic
  */
+import mongoose from 'mongoose';
 import { llmService, LLMMessage } from './llmService';
 import { ConversationModel } from '../models/Conversation';
 import { EventType, TimelineItem, ChecklistItem, EVENT_TYPE_METADATA } from '@jadeassist/shared';
@@ -41,14 +42,22 @@ class PlanningEngineService {
    */
   async processRequest(context: PlanningContext, userMessage: string): Promise<PlanningResponse> {
     try {
+      const persistenceReady = mongoose.connection.readyState === 1;
       let messages: Awaited<ReturnType<typeof ConversationModel.getMessages>> = [];
 
-      try {
-        messages = await ConversationModel.getMessages(context.conversationId);
-      } catch (historyError) {
+      if (persistenceReady) {
+        try {
+          messages = await ConversationModel.getMessages(context.conversationId);
+        } catch (historyError) {
+          logger.warn(
+            { historyError, conversationId: context.conversationId },
+            'Conversation history unavailable; continuing with stateless chat turn'
+          );
+        }
+      } else {
         logger.warn(
-          { historyError, conversationId: context.conversationId },
-          'Conversation history unavailable; continuing with stateless chat turn'
+          { conversationId: context.conversationId, readyState: mongoose.connection.readyState },
+          'MongoDB is not connected; continuing with stateless chat turn'
         );
       }
 
@@ -75,7 +84,14 @@ class PlanningEngineService {
         throw new Error('EMPTY_LLM_RESPONSE');
       }
 
-      await this.persistTurn(context, userMessage, response.content, response.tokensUsed);
+      if (persistenceReady) {
+        await this.persistTurn(context, userMessage, response.content, response.tokensUsed);
+      } else {
+        logger.warn(
+          { conversationId: context.conversationId },
+          'Skipping conversation persistence because MongoDB is not connected'
+        );
+      }
 
       return this.parseResponse(response.content, context);
     } catch (error) {
