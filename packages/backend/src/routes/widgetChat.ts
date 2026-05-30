@@ -57,6 +57,16 @@ function widgetErrorResponse(err: unknown): {
 } {
   const errMessage = err instanceof Error ? err.message : '';
 
+  if (errMessage.startsWith('OPENAI_INSUFFICIENT_QUOTA:')) {
+    return {
+      status: 503,
+      code: 'OPENAI_INSUFFICIENT_QUOTA',
+      message:
+        'Jade is temporarily unavailable while the AI service quota is being updated. Please try again later.',
+      exposeDiagnostics: true,
+    };
+  }
+
   if (errMessage.startsWith('RATE_LIMIT:')) {
     return {
       status: 429,
@@ -78,7 +88,7 @@ function widgetErrorResponse(err: unknown): {
     return {
       status: 503,
       code: 'EMPTY_LLM_RESPONSE',
-      message: "Jade connected to the AI provider, but received an empty response. Please try again.",
+      message: 'Jade connected to the AI provider, but received an empty response. Please try again.',
     };
   }
 
