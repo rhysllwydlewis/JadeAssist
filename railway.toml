@@ -9,12 +9,11 @@
 #   @jadeassist/backend  -> Root Directory: .  -> railway.toml (this file)
 #   @jadeassist/widget   -> Static site / CDN for packages/widget/dist
 #
-# The backend service requires OPENAI_API_KEY, JWT_SECRET, and MONGODB_URL for
-# full chat functionality. Railway starts with JADEASSIST_MINIMAL_MODE=true by
-# default so first-time deploys and missing-secret deploys still boot, /healthz
-# stays available, and feature routes return clear JSON 503 errors. Once the
-# required secrets are present, set JADEASSIST_MINIMAL_MODE=false or override the
-# start command to run in strict mode.
+# Railway starts in JADEASSIST_MINIMAL_MODE=auto by default. Auto mode boots
+# safely when secrets are missing, but automatically enables the full agent as
+# soon as MONGODB_URL, OPENAI_API_KEY, and JWT_SECRET are present. Use
+# JADEASSIST_MINIMAL_MODE=false for strict fail-fast production checks, or true
+# only when intentionally disabling feature routes during setup.
 
 [build]
 builder = "nixpacks"
@@ -22,7 +21,7 @@ buildCommand = "npm run build --workspace=packages/backend"
 watchPaths = ["packages/backend/**", "packages/shared/**", "package.json", "package-lock.json", "tsconfig.json"]
 
 [deploy]
-startCommand = "JADEASSIST_MINIMAL_MODE=${JADEASSIST_MINIMAL_MODE:-true} npm run start --workspace=packages/backend"
+startCommand = "JADEASSIST_MINIMAL_MODE=${JADEASSIST_MINIMAL_MODE:-auto} npm run start --workspace=packages/backend"
 healthcheckPath = "/healthz"
 healthcheckTimeout = 30
 restartPolicyType = "on_failure"

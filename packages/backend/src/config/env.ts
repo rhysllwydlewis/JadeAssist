@@ -1,12 +1,12 @@
 /**
  * Environment configuration and validation
  *
- * Two modes:
- *   Strict (default) — MONGODB_URL, OPENAI_API_KEY, JWT_SECRET are required.
- *                      The process exits(1) if any are missing.
- *   Minimal (opt-in) — Set JADEASSIST_MINIMAL_MODE=true to allow the server to
- *                      start without the above vars. Routes that depend on them
- *                      return HTTP 503 until they are configured.
+ * Modes:
+ *   auto (default on Railway) — starts safely when required vars are missing,
+ *                             but enables full routes automatically once they
+ *                             are present.
+ *   false / strict          — fail fast when required vars are missing.
+ *   true / minimal         — force minimal boot mode and disable feature routes.
  */
 import dotenv from 'dotenv';
 import { z } from 'zod';
@@ -14,10 +14,22 @@ import { z } from 'zod';
 // Load environment variables
 dotenv.config();
 
-// ── Step 1: read minimal-mode flag before full schema parse ──────────────────
-const MINIMAL_MODE = process.env.JADEASSIST_MINIMAL_MODE === 'true';
+type MinimalModeSetting = 'auto' | 'true' | 'false';
 
-// ── Step 2: schema — conditionally-required fields become optional in minimal ─
+function normaliseMinimalMode(value: string | undefined): MinimalModeSetting {
+  const normalised = (value ?? 'auto').trim().toLowerCase();
+
+  if (['1', 'true', 'yes', 'minimal'].includes(normalised)) return 'true';
+  if (['0', 'false', 'no', 'strict'].includes(normalised)) return 'false';
+  return 'auto';
+}
+
+function hasValue(value: string | undefined): boolean {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+const minimalModeSetting = normaliseMinimalMode(process.env['JADEASSIST_MINIMAL_MODE']);
+
 const envSchema = z.object({
   // Server
   PORT: z.string().default('3001'),
@@ -25,18 +37,18 @@ const envSchema = z.object({
   API_URL: z.string().default('http://localhost:3001'),
   JADEASSIST_MINIMAL_MODE: z.string().optional(),
 
-  // Database — MONGODB_URL is the primary env var.  DATABASE_URL is accepted
+  // Database — MONGODB_URL is the primary env var. DATABASE_URL is accepted
   // as a legacy alias so existing Railway configs keep working without changes.
   MONGODB_URL: z.string().optional(),
   DATABASE_URL: z.string().optional(),
 
-  // LLM — required in strict mode, optional in minimal
-  OPENAI_API_KEY: MINIMAL_MODE ? z.string().optional() : z.string(),
+  // LLM
+  OPENAI_API_KEY: z.string().optional(),
   LLM_MODEL: z.string().default('gpt-4-turbo'),
   LLM_TOKEN_LIMIT: z.string().default('4000'),
 
-  // Auth — required in strict mode, optional in minimal
-  JWT_SECRET: MINIMAL_MODE ? z.string().optional() : z.string(),
+  // Auth
+  JWT_SECRET: z.string().optional(),
   AUTH_PROVIDER: z.enum(['jwt', 'supabase', 'eventflow']).default('jwt'),
 
   // Event-flow integration
@@ -48,15 +60,13 @@ const envSchema = z.object({
   EVENTFLOW_CATALOG_API_KEY: z.string().optional(),
 
   // CORS — comma-separated list of allowed origins, '*' for all, or empty to
-  // use the built-in production fallback (event-flow.co.uk domains in prod,
-  // wildcard in development).
+  // use the built-in production fallback.
   CORS_ORIGIN: z.string().default(''),
 
   // Logging
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
 });
 
-// ── Step 3: parse ────────────────────────────────────────────────────────────
 const parsedEnv = envSchema.safeParse(process.env);
 
 if (!parsedEnv.success) {
@@ -67,46 +77,45 @@ if (!parsedEnv.success) {
 
 // Resolve the DB URL: MONGODB_URL takes precedence over DATABASE_URL
 const resolvedDbUrl = parsedEnv.data.MONGODB_URL ?? parsedEnv.data.DATABASE_URL;
+const missingRequiredVars = [
+  ...(!hasValue(resolvedDbUrl) ? ['MONGODB_URL'] : []),
+  ...(!hasValue(parsedEnv.data.OPENAI_API_KEY) ? ['OPENAI_API_KEY'] : []),
+  ...(!hasValue(parsedEnv.data.JWT_SECRET) ? ['JWT_SECRET'] : []),
+];
 
-// ── Step 4: strict-mode enforcement (fail-fast) ──────────────────────────────
-if (!MINIMAL_MODE) {
-  const missing: string[] = [];
-  if (!resolvedDbUrl) missing.push('MONGODB_URL');
-  if (!parsedEnv.data.OPENAI_API_KEY) missing.push('OPENAI_API_KEY');
-  if (!parsedEnv.data.JWT_SECRET) missing.push('JWT_SECRET');
+const forcedMinimalMode = minimalModeSetting === 'true';
+const strictMode = minimalModeSetting === 'false';
+const autoMinimalMode = minimalModeSetting === 'auto' && missingRequiredVars.length > 0;
+const minimalMode = forcedMinimalMode || autoMinimalMode;
+const serviceConfigured = missingRequiredVars.length === 0;
 
-  if (missing.length > 0) {
-    console.error(`❌ Missing required environment variables: ${missing.join(', ')}`);
-    console.error('   Tip: set JADEASSIST_MINIMAL_MODE=true to start in minimal boot mode');
-    console.error('   (health check endpoints stay up; feature routes return 503).');
-    process.exit(1);
-  }
+if (strictMode && missingRequiredVars.length > 0) {
+  console.error(`❌ Missing required environment variables: ${missingRequiredVars.join(', ')}`);
+  console.error('   Set JADEASSIST_MINIMAL_MODE=auto for boot-safe Railway deploys during setup.');
+  process.exit(1);
 }
 
-// ── Step 5: minimal-mode warnings ────────────────────────────────────────────
-if (MINIMAL_MODE) {
-  const missing: string[] = [];
-  if (!resolvedDbUrl) missing.push('MONGODB_URL');
-  if (!parsedEnv.data.OPENAI_API_KEY) missing.push('OPENAI_API_KEY');
-  if (!parsedEnv.data.JWT_SECRET) missing.push('JWT_SECRET');
+if (minimalMode) {
+  console.warn(`⚠️  JADEASSIST_MINIMAL_MODE resolved to ${forcedMinimalMode ? 'forced minimal' : 'auto minimal'} mode.`);
 
-  if (missing.length > 0) {
-    console.warn('⚠️  JADEASSIST_MINIMAL_MODE is active.');
-    console.warn(`⚠️  Missing vars: ${missing.join(', ')}`);
-    console.warn(
-      '⚠️  Disabled features: database queries, AI chat, JWT authentication.',
-    );
-    console.warn('⚠️  /healthz and / remain fully operational.');
-    console.warn(
-      '⚠️  Set the missing vars and remove JADEASSIST_MINIMAL_MODE to enable all features.',
-    );
+  if (missingRequiredVars.length > 0) {
+    console.warn(`⚠️  Missing vars: ${missingRequiredVars.join(', ')}`);
+    console.warn('⚠️  Feature routes return 503 until the missing vars are configured.');
+  } else {
+    console.warn('⚠️  All required vars are present, but minimal mode is being forced.');
+    console.warn('⚠️  Set JADEASSIST_MINIMAL_MODE=auto or false to enable feature routes.');
   }
+
+  console.warn('⚠️  /healthz and / remain operational.');
 }
 
-// ── Step 6: export typed config ───────────────────────────────────────────────
 export const env = {
   // Mode
-  minimalMode: MINIMAL_MODE,
+  minimalMode,
+  minimalModeSetting,
+  serviceConfigured,
+  missingRequiredVars,
+  forcedMinimalMode,
 
   // Server
   port: parseInt(parsedEnv.data.PORT, 10),
@@ -116,19 +125,19 @@ export const env = {
   isProduction: parsedEnv.data.NODE_ENV === 'production',
   isTest: parsedEnv.data.NODE_ENV === 'test',
 
-  // Database URL (MongoDB) — string | undefined; always check before use in minimal mode
-  databaseUrl: resolvedDbUrl as string | undefined,
+  // Database URL (MongoDB)
+  databaseUrl: hasValue(resolvedDbUrl) ? resolvedDbUrl : undefined,
 
-  // LLM (string | undefined — always check before use in minimal mode)
+  // LLM
   llm: {
-    apiKey: parsedEnv.data.OPENAI_API_KEY as string | undefined,
+    apiKey: hasValue(parsedEnv.data.OPENAI_API_KEY) ? parsedEnv.data.OPENAI_API_KEY : undefined,
     model: parsedEnv.data.LLM_MODEL,
     tokenLimit: parseInt(parsedEnv.data.LLM_TOKEN_LIMIT, 10),
   },
 
-  // Auth (string | undefined — always check before use in minimal mode)
+  // Auth
   auth: {
-    jwtSecret: parsedEnv.data.JWT_SECRET as string | undefined,
+    jwtSecret: hasValue(parsedEnv.data.JWT_SECRET) ? parsedEnv.data.JWT_SECRET : undefined,
     provider: parsedEnv.data.AUTH_PROVIDER,
   },
 

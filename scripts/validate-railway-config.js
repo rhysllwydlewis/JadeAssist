@@ -2,8 +2,8 @@
 /**
  * Guard against production Railway regressions:
  * - repo root must deploy the backend workspace, not the widget server;
- * - backend deploys must default to minimal mode so missing secrets do not
- *   crash first-time or partially configured Railway deployments.
+ * - backend deploys must default to auto mode so missing secrets do not crash
+ *   first-time deployments, while configured services still enable the agent.
  */
 
 'use strict';
@@ -33,8 +33,12 @@ assert(
   'repo-root railway.toml builds the backend workspace'
 );
 assert(
-  rootConfig.includes('JADEASSIST_MINIMAL_MODE=${JADEASSIST_MINIMAL_MODE:-true} npm run start --workspace=packages/backend'),
-  'repo-root railway.toml starts backend in boot-safe minimal mode by default'
+  rootConfig.includes('JADEASSIST_MINIMAL_MODE=${JADEASSIST_MINIMAL_MODE:-auto} npm run start --workspace=packages/backend'),
+  'repo-root railway.toml starts backend in auto mode by default'
+);
+assert(
+  !rootConfig.includes('JADEASSIST_MINIMAL_MODE=${JADEASSIST_MINIMAL_MODE:-true}'),
+  'repo-root railway.toml does not force minimal mode when secrets exist'
 );
 assert(
   !rootConfig.includes('dockerfilePath = "packages/widget/Dockerfile"'),

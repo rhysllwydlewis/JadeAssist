@@ -16,6 +16,7 @@ import { planningEngine } from '../services/planningEngine';
 import { logger } from '../utils/logger';
 import { RATE_LIMITS } from '../utils/constants';
 import { isDbSchemaMissingError } from '../utils/dbErrors';
+import { env } from '../config/env';
 
 const router = Router();
 
@@ -48,6 +49,56 @@ function methodNotAllowed(req: Request, res: Response): void {
   });
 }
 
+function widgetErrorResponse(err: unknown): {
+  status: number;
+  code: string;
+  message: string;
+  exposeDiagnostics?: boolean;
+} {
+  const errMessage = err instanceof Error ? err.message : '';
+
+  if (errMessage.startsWith('RATE_LIMIT:')) {
+    return {
+      status: 429,
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: "I'm getting a lot of requests right now — please give me a moment and try again.",
+    };
+  }
+
+  if (errMessage.startsWith('LLM_NOT_CONFIGURED:')) {
+    return {
+      status: 503,
+      code: 'LLM_NOT_CONFIGURED',
+      message: 'Jade is online, but the AI provider is not configured yet. Please add OPENAI_API_KEY in Railway.',
+      exposeDiagnostics: true,
+    };
+  }
+
+  if (errMessage === 'EMPTY_LLM_RESPONSE') {
+    return {
+      status: 503,
+      code: 'EMPTY_LLM_RESPONSE',
+      message: "Jade connected to the AI provider, but received an empty response. Please try again.",
+    };
+  }
+
+  if (isDbSchemaMissingError(err)) {
+    return {
+      status: 503,
+      code: 'DB_NOT_INITIALIZED',
+      message:
+        'Jade is online, but the database is not available yet. Please check MONGODB_URL and the MongoDB service in Railway.',
+      exposeDiagnostics: true,
+    };
+  }
+
+  return {
+    status: 503,
+    code: 'LLM_ERROR',
+    message: "I'm having trouble connecting to my planning system right now. Please try again in a moment.",
+  };
+}
+
 // Route-level compatibility guard. App-level CORS middleware supplies the
 // Access-Control-* headers; this prevents Railway/browser probes from showing
 // this live endpoint as a missing-route 404.
@@ -73,7 +124,7 @@ const widgetRateLimiter = rateLimit({
 });
 
 const widgetChatRequestSchema = z.object({
-  message: z.string().min(1).max(5000),
+  message: z.string().trim().min(1).max(5000),
   conversationId: z.string().optional(),
   userId: z.string().optional(),
 });
@@ -106,35 +157,29 @@ router.post(
         message
       );
     } catch (err) {
-      const errMessage = err instanceof Error ? err.message : '';
-      const isRateLimit = errMessage.startsWith('RATE_LIMIT:');
-      const isDbSchema = !isRateLimit && isDbSchemaMissingError(err);
+      const errorResponse = widgetErrorResponse(err);
 
-      if (isDbSchema) {
-        logger.warn(
-          { err, conversationId: resolvedConversationId },
-          'Widget chat DB not available'
-        );
-        res.status(503).json({
-          success: false,
-          error: {
-            code: 'DB_NOT_INITIALIZED',
-            message:
-              'The database is not available. Please check that MONGODB_URL is set correctly and the MongoDB service is running.',
-          },
-          timestamp: new Date().toISOString(),
-        });
-        return;
-      }
+      logger.warn(
+        {
+          err,
+          conversationId: resolvedConversationId,
+          errorCode: errorResponse.code,
+          status: errorResponse.status,
+        },
+        'Widget chat request failed'
+      );
 
-      logger.warn({ err, conversationId: resolvedConversationId }, 'Widget chat planning error');
-      res.status(isRateLimit ? 429 : 503).json({
+      res.status(errorResponse.status).json({
         success: false,
         error: {
-          code: isRateLimit ? 'RATE_LIMIT_EXCEEDED' : 'LLM_ERROR',
-          message: isRateLimit
-            ? "I'm getting a lot of requests right now — please give me a moment and try again."
-            : "I'm having trouble connecting to my planning system right now. Please try again in a moment.",
+          code: errorResponse.code,
+          message: errorResponse.message,
+          ...(errorResponse.exposeDiagnostics && {
+            minimalMode: env.minimalMode,
+            minimalModeSetting: env.minimalModeSetting,
+            serviceConfigured: env.serviceConfigured,
+            missingVars: env.missingRequiredVars,
+          }),
         },
         timestamp: new Date().toISOString(),
       });

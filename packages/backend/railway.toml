@@ -1,24 +1,11 @@
 # railway.toml — Backend service configuration
 #
-# Usage: Prefer setting the "@jadeassist/backend" service root directory to
-#        "." so Railway uses the repo-root railway.toml. This file remains
-#        as a package-local fallback for teams that deliberately set the root
-#        directory to "packages/backend" and provide package-local installs.
+# Usage: Prefer setting the backend Railway service root directory to "." so
+# Railway uses the repo-root railway.toml. This file remains as a package-local
+# fallback for services rooted at packages/backend.
 #
-# Required environment variables for full chat functionality:
-#   OPENAI_API_KEY   — Your OpenAI API key (starts with sk-…)
-#   JWT_SECRET       — Long random secret for JWT signing (32+ chars)
-#   MONGODB_URL      — MongoDB connection string (use ${{ MongoDB.MONGO_URL }} on Railway)
-#
-# This fallback config also starts with JADEASSIST_MINIMAL_MODE=true by default
-# so missing secrets do not crash first-time Railway deploys. Feature routes
-# return clear JSON 503 errors until the required secrets are configured and
-# JADEASSIST_MINIMAL_MODE is set to false or removed.
-#
-# Recommended (optional) variables:
-#   LLM_MODEL        — OpenAI model name, e.g. gpt-4o-mini (default: gpt-4-turbo)
-#   NODE_ENV         — Set to "production" on Railway
-#   CORS_ORIGIN      — Comma-separated allowed origins, e.g. https://event-flow.co.uk
+# JADEASSIST_MINIMAL_MODE=auto boots safely during setup, but automatically
+# enables the full backend as soon as required configuration is present.
 
 [build]
 builder = "nixpacks"
@@ -26,7 +13,7 @@ buildCommand = "npm run build"
 watchPaths = ["packages/backend/**", "packages/shared/**"]
 
 [deploy]
-startCommand = "JADEASSIST_MINIMAL_MODE=${JADEASSIST_MINIMAL_MODE:-true} npm run start"
+startCommand = "JADEASSIST_MINIMAL_MODE=${JADEASSIST_MINIMAL_MODE:-auto} npm run start"
 healthcheckPath = "/healthz"
 healthcheckTimeout = 30
 restartPolicyType = "on_failure"

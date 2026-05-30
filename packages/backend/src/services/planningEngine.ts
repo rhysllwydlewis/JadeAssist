@@ -1,6 +1,7 @@
 /**
  * Planning Engine Service - Core event planning logic
  */
+import mongoose from 'mongoose';
 import { llmService, LLMMessage } from './llmService';
 import { ConversationModel } from '../models/Conversation';
 import { EventType, TimelineItem, ChecklistItem, EVENT_TYPE_METADATA } from '@jadeassist/shared';
@@ -33,49 +34,91 @@ export interface PlanningResponse {
 
 class PlanningEngineService {
   /**
-   * Process a planning request and generate response
+   * Process a planning request and generate response.
+   *
+   * Conversation persistence is useful, but it should not make the public
+   * widget fail. If MongoDB is still warming up or temporarily unavailable, the
+   * request falls back to a stateless LLM turn and logs the persistence issue.
    */
   async processRequest(context: PlanningContext, userMessage: string): Promise<PlanningResponse> {
     try {
-      // Get conversation history
-      const messages = await ConversationModel.getMessages(context.conversationId);
+      const persistenceReady = mongoose.connection.readyState === 1;
+      let messages: Awaited<ReturnType<typeof ConversationModel.getMessages>> = [];
 
-      // Build context for LLM
-      const llmMessages: LLMMessage[] = messages.map((msg) => ({
+      if (persistenceReady) {
+        try {
+          messages = await ConversationModel.getMessages(context.conversationId);
+        } catch (historyError) {
+          logger.warn(
+            { historyError, conversationId: context.conversationId },
+            'Conversation history unavailable; continuing with stateless chat turn'
+          );
+        }
+      } else {
+        logger.warn(
+          { conversationId: context.conversationId, readyState: mongoose.connection.readyState },
+          'MongoDB is not connected; continuing with stateless chat turn'
+        );
+      }
+
+      // Build context for LLM from recent history only. This keeps prompts small
+      // and prevents stale/oversized conversations from degrading the widget.
+      const llmMessages: LLMMessage[] = messages.slice(-12).map((msg) => ({
         role: msg.role as 'user' | 'assistant' | 'system',
-        content: msg.content,
+        content: msg.content.slice(0, 4000),
       }));
 
-      // Add current user message with enriched context appended
-      const enrichedMessage = buildEnrichedUserMessage(context, userMessage);
+      const enrichedMessage = buildEnrichedUserMessage(context, userMessage.trim());
       llmMessages.push({
         role: 'user',
         content: enrichedMessage,
       });
 
-      // Build dynamic system prompt that reflects known context
       const dynamicSystemPrompt = buildDynamicSystemPrompt(context);
 
-      // Get LLM response
       const response = await llmService.chat(llmMessages, {
         systemPrompt: dynamicSystemPrompt,
       });
 
-      // Store the assistant's response
-      await ConversationModel.addMessage(
-        context.conversationId,
-        'assistant',
-        response.content,
-        response.tokensUsed
-      );
+      if (!response.content.trim()) {
+        throw new Error('EMPTY_LLM_RESPONSE');
+      }
 
-      // Parse response and extract structured data
-      const planningResponse = this.parseResponse(response.content, context);
+      if (persistenceReady) {
+        await this.persistTurn(context, userMessage, response.content, response.tokensUsed);
+      } else {
+        logger.warn(
+          { conversationId: context.conversationId },
+          'Skipping conversation persistence because MongoDB is not connected'
+        );
+      }
 
-      return planningResponse;
+      return this.parseResponse(response.content, context);
     } catch (error) {
       logger.error({ error, context }, 'Planning request failed');
       throw error;
+    }
+  }
+
+  private async persistTurn(
+    context: PlanningContext,
+    userMessage: string,
+    assistantMessage: string,
+    tokensUsed: number
+  ): Promise<void> {
+    try {
+      await ConversationModel.addMessage(context.conversationId, 'user', userMessage);
+      await ConversationModel.addMessage(
+        context.conversationId,
+        'assistant',
+        assistantMessage,
+        tokensUsed
+      );
+    } catch (persistError) {
+      logger.warn(
+        { persistError, conversationId: context.conversationId },
+        'Conversation persistence failed; response was still returned to the widget'
+      );
     }
   }
 
@@ -97,13 +140,12 @@ class PlanningEngineService {
     - When to book venues
     - When to send invitations
     - When to confirm suppliers
-    - When to finalize details
+    - When to finalise details
     
     Return the timeline as a JSON array with items containing: title, description, dueDate (as ISO string), category.`;
 
     const response = await llmService.generate(prompt);
 
-    // Parse timeline from response
     try {
       const timelineData = JSON.parse(response.content) as TimelineItem[];
       return timelineData.map((item, index) => ({
