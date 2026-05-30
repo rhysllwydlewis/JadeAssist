@@ -26,19 +26,13 @@ import widgetChatRouter from './routes/widgetChat';
 const app: Application = express();
 
 // Trust the first proxy hop — required on Railway (and similar PaaS platforms)
-// so that express-rate-limit can read the real client IP from X-Forwarded-For
-// instead of logging ERR_ERL_UNEXPECTED_X_FORWARDED_FOR warnings.
+// so that express-rate-limit can read the real client IP from X-Forwarded-For.
 app.set('trust proxy', 1);
 
 // Security middleware
 app.use(helmet());
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
-// resolveAllowedOrigins applies the following rules:
-//  1. CORS_ORIGIN='*'          → wildcard (all origins allowed, no credentials).
-//  2. CORS_ORIGIN=<list>       → only the specified comma-separated origins.
-//  3. CORS_ORIGIN not set + production → PRODUCTION_FALLBACK_ORIGINS (EventFlow domains).
-//  4. CORS_ORIGIN not set + other envs → wildcard (convenient for local dev).
 const allowedOrigins = resolveAllowedOrigins(env.corsOrigin, env.isProduction);
 const corsOptions: CorsOptions = {
   origin: allowedOrigins,
@@ -49,23 +43,18 @@ const corsOptions: CorsOptions = {
 };
 
 // Explicitly handle the embedded widget preflight before rate limiting or route
-// matching.  The EventFlow browser failure was an OPTIONS 404 for this exact
-// endpoint, so keep this dedicated guard even though the global preflight handler
-// below should also catch it.
+// matching. The EventFlow browser failure was an OPTIONS 404 for this endpoint.
 app.options('/api/widget/chat', cors(corsOptions), (_req: Request, res: Response) => {
   res.sendStatus(204);
 });
 
-// Respond to OPTIONS preflight requests immediately — must be registered before
-// any route so browsers receive correct CORS headers without hitting
-// rate-limiting or other middleware.
+// Respond to OPTIONS preflight requests immediately.
 app.options('*', cors(corsOptions));
 
 // Attach CORS headers to every real request as well.
 app.use(cors(corsOptions));
 
-// Ensure widget chat responses always receive CORS headers before the route's
-// stricter anonymous-user limiter runs.
+// Ensure widget chat responses always receive CORS headers before route limits.
 app.use('/api/widget/chat', cors(corsOptions));
 
 // Body parsing middleware
@@ -107,7 +96,13 @@ app.use('/health', healthRouter);
 
 // Railway / k8s health probe — lightweight, no DB check, always up
 app.get('/healthz', (_req, res) => {
-  res.status(200).json({ ok: true, minimalMode: env.minimalMode });
+  res.status(200).json({
+    ok: true,
+    minimalMode: env.minimalMode,
+    minimalModeSetting: env.minimalModeSetting,
+    serviceConfigured: env.serviceConfigured,
+    missingRequiredVars: env.missingRequiredVars,
+  });
 });
 
 // Root endpoint — always mounted
@@ -117,32 +112,30 @@ app.get('/', (_req, res) => {
     version: '1.0.0',
     status: env.minimalMode ? 'minimal' : 'running',
     minimalMode: env.minimalMode,
+    minimalModeSetting: env.minimalModeSetting,
+    serviceConfigured: env.serviceConfigured,
+    missingRequiredVars: env.missingRequiredVars,
     documentation: '/health',
   });
 });
 
 // ── Feature routes ─────────────────────────────────────────────────────────────
-// In minimal mode the service may be missing MONGODB_URL / OPENAI_API_KEY /
-// JWT_SECRET.  Rather than not mounting these routes at all (which makes
-// misconfiguration hard to debug) we return a clear 503 with guidance.
+// In minimal mode the service may be missing required vars, or minimal mode may
+// have been forced. Rather than hiding routes behind 404s, return explicit 503s.
 if (env.minimalMode) {
-  // env.databaseUrl already resolves MONGODB_URL and DATABASE_URL as fallback
-  const hasDb = Boolean(env.databaseUrl);
-  const missingVars = [
-    ...(!hasDb ? ['MONGODB_URL'] : []),
-    ...(!process.env['OPENAI_API_KEY'] ? ['OPENAI_API_KEY'] : []),
-    ...(!process.env['JWT_SECRET'] ? ['JWT_SECRET'] : []),
-  ];
-
   const unconfiguredHandler = (_req: Request, res: Response): void => {
+    const forcedWithSecrets = env.forcedMinimalMode && env.serviceConfigured;
     res.status(503).json({
       success: false,
       error: {
         code: 'SERVICE_NOT_CONFIGURED',
-        message:
-          'This endpoint requires MONGODB_URL, OPENAI_API_KEY, and JWT_SECRET. ' +
-          'Configure the missing variables and set JADEASSIST_MINIMAL_MODE=false (or remove it) to enable full functionality.',
-        missingVars,
+        message: forcedWithSecrets
+          ? 'JadeAssist is configured, but JADEASSIST_MINIMAL_MODE is forcing feature routes off. Set JADEASSIST_MINIMAL_MODE=auto or false to enable the agent.'
+          : 'JadeAssist is waiting for required configuration before this endpoint can run.',
+        missingVars: env.missingRequiredVars,
+        minimalMode: env.minimalMode,
+        minimalModeSetting: env.minimalModeSetting,
+        serviceConfigured: env.serviceConfigured,
       },
       timestamp: new Date().toISOString(),
     });
@@ -169,15 +162,14 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 // ── Database initialisation ───────────────────────────────────────────────────
-// Connect to MongoDB when MONGODB_URL (or legacy DATABASE_URL) is present and
-// we are not in minimal mode.  Mongoose buffers commands until connected, so
-// the server can start accepting HTTP while the connection establishes.
-if (!env.minimalMode && env.databaseUrl) {
+// Connect when a DB URL is present. In auto/full mode the chat route can still
+// answer statelessly if MongoDB is slow or temporarily unavailable.
+if (env.databaseUrl) {
   const { SupplierModel } = require('./models/Supplier') as typeof import('./models/Supplier');
   connectDatabase()
     .then(() => SupplierModel.seedIfEmpty())
     .catch((err: unknown) => {
-      logger.error({ err }, 'Failed to connect to MongoDB on startup');
+      logger.error({ err }, 'Failed to connect to MongoDB on startup; chat will run statelessly until DB is available');
     });
 }
 
@@ -185,12 +177,10 @@ if (!env.minimalMode && env.databaseUrl) {
 const gracefulShutdown = async (signal: string) => {
   logger.info(`${signal} received, starting graceful shutdown`);
 
-  // Stop accepting new connections
   server.close(() => {
     logger.info('HTTP server closed');
   });
 
-  // Close database connections
   await closeDatabaseConnections();
 
   logger.info('Graceful shutdown complete');
@@ -220,10 +210,13 @@ const server = app.listen(env.port, () => {
       nodeEnv: env.nodeEnv,
       version: '1.0.0',
       minimalMode: env.minimalMode,
+      minimalModeSetting: env.minimalModeSetting,
+      serviceConfigured: env.serviceConfigured,
+      missingRequiredVars: env.missingRequiredVars,
     },
     env.minimalMode
-      ? '🚀 JadeAssist API server started (minimal mode — feature routes return 503 until secrets are configured)'
-      : '🚀 JadeAssist API server started'
+      ? '🚀 JadeAssist API server started in minimal mode'
+      : '🚀 JadeAssist API server started with feature routes enabled'
   );
 
   logger.info(
@@ -231,6 +224,7 @@ const server = app.listen(env.port, () => {
       health: `http://localhost:${env.port}/health`,
       healthz: `http://localhost:${env.port}/healthz`,
       assist: `http://localhost:${env.port}/api/v1/assist`,
+      widgetChat: `http://localhost:${env.port}/api/widget/chat`,
     },
     '📍 API endpoints'
   );
