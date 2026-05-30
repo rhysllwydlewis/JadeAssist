@@ -15,6 +15,18 @@ export interface ConversationBriefMetadata {
   missingDetails?: string[];
 }
 
+export interface WidgetSearchResult {
+  id: string;
+  type: 'supplier' | 'venue' | 'website';
+  title: string;
+  description: string;
+  location?: string;
+  category?: string;
+  url?: string;
+  rating?: number;
+  source: 'local-db' | 'eventflow-catalog' | 'website-index';
+}
+
 export interface ChatApiResponse {
   success: boolean;
   data?: {
@@ -27,6 +39,7 @@ export interface ChatApiResponse {
     };
     suggestions?: string[];
     conversation?: ConversationBriefMetadata;
+    searchResults?: WidgetSearchResult[];
   };
   error?: {
     code: string;
@@ -59,7 +72,7 @@ export class ApiClient {
   async sendMessage(
     message: string,
     conversationId?: string
-  ): Promise<{ conversationId: string; message: WidgetMessage; conversation?: ConversationBriefMetadata }> {
+  ): Promise<{ conversationId: string; message: WidgetMessage; conversation?: ConversationBriefMetadata; searchResults?: WidgetSearchResult[] }> {
     if (this.demoMode) {
       return this.mockResponse(message);
     }
@@ -109,6 +122,7 @@ export class ApiClient {
     return {
       conversationId: data.data.conversationId,
       conversation: data.data.conversation,
+      searchResults: data.data.searchResults,
       message: {
         id: data.data.message.id,
         role: 'assistant',
@@ -135,7 +149,7 @@ export class ApiClient {
 
   private async mockResponse(
     userMessage: string
-  ): Promise<{ conversationId: string; message: WidgetMessage; conversation?: ConversationBriefMetadata }> {
+  ): Promise<{ conversationId: string; message: WidgetMessage; conversation?: ConversationBriefMetadata; searchResults?: WidgetSearchResult[] }> {
     // Simulate realistic API delay
     await new Promise((resolve) => setTimeout(resolve, 700 + Math.random() * 400));
 
@@ -254,66 +268,28 @@ export class ApiClient {
       };
     }
 
-    // ── Wedding deep knowledge ──────────────────────────────────────────
-    if (lower.includes('wedding') || state.eventType === 'wedding') {
+    // Demo-mode detailed responses are intentionally kept below in this file.
+    // The hosted widget uses /api/widget/chat for live supplier and website search.
+    return this.buildDetailedDemoResponse(lower, state);
+  }
 
-      if (lower.includes('cost') || lower.includes('price') || lower.includes('budget') || lower.includes('expensive') || lower.includes('afford')) {
-        const loc = state.location || 'the UK';
-        return {
-          content: `Here's a realistic cost breakdown for a wedding in ${loc}:\n\n**Average UK wedding: £30,000** (range: £8,000 to £100,000+)\n\n**Typical category breakdown:**\n- **Venue**: £3,000–£15,000 (London/South East at the top end)\n- **Catering & bar**: £65–£150/head\n- **Photography**: £1,500–£4,000\n- **Videography**: £1,200–£3,500\n- **Flowers & décor**: £2,000–£8,000\n- **Band or DJ**: £800–£3,500\n- **Dress**: £500–£5,000\n- **Suit/attire**: £300–£1,500\n- **Stationery**: £200–£800\n- **Wedding cake**: £400–£1,200\n- **Transport**: £300–£800\n\n**Biggest cost-saving opportunities:**\n1. Choose a Friday or Sunday — venues often charge 20–40% less\n2. Book a dry hire venue and bring your own caterer\n3. Go for a buffet or sharing platters rather than silver service\n4. Limit the evening guest list to reduce per-head costs\n\nWhat's your approximate total budget?`,
-          quickReplies: ['Under £10k', '£10k–£20k', '£20k–£50k', '£50k+'],
-        };
-      }
-
-      if (lower.includes('venue')) {
-        const loc = state.location || 'your area';
-        return {
-          content: `Choosing your venue is the most important early decision — it sets your date, capacity, and overall feel.\n\n**Key questions to ask every venue:**\n- Is it licensed for civil ceremonies, or ceremony-only?\n- Is it exclusive hire, or will other events run simultaneously?\n- Do they have in-house catering (mandatory or optional)?\n- What's the alcohol licence / noise curfew?\n- Is there on-site accommodation?\n- What's the wet weather contingency?\n\n**Popular venue styles in ${loc}:**\n- **Country house hotels** — all-in-one convenience, £4,000–£12,000\n- **Barns & rural estates** — rustic charm, dry hire from £2,500\n- **City hotels** — central for guests, £3,000–£15,000\n- **Heritage venues** — museums, galleries, castles\n\n**Pro tip:** Always visit at least 3 venues before committing — and popular dates book 12–18 months ahead.\n\nHow many guests are you expecting?`,
-          quickReplies: ['Under 50', '50–100', '100–150', '150+'],
-        };
-      }
-
-      if (lower.includes('photographer') || lower.includes('photography')) {
-        return {
-          content: `Wedding photography is one area where it genuinely pays to invest — you'll have these photos forever.\n\n**Typical UK rates:**\n- Budget: £800–£1,500\n- Mid-range: £1,500–£2,500\n- Premium: £2,500–£4,500+\n\n**What to look for:**\n- A portfolio that matches your style (documentary? posed? fine art?)\n- Full-day coverage with high-res digital files\n- Public liability insurance and backup equipment\n- A second shooter for larger weddings\n\n**Red flags:**\n- No contract or vague payment terms\n- Can't show a full recent gallery (only highlights)\n- No backup plan for illness/emergency\n\n**Questions to ask:**\n- Can I see a full gallery from a recent wedding?\n- What happens if you have an emergency on our day?\n- When will we receive our photos?\n\nWhere are you based? I can give region-specific advice.`,
-          quickReplies: ['London/South East', 'North of England', 'Midlands', 'Scotland/Wales'],
-        };
-      }
-
-      if (lower.includes('catering') || lower.includes('food') || lower.includes('menu')) {
-        return {
-          content: `Food is what guests remember most — it's worth getting right.\n\n**Typical per-head costs (UK):**\n- Buffet / food stations: £45–£75/head\n- 2-course sit-down: £55–£85/head\n- 3-course sit-down: £65–£110/head\n- Canapes + 3-course: £80–£130/head\n- Premium silver service: £100–£150+/head\n\n**Drinks:** Budget an extra £25–£50/head for a full open bar.\n\n**Popular formats:**\n- **Traditional sit-down** — formal, great for larger weddings\n- **Sharing platters** — relaxed, sociable, 15–20% cheaper\n- **Food stations** — very on-trend and theatrical\n\n**Dietary requirements to address:**\n- Vegan/vegetarian (should be a full dish, not an afterthought)\n- Halal/Kosher (specialist caterer required)\n- Nut allergies/coeliac (cross-contamination controls)\n\nHow many guests are you feeding?`,
-          quickReplies: ['Under 50', '50–100', '100–150', '150+'],
-        };
-      }
-
-      if (lower.includes('timeline') || lower.includes('when') || lower.includes('schedule') || lower.includes('plan')) {
-        return {
-          content: `Here's a strong wedding planning timeline:\n\n**12–18 months out**\n- Set budget and guest list\n- Book venue and registrar/church\n- Book photographer/videographer\n\n**9–12 months**\n- Catering, florist, entertainment\n- Dress/suits\n- Save the dates\n\n**6 months**\n- Invitations\n- Menu tasting\n- Decor plan\n- Transport/accommodation blocks\n\n**3 months**\n- Final fittings\n- Supplier confirmations\n- Seating plan draft\n\n**Final month**\n- Final numbers to venue/caterer\n- Emergency kit\n- Day schedule\n\nWhat date or month are you aiming for?`,
-          quickReplies: ['This year', 'Next year', 'Not sure yet'],
-        };
-      }
-    }
-
-    // ── Corporate events ───────────────────────────────────────────────
-    if (lower.includes('corporate') || lower.includes('work') || lower.includes('conference') || state.eventType === 'corporate' || state.eventType === 'conference') {
+  private buildDetailedDemoResponse(lower: string, state: DemoConversationState): { content: string; quickReplies?: string[] } {
+    if (lower.includes('venue') || lower.includes('supplier') || lower.includes('search')) {
       return {
-        content: `Corporate events need clarity on purpose first: is this for team building, client engagement, training, product launch, or networking?\n\n**Core planning areas:**\n- **Venue**: access, parking, AV, breakout rooms, Wi-Fi capacity\n- **Catering**: coffee breaks, lunch, dietary requirements\n- **AV/tech**: screens, microphones, hybrid streaming, tech support\n- **Branding**: signage, staging, registration desk\n- **Risk**: insurance, accessibility, fire routes, first aid\n\nTypical UK corporate day rates range from **£45–£120 per delegate** before major production/AV.\n\nWhat's the main purpose of the event?`,
-        quickReplies: ['Team away-day', 'Conference', 'Product launch', 'Client event'],
+        content: 'In live mode I can search EventFlow suppliers and website sections. In demo mode, try asking for a budget breakdown, venue checklist, or planning timeline.',
+        quickReplies: ['Budget breakdown', 'Venue checklist', 'Planning timeline'],
       };
     }
 
-    // ── Party / birthday / anniversary ─────────────────────────────────
-    if (lower.includes('birthday') || lower.includes('party') || lower.includes('anniversary') || state.eventType === 'birthday' || state.eventType === 'party' || state.eventType === 'anniversary') {
+    if (lower.includes('budget') || lower.includes('cost') || lower.includes('price')) {
       return {
-        content: `Lovely — for a private celebration, the biggest decisions are usually venue, food, entertainment, and guest experience.\n\n**Typical UK costs:**\n- Venue hire: £300–£3,000+\n- Buffet/casual catering: £20–£55/head\n- DJ: £300–£900\n- Live music: £800–£3,000\n- Decor/balloons/florals: £250–£2,000\n\n**Best next step:** decide the vibe first — relaxed, premium, themed, family-friendly, or late-night party.\n\nHow many guests are you expecting?`,
-        quickReplies: ['Under 30', '30–60', '60–100', '100+'],
+        content: `For a ${state.eventType || 'event'}, start with venue, food and drink, guest experience, styling, and a 10% contingency. Tell me your guest count and location and I can make this more specific.`,
+        quickReplies: ['Venue checklist', 'Planning timeline', 'Supplier questions'],
       };
     }
 
-    // Generic fallback
     return {
-      content: `I can help with that. To give you useful advice, I need one key detail first: what type of event are you planning?`,
+      content: 'I can help with that. To give you useful advice, what type of event are you planning?',
       quickReplies: ['Wedding', 'Birthday Party', 'Corporate Event', 'Anniversary', 'Other'],
     };
   }
