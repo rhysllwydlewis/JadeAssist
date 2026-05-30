@@ -3,9 +3,16 @@
  * Includes resilient handling for public widget chat.
  */
 import mongoose from 'mongoose';
+import { z } from 'zod';
 import { llmService, LLMMessage } from './llmService';
 import { ConversationModel } from '../models/Conversation';
-import { EventType, TimelineItem, ChecklistItem, EVENT_TYPE_METADATA } from '@jadeassist/shared';
+import {
+  AssistantResponse,
+  EventType,
+  TimelineItem,
+  ChecklistItem,
+  EVENT_TYPE_METADATA,
+} from '@jadeassist/shared';
 import { logger } from '../utils/logger';
 import { searchService, SearchResult } from './searchService';
 import {
@@ -41,7 +48,24 @@ export interface PlanningResponse {
   context: PlanningContext;
   missingDetails: string[];
   searchResults?: SearchResult[];
+  assistantResponse: AssistantResponse;
 }
+
+const assistantResponseSchema = z.object({
+  assistantMessage: z.string().trim().min(1),
+  statePatch: z.record(z.unknown()).default({}),
+  nextQuestion: z.string().trim().optional(),
+  uiActions: z
+    .array(
+      z.object({
+        type: z.string().trim().min(1),
+        payload: z.record(z.unknown()).optional(),
+      })
+    )
+    .default([]),
+  confidence: z.number().min(0).max(1).default(0.75),
+  mode: z.enum(['live', 'degraded']).default('live'),
+});
 
 function shouldSearch(message: string): boolean {
   const lower = message.toLowerCase();
@@ -79,6 +103,85 @@ function buildSearchQuery(context: PlanningContext, message: string): string {
   if (context.location) parts.push(context.location);
   if (context.guestCount) parts.push(`${context.guestCount} guests`);
   return parts.join(' ');
+}
+
+function dateToPlannerLabel(date: Date | undefined): string | undefined {
+  return date ? date.toISOString().slice(0, 10) : undefined;
+}
+
+function buildStatePatch(context: PlanningContext): AssistantResponse['statePatch'] {
+  return {
+    eventType: context.eventType,
+    location: context.location,
+    dateOrTimeframe: dateToPlannerLabel(context.eventDate),
+    guestCount: context.guestCount,
+    budget: context.budget
+      ? {
+          currency: 'GBP',
+          min: context.budget,
+          max: context.budget,
+          label: `£${context.budget.toLocaleString('en-GB')}`,
+        }
+      : undefined,
+    unresolvedQuestions: getMissingDetails(context),
+    summary: [
+      context.eventType ? `event type: ${context.eventType}` : undefined,
+      context.location ? `location: ${context.location}` : undefined,
+      context.guestCount ? `guest count: ${context.guestCount}` : undefined,
+      context.budget ? `budget: £${context.budget.toLocaleString('en-GB')}` : undefined,
+      context.eventDate ? `date/timeframe: ${dateToPlannerLabel(context.eventDate)}` : undefined,
+    ]
+      .filter(Boolean)
+      .join(' | '),
+  };
+}
+
+function stripCodeFence(value: string): string {
+  return value
+    .trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/```$/i, '')
+    .trim();
+}
+
+function maybeParseAssistantResponse(content: string): AssistantResponse | undefined {
+  const trimmed = stripCodeFence(content);
+  if (!trimmed.startsWith('{')) return undefined;
+
+  try {
+    const parsed = assistantResponseSchema.parse(JSON.parse(trimmed));
+    return {
+      assistantMessage: parsed.assistantMessage,
+      statePatch: parsed.statePatch as AssistantResponse['statePatch'],
+      nextQuestion: parsed.nextQuestion,
+      uiActions: parsed.uiActions as AssistantResponse['uiActions'],
+      confidence: parsed.confidence,
+      mode: parsed.mode,
+    };
+  } catch (error) {
+    logger.warn({ error }, 'Assistant response JSON failed validation; using text fallback');
+    return undefined;
+  }
+}
+
+function buildSyntheticAssistantResponse(
+  content: string,
+  context: PlanningContext,
+  missingDetails: string[],
+  model: string
+): AssistantResponse {
+  const degraded = model.includes('degraded') || content.toLowerCase().includes('degraded planning mode');
+  return {
+    assistantMessage: content,
+    statePatch: buildStatePatch(context),
+    nextQuestion: missingDetails[0],
+    uiActions: [
+      { type: 'update_plan_summary' },
+      ...(degraded ? [{ type: 'show_degraded_mode_banner' as const }] : []),
+    ],
+    confidence: degraded ? 0.45 : 0.82,
+    mode: degraded ? 'degraded' : 'live',
+  };
 }
 
 class PlanningEngineService {
@@ -171,7 +274,7 @@ class PlanningEngineService {
       });
 
       const response = await llmService.chat(llmMessages, {
-        systemPrompt: `${buildDynamicSystemPrompt(enrichedContext)}\n\nWhen EventFlow search results are provided, answer the user's find/recommendation request first with a concise shortlist, even if some event-brief details are still missing. Be clear when a result is from the local supplier database, EventFlow catalog, online search fallback, or EventFlow website index. Do not invent supplier names, URLs, prices, availability or ratings beyond the supplied results; ask one focused follow-up only after the shortlist.`,
+        systemPrompt: `${buildDynamicSystemPrompt(enrichedContext)}\n\nReturn either concise Markdown or a valid JSON object matching this contract when you are updating planner state: assistantMessage, statePatch, nextQuestion, uiActions, confidence, mode. When EventFlow search results are provided, answer the user's find/recommendation request first with a concise shortlist, even if some event-brief details are still missing. Be clear when a result is from the local supplier database, EventFlow catalog, online search fallback, or EventFlow website index. Do not invent supplier names, URLs, prices, availability or ratings beyond the supplied results; ask one focused follow-up only after the shortlist.`,
         temperature: missingDetails.length > 0 ? 0.55 : 0.7,
         maxTokens: searchResults.length > 0 ? 1000 : missingDetails.length > 0 ? 550 : 900,
       });
@@ -180,8 +283,20 @@ class PlanningEngineService {
         throw new Error('EMPTY_LLM_RESPONSE');
       }
 
+      const planningResponse = this.parseResponse(
+        response.content,
+        enrichedContext,
+        searchResults,
+        response.model
+      );
+
       if (persistenceReady) {
-        await this.persistTurn(context, trimmedMessage, response.content, response.tokensUsed);
+        await this.persistTurn(
+          context,
+          trimmedMessage,
+          planningResponse.assistantResponse.assistantMessage,
+          response.tokensUsed
+        );
       } else {
         logger.warn(
           { conversationId: context.conversationId },
@@ -189,7 +304,7 @@ class PlanningEngineService {
         );
       }
 
-      return this.parseResponse(response.content, enrichedContext, searchResults);
+      return planningResponse;
     } catch (error) {
       logger.error({ error, context }, 'Planning request failed');
       throw error;
@@ -218,109 +333,92 @@ class PlanningEngineService {
     }
   }
 
-  /**
-   * Generate a timeline for an event
-   */
+  /** Generate a timeline for an event */
   async generateTimeline(context: PlanningContext): Promise<TimelineItem[]> {
     const metadata = context.eventType ? EVENT_TYPE_METADATA[context.eventType] : null;
 
-    if (!metadata) {
-      return [];
-    }
+    if (!metadata) return [];
 
     const prompt = `Generate a detailed timeline for a ${metadata.displayName} with ${
       context.guestCount || 'unknown'
-    } guests and a budget of £${context.budget || 'unknown'}. 
-    
-    Create a list of key milestones from now until the event date, including:
-    - When to book venues
-    - When to send invitations
-    - When to confirm suppliers
-    - When to finalise details
-    
-    Return the timeline as a JSON array with items containing: title, description, dueDate (as ISO string), category.`;
+    } guests and a budget of £${context.budget || 'unknown'}.
+
+Create a list of key milestones from now until the event date, including:
+- When to book venues
+- When to send invitations
+- When to confirm suppliers
+- When to finalise details
+
+Return the timeline as a JSON array with items containing: title, description, dueDate (as ISO string), category.`;
 
     const response = await llmService.generate(prompt);
 
     try {
       const timelineData = JSON.parse(response.content) as TimelineItem[];
-      return timelineData.map((item, index) => ({
-        ...item,
-        id: `timeline-${index}`,
-        completed: false,
-      }));
+      return timelineData.map((item, index) => ({ ...item, id: `timeline-${index}`, completed: false }));
     } catch {
       logger.warn('Failed to parse timeline JSON');
       return [];
     }
   }
 
-  /**
-   * Generate a checklist for an event
-   */
+  /** Generate a checklist for an event */
   async generateChecklist(context: PlanningContext): Promise<ChecklistItem[]> {
     const metadata = context.eventType ? EVENT_TYPE_METADATA[context.eventType] : null;
 
-    if (!metadata) {
-      return [];
-    }
+    if (!metadata) return [];
 
-    const prompt = `Generate a comprehensive checklist for planning a ${
-      metadata.displayName
-    }. Include:
-    - Venue selection and booking
-    - Catering arrangements
-    - Entertainment and activities
-    - Decorations and setup
-    - Guest management
-    - Day-of coordination
-    
-    Return as JSON array with items containing: title, description, priority (low/medium/high), category.`;
+    const prompt = `Generate a comprehensive checklist for planning a ${metadata.displayName}. Include:
+- Venue selection and booking
+- Catering arrangements
+- Entertainment and activities
+- Decorations and setup
+- Guest management
+- Day-of coordination
+
+Return as JSON array with items containing: title, description, priority (low/medium/high), category.`;
 
     const response = await llmService.generate(prompt);
 
     try {
       const checklistData = JSON.parse(response.content) as ChecklistItem[];
-      return checklistData.map((item, index) => ({
-        ...item,
-        id: `checklist-${index}`,
-        completed: false,
-      }));
+      return checklistData.map((item, index) => ({ ...item, id: `checklist-${index}`, completed: false }));
     } catch {
       logger.warn('Failed to parse checklist JSON');
       return [];
     }
   }
 
-  /**
-   * Parse LLM response and extract structured data
-   */
+  /** Parse LLM response and extract structured data */
   private parseResponse(
     content: string,
     context: PlanningContext,
-    searchResults: SearchResult[] = []
+    searchResults: SearchResult[] = [],
+    model: string
   ): PlanningResponse {
     const missingDetails = getMissingDetails(context);
-    const needsMoreInfo = detectInformationGaps(content, context);
-    const suggestions = extractContextualSuggestions(content, context);
+    const assistantResponse =
+      maybeParseAssistantResponse(content) ??
+      buildSyntheticAssistantResponse(content, context, missingDetails, model);
+    const message = assistantResponse.assistantMessage;
+    const needsMoreInfo = detectInformationGaps(message, context);
+    const suggestions = extractContextualSuggestions(message, context);
 
     return {
-      message: content,
+      message,
       suggestions,
       requiresMoreInfo: needsMoreInfo,
       context,
       missingDetails,
       searchResults,
+      assistantResponse,
     };
   }
 
-  /**
-   * Expose gap detection for external testing / diagnostics
-   */
+  /** Expose gap detection for external testing / diagnostics */
   public getMissingContextDetails(context: PlanningContext): string[] {
     return getMissingDetails(context);
   }
 }
 
-// Export singleton instance
 export const planningEngine = new PlanningEngineService();
