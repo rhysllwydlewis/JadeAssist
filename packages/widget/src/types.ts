@@ -56,6 +56,14 @@ export interface WidgetSearchResult {
     | 'online-search';
 }
 
+export interface WidgetAssistantMeta {
+  mode?: 'live' | 'degraded';
+  confidence?: number;
+  nextQuestion?: string;
+  uiActions?: Array<{ type: string; payload?: Record<string, unknown> }>;
+  statePatch?: Record<string, unknown>;
+}
+
 export interface WidgetMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -63,6 +71,7 @@ export interface WidgetMessage {
   timestamp: number;
   quickReplies?: string[];
   searchResults?: WidgetSearchResult[];
+  assistantMeta?: WidgetAssistantMeta;
 }
 
 // Constants
