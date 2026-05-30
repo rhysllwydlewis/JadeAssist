@@ -35,6 +35,14 @@ assert(extracted.guestCount === 120, 'detects guest count');
 assert(extracted.budget === 25000, 'detects shorthand budget');
 assert(extracted.eventDate instanceof Date, 'detects broad date timeframe');
 
+section('Avoids false positives');
+
+const guestsOnly = extractPlanningContextFromMessage('We will probably have 120 guests in Cardiff.');
+
+assert(guestsOnly.guestCount === 120, 'still extracts guest count without budget wording');
+assert(guestsOnly.budget === undefined, 'does not treat guest count as a budget');
+assert(guestsOnly.location === 'Cardiff', 'still extracts location without budget wording');
+
 section('Merges context without overwriting known values');
 
 const current = {
