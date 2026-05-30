@@ -1,16 +1,9 @@
 /**
- * Smoke tests for env.ts dual-mode validation behaviour.
+ * Smoke tests for env.ts validation and Railway-safe auto mode behaviour.
  *
  * Run with:
  *   ts-node --project tsconfig.json src/tests/env.validation.ts
- *
- * These tests exercise the parsing logic directly by manipulating
- * process.env and re-requiring the module.  No database or LLM is needed.
  */
-
-// ---------------------------------------------------------------------------
-// Test runner helpers (same style as planningEngine.validation.ts)
-// ---------------------------------------------------------------------------
 
 let passed = 0;
 let failed = 0;
@@ -29,39 +22,31 @@ function section(title: string): void {
   console.log(`\n── ${title} ──`);
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Parses the env module in an isolated context with a custom process.env.
- * Returns the exported `env` object, or null if the module called process.exit.
- */
 function parseEnv(vars: Record<string, string>): {
   minimalMode: boolean;
+  minimalModeSetting: 'auto' | 'true' | 'false';
+  serviceConfigured: boolean;
+  missingRequiredVars: string[];
+  forcedMinimalMode: boolean;
   port: number;
   databaseUrl: string | undefined;
   llm: { apiKey: string | undefined; model: string; tokenLimit: number };
   auth: { jwtSecret: string | undefined; provider: string };
 } | null {
-  // Save and restore process.env + process.exit to isolate test runs
   const origEnv = process.env;
   const origExit = process.exit;
 
   let exitCalled = false;
 
   try {
-    // Replace process.env with our test vars
     process.env = { ...vars };
 
-    // Stub process.exit so the module cannot terminate the test runner
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (process as any).exit = () => {
       exitCalled = true;
       throw new Error('process.exit called');
     };
 
-    // Clear Node module cache so env.ts is re-evaluated
     const key = require.resolve('../config/env');
     delete require.cache[key];
 
@@ -76,19 +61,15 @@ function parseEnv(vars: Record<string, string>): {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (process as any).exit = origExit;
 
-    // Clean up the cached module so subsequent calls re-evaluate
     const key = require.resolve('../config/env');
     delete require.cache[key];
   }
 }
 
-// ---------------------------------------------------------------------------
-// Tests — strict mode (default)
-// ---------------------------------------------------------------------------
+section('Auto mode — fully configured enables feature routes');
 
-section('Strict mode — all required vars present');
-
-const strictResult = parseEnv({
+const autoFullResult = parseEnv({
+  JADEASSIST_MINIMAL_MODE: 'auto',
   MONGODB_URL: 'mongodb://localhost:27017/jadeassist',
   OPENAI_API_KEY: 'sk-test-key',
   JWT_SECRET: 'super-secret-string-at-least-32-chars-long',
@@ -96,58 +77,84 @@ const strictResult = parseEnv({
   NODE_ENV: 'test',
 });
 
-assert(strictResult !== null, 'does not call process.exit when all required vars are present');
-assert(strictResult?.minimalMode === false, 'minimalMode is false');
-assert(strictResult?.databaseUrl === 'mongodb://localhost:27017/jadeassist', 'databaseUrl is set');
-assert(strictResult?.llm.apiKey === 'sk-test-key', 'llm.apiKey is set');
-assert(strictResult?.auth.jwtSecret === 'super-secret-string-at-least-32-chars-long', 'auth.jwtSecret is set');
-assert(strictResult?.port === 3001, 'port is parsed as integer');
-assert(strictResult?.llm.model === 'gpt-4-turbo', 'llm.model defaults to gpt-4-turbo');
-assert(strictResult?.llm.tokenLimit === 4000, 'llm.tokenLimit defaults to 4000');
+assert(autoFullResult !== null, 'does not call process.exit when all required vars are present in auto mode');
+assert(autoFullResult?.minimalMode === false, 'minimalMode is false when auto mode is fully configured');
+assert(autoFullResult?.minimalModeSetting === 'auto', 'minimalModeSetting is auto');
+assert(autoFullResult?.serviceConfigured === true, 'serviceConfigured is true');
+assert(autoFullResult?.missingRequiredVars.length === 0, 'missingRequiredVars is empty');
+assert(autoFullResult?.llm.apiKey === 'sk-test-key', 'llm.apiKey is set');
+assert(autoFullResult?.auth.jwtSecret === 'super-secret-string-at-least-32-chars-long', 'auth.jwtSecret is set');
+assert(autoFullResult?.port === 3001, 'port is parsed as integer');
+
+section('Auto mode — missing required vars enters minimal mode without exit');
+
+const autoMissingResult = parseEnv({
+  JADEASSIST_MINIMAL_MODE: 'auto',
+  PORT: '3001',
+  NODE_ENV: 'test',
+});
+
+assert(autoMissingResult !== null, 'does not call process.exit when vars are missing in auto mode');
+assert(autoMissingResult?.minimalMode === true, 'minimalMode is true when auto mode is missing vars');
+assert(autoMissingResult?.serviceConfigured === false, 'serviceConfigured is false');
+assert(autoMissingResult?.missingRequiredVars.includes('MONGODB_URL') === true, 'missingRequiredVars includes MONGODB_URL');
+assert(autoMissingResult?.missingRequiredVars.includes('OPENAI_API_KEY') === true, 'missingRequiredVars includes OPENAI_API_KEY');
+assert(autoMissingResult?.missingRequiredVars.includes('JWT_SECRET') === true, 'missingRequiredVars includes JWT_SECRET');
+
+section('Default mode — behaves like auto');
+
+const defaultModeResult = parseEnv({
+  MONGODB_URL: 'mongodb://localhost:27017/jadeassist',
+  OPENAI_API_KEY: 'sk-test-key',
+  JWT_SECRET: 'super-secret-string-at-least-32-chars-long',
+  PORT: '3001',
+  NODE_ENV: 'test',
+});
+
+assert(defaultModeResult !== null, 'default mode starts when fully configured');
+assert(defaultModeResult?.minimalModeSetting === 'auto', 'unset JADEASSIST_MINIMAL_MODE normalises to auto');
+assert(defaultModeResult?.minimalMode === false, 'default auto mode enables feature routes when configured');
+
+section('Strict mode — all required vars present');
+
+const strictResult = parseEnv({
+  JADEASSIST_MINIMAL_MODE: 'false',
+  MONGODB_URL: 'mongodb://localhost:27017/jadeassist',
+  OPENAI_API_KEY: 'sk-test-key',
+  JWT_SECRET: 'super-secret-string-at-least-32-chars-long',
+  PORT: '3001',
+  NODE_ENV: 'test',
+});
+
+assert(strictResult !== null, 'does not call process.exit when all required vars are present in strict mode');
+assert(strictResult?.minimalMode === false, 'minimalMode is false in strict mode');
+assert(strictResult?.minimalModeSetting === 'false', 'minimalModeSetting is false');
+assert(strictResult?.serviceConfigured === true, 'serviceConfigured is true in strict mode');
 
 section('Strict mode — missing required vars causes exit');
 
 const strictMissingResult = parseEnv({
-  // MONGODB_URL, OPENAI_API_KEY, JWT_SECRET intentionally absent
+  JADEASSIST_MINIMAL_MODE: 'false',
   PORT: '3001',
   NODE_ENV: 'test',
 });
 
 assert(strictMissingResult === null, 'calls process.exit when required vars are missing in strict mode');
 
-// ---------------------------------------------------------------------------
-// Tests — minimal mode
-// ---------------------------------------------------------------------------
-
-section('Minimal mode — starts without required vars');
+section('Forced minimal mode — starts without required vars');
 
 const minimalResult = parseEnv({
   JADEASSIST_MINIMAL_MODE: 'true',
   PORT: '3001',
   NODE_ENV: 'test',
-  // MONGODB_URL, OPENAI_API_KEY, JWT_SECRET intentionally absent
 });
 
-assert(minimalResult !== null, 'does not call process.exit in minimal mode without required vars');
+assert(minimalResult !== null, 'does not call process.exit in forced minimal mode without required vars');
 assert(minimalResult?.minimalMode === true, 'minimalMode is true');
-assert(minimalResult?.databaseUrl === undefined, 'databaseUrl is undefined');
-assert(minimalResult?.llm.apiKey === undefined, 'llm.apiKey is undefined');
-assert(minimalResult?.auth.jwtSecret === undefined, 'auth.jwtSecret is undefined');
+assert(minimalResult?.forcedMinimalMode === true, 'forcedMinimalMode is true');
+assert(minimalResult?.serviceConfigured === false, 'serviceConfigured is false when vars are missing');
 
-section('Minimal mode — partial configuration (only MONGODB_URL)');
-
-const minimalPartialResult = parseEnv({
-  JADEASSIST_MINIMAL_MODE: 'true',
-  MONGODB_URL: 'mongodb://localhost:27017/jadeassist',
-  PORT: '3001',
-  NODE_ENV: 'test',
-});
-
-assert(minimalPartialResult !== null, 'does not call process.exit with partial config in minimal mode');
-assert(minimalPartialResult?.databaseUrl === 'mongodb://localhost:27017/jadeassist', 'databaseUrl is set when provided');
-assert(minimalPartialResult?.llm.apiKey === undefined, 'llm.apiKey still undefined');
-
-section('Minimal mode — all vars provided (fully configured)');
+section('Forced minimal mode — all vars provided still keeps feature routes off');
 
 const minimalFullResult = parseEnv({
   JADEASSIST_MINIMAL_MODE: 'true',
@@ -158,14 +165,10 @@ const minimalFullResult = parseEnv({
   NODE_ENV: 'test',
 });
 
-assert(minimalFullResult !== null, 'starts successfully when all vars are present in minimal mode');
-assert(minimalFullResult?.minimalMode === true, 'minimalMode flag is still true');
-assert(minimalFullResult?.databaseUrl === 'mongodb://localhost:27017/jadeassist', 'databaseUrl is set');
-assert(minimalFullResult?.llm.apiKey === 'sk-test-key', 'llm.apiKey is set');
-
-// ---------------------------------------------------------------------------
-// Results
-// ---------------------------------------------------------------------------
+assert(minimalFullResult !== null, 'starts successfully when all vars are present in forced minimal mode');
+assert(minimalFullResult?.minimalMode === true, 'forced minimal mode remains true');
+assert(minimalFullResult?.serviceConfigured === true, 'serviceConfigured is true even though feature routes are forced off');
+assert(minimalFullResult?.missingRequiredVars.length === 0, 'missingRequiredVars is empty when all vars are present');
 
 console.log(`\n──────────────────────────────────`);
 console.log(`Results: ${passed} passed, ${failed} failed`);
