@@ -34,6 +34,7 @@ export interface CreateSupplierParams {
 }
 
 export interface SearchSuppliersParams {
+  query?: string;
   category?: SupplierCategory;
   postcode?: string;
   region?: string;
@@ -60,9 +61,9 @@ interface SupplierDoc {
 const SupplierSchema = new Schema<SupplierDoc>(
   {
     _id: { type: String, default: () => randomUUID() },
-    name: { type: String, required: true },
+    name: { type: String, required: true, index: true },
     category: { type: String, required: true, index: true },
-    location: String,
+    location: { type: String, index: true },
     postcode: { type: String, index: true },
     description: String,
     rating: { type: Number, default: 0, index: true },
@@ -70,6 +71,8 @@ const SupplierSchema = new Schema<SupplierDoc>(
   },
   { timestamps: { createdAt: 'createdAt', updatedAt: false } }
 );
+
+SupplierSchema.index({ name: 'text', description: 'text', location: 'text', region: 'text', postcode: 'text' });
 
 // ── Mongoose model ────────────────────────────────────────────────────────────
 
@@ -165,6 +168,10 @@ function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function compact(value: string | undefined): string {
+  return (value ?? '').trim();
+}
+
 export class SupplierModel {
   /**
    * Insert sample suppliers if the collection is empty.
@@ -193,16 +200,38 @@ export class SupplierModel {
     return doc ? toSupplier(doc) : null;
   }
 
-  /** Search suppliers with optional filters */
+  /** Search suppliers with optional filters and keyword matching. */
   static async search(params: SearchSuppliersParams): Promise<Supplier[]> {
     const filter: Record<string, unknown> = {};
+    const andFilters: Record<string, unknown>[] = [];
+    const query = compact(params.query);
 
     if (params.category) filter['category'] = params.category;
     if (params.postcode) filter['postcode'] = { $regex: `^${escapeRegex(params.postcode)}`, $options: 'i' };
-    if (params.region) filter['region'] = params.region;
+    if (params.region) {
+      andFilters.push({
+        $or: [
+          { region: { $regex: escapeRegex(params.region), $options: 'i' } },
+          { location: { $regex: escapeRegex(params.region), $options: 'i' } },
+        ],
+      });
+    }
     if (params.minRating !== undefined) filter['rating'] = { $gte: params.minRating };
+    if (query) {
+      andFilters.push({
+        $or: [
+          { name: { $regex: escapeRegex(query), $options: 'i' } },
+          { description: { $regex: escapeRegex(query), $options: 'i' } },
+          { location: { $regex: escapeRegex(query), $options: 'i' } },
+          { region: { $regex: escapeRegex(query), $options: 'i' } },
+          { postcode: { $regex: escapeRegex(query), $options: 'i' } },
+        ],
+      });
+    }
 
-    const limit = params.limit ?? 50;
+    if (andFilters.length > 0) filter['$and'] = andFilters;
+
+    const limit = Math.min(Math.max(params.limit ?? 50, 1), 100);
 
     const docs = await SupplierMongoose.find(filter)
       .sort({ rating: -1, name: 1 })
@@ -234,7 +263,7 @@ export class SupplierModel {
     const doc = await SupplierMongoose.findByIdAndUpdate(
       id,
       { $set: set },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean<SupplierDoc>();
 
     if (!doc) return null;
