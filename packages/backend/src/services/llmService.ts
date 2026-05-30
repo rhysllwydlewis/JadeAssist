@@ -33,11 +33,11 @@ class LLMService {
   }
 
   /** Lazily initialize the OpenAI client so startup never crashes when the
-   *  API key is absent (minimal mode).  Throws at call-time if not configured. */
+   *  API key is absent. Throws at call-time if not configured. */
   private get client(): OpenAI {
     if (!this._client) {
       if (!env.llm.apiKey) {
-        throw new Error('OPENAI_API_KEY is not configured');
+        throw new Error('LLM_NOT_CONFIGURED: OPENAI_API_KEY is not configured');
       }
       this._client = new OpenAI({ apiKey: env.llm.apiKey });
     }
@@ -48,6 +48,10 @@ class LLMService {
    * Send a chat completion request
    */
   async chat(messages: LLMMessage[], options?: LLMOptions): Promise<LLMResponse> {
+    if (!env.llm.apiKey) {
+      throw new Error('LLM_NOT_CONFIGURED: OPENAI_API_KEY is not configured');
+    }
+
     try {
       const systemPrompt = options?.systemPrompt || LLM_SETTINGS.SYSTEM_PROMPT;
       const temperature = options?.temperature ?? LLM_SETTINGS.TEMPERATURE;
@@ -83,7 +87,6 @@ class LLMService {
     } catch (error) {
       logger.error({ error }, 'LLM request failed');
 
-      // Surface rate-limit errors distinctly so callers can return a friendly message
       if (
         error instanceof Error &&
         (error.message.includes('429') ||
@@ -93,7 +96,11 @@ class LLMService {
         throw new Error('RATE_LIMIT: Too many requests — please wait a moment and try again.');
       }
 
-      throw new Error('Failed to get response from LLM');
+      if (error instanceof Error && error.message.startsWith('LLM_NOT_CONFIGURED:')) {
+        throw error;
+      }
+
+      throw new Error('LLM_ERROR: Failed to get response from LLM');
     }
   }
 
@@ -105,8 +112,8 @@ class LLMService {
   }
 
   /**
-   * Returns false (not healthy) when OPENAI_API_KEY is not configured rather
-   * than throwing, so health checks remain non-fatal in minimal mode.
+   * Returns false when OPENAI_API_KEY is not configured rather than throwing,
+   * so health checks remain non-fatal in auto/minimal mode.
    */
   async healthCheck(): Promise<boolean> {
     if (!env.llm.apiKey) {
