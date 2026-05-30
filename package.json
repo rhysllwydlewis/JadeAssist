@@ -20,8 +20,9 @@
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,json,md}\"",
-    "typecheck": "tsc --build --verbose",
-    "clean": "npm run clean --workspaces --if-present && rm -rf dist node_modules"
+    "typecheck": "npm run build:shared && npm run typecheck --workspace=packages/backend && npm run typecheck --workspace=packages/widget",
+    "clean": "npm run clean --workspaces --if-present && rm -rf dist node_modules",
+    "validate:railway": "node scripts/validate-railway-config.js"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

@@ -131,7 +131,10 @@ async function main() {
       'Access-Control-Request-Headers': 'Content-Type',
     });
 
-    assert(preflight.status === 204, `OPTIONS /api/widget/chat returns 204, not ${preflight.status}`);
+    assert(
+      preflight.status === 204,
+      `OPTIONS /api/widget/chat returns 204, not ${preflight.status}`
+    );
     assert(
       preflight.headers['access-control-allow-origin'] === 'https://event-flow.co.uk',
       'EventFlow origin receives ACAO on diagnostic preflight'
@@ -149,7 +152,10 @@ async function main() {
       { message: 'Yes please' }
     );
 
-    assert(post.status === 421, `POST /api/widget/chat returns 421 WRONG_SERVICE, not ${post.status}`);
+    assert(
+      post.status === 421,
+      `POST /api/widget/chat returns 421 WRONG_SERVICE, not ${post.status}`
+    );
     assert(
       post.headers['access-control-allow-origin'] === 'https://event-flow.co.uk',
       'Diagnostic POST includes EventFlow ACAO header'
@@ -161,8 +167,19 @@ async function main() {
     } catch (_) {
       json = null;
     }
-    assert(json && json.error && json.error.code === 'WRONG_SERVICE', 'Diagnostic body includes WRONG_SERVICE code');
-    assert(post.body !== 'Not Found', 'Diagnostic body is no longer the old 9-byte Not Found response');
+    assert(
+      json && json.error && json.error.code === 'WRONG_SERVICE',
+      'Diagnostic body includes WRONG_SERVICE code'
+    );
+    assert(
+      Array.isArray(json && json.remediation) && json.remediation.length >= 3,
+      'Diagnostic body includes concrete remediation steps'
+    );
+    assert(json && typeof json.timestamp === 'string', 'Diagnostic body includes timestamp');
+    assert(
+      post.body !== 'Not Found',
+      'Diagnostic body is no longer the old 9-byte Not Found response'
+    );
   } finally {
     await stopWidgetServer(child);
   }

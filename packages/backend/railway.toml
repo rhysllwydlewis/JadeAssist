@@ -1,7 +1,9 @@
 # railway.toml — Backend service configuration
 #
-# Usage: In Railway, set the "@jadeassist/backend" service root directory to
-#        "packages/backend". Railway will pick up this file automatically.
+# Usage: Prefer setting the "@jadeassist/backend" service root directory to
+#        "." so Railway uses the repo-root railway.toml. This file remains
+#        as a package-local fallback for teams that deliberately set the root
+#        directory to "packages/backend" and provide package-local installs.
 #
 # Required environment variables for this service:
 #   OPENAI_API_KEY   — Your OpenAI API key (starts with sk-…)

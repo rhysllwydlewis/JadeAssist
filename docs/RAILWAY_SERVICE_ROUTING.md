@@ -2,10 +2,10 @@
 
 JadeAssist is designed to run as two separate Railway services:
 
-| Service | Root directory | Purpose | Public routes |
-|---|---|---|---|
-| `@jadeassist/backend` | `packages/backend` | Express API and OpenAI-backed assistant | `/api/widget/chat`, `/api/chat`, `/api/v1/assist`, `/healthz` |
-| `@jadeassist/widget` | `.` repo root | Static widget bundle hosting | `/jade-widget.js`, `/healthz` |
+| Service               | Root directory                               | Purpose                                 | Public routes                                                 |
+| --------------------- | -------------------------------------------- | --------------------------------------- | ------------------------------------------------------------- |
+| `@jadeassist/backend` | `.` repo root                                | Express API and OpenAI-backed assistant | `/api/widget/chat`, `/api/chat`, `/api/v1/assist`, `/healthz` |
+| `@jadeassist/widget`  | Static/CDN hosting of `packages/widget/dist` | Static widget bundle hosting            | `/jade-widget.js`                                             |
 
 ## Confirmed failure mode
 
@@ -18,11 +18,11 @@ https://jadeassistbackend-production.up.railway.app/api/widget/chat
 and Railway returns:
 
 ```text
-OPTIONS /api/widget/chat -> 404
-response body: Not Found
+POST /api/widget/chat -> 421
+response body: { "error": { "code": "WRONG_SERVICE" }, "currentService": "jadeassist-widget-static" }
 ```
 
-then the domain is not serving the backend Express API. The widget static server historically returned a plain text `Not Found` response, which is 9 bytes. The backend API returns structured JSON errors, not a 9-byte body.
+then the domain is not serving the backend Express API. The widget static server returns this diagnostic when API traffic reaches the static bundle host. The backend API returns `204` for preflight and structured chat JSON for POST requests.
 
 This usually means one of the following:
 
@@ -37,10 +37,10 @@ In Railway, the backend service should be configured as:
 
 ```text
 Service name: @jadeassist/backend
-Root Directory: packages/backend
+Root Directory: .
 Builder: Nixpacks
-Build command: npm run build
-Start command: npm run start
+Build command: npm run build --workspace=packages/backend
+Start command: npm run start --workspace=packages/backend
 Healthcheck path: /healthz
 ```
 
@@ -61,14 +61,13 @@ The widget service should be configured as:
 
 ```text
 Service name: @jadeassist/widget
-Root Directory: .
-Builder: Dockerfile
-Dockerfile path: packages/widget/Dockerfile
-Start command: node server.js
-Healthcheck path: /healthz
+Service type: Static (recommended)
+Build command: npm ci && npm run build --workspace=packages/widget
+Output directory: packages/widget/dist
+Healthcheck path: not required for Static sites
 ```
 
-The widget service should not receive `/api/widget/chat` traffic. If it does, the service now returns a `WRONG_SERVICE` diagnostic JSON response with CORS headers for EventFlow origins.
+The widget host should not receive `/api/widget/chat` traffic. If it does, the Node static fallback returns a `WRONG_SERVICE` diagnostic JSON response with CORS headers for EventFlow origins, and the browser widget now surfaces that diagnostic instead of a generic `API error: 421`.
 
 ## Smoke tests after deploy
 
