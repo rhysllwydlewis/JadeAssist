@@ -150,7 +150,6 @@ export class ApiClient {
   private async mockResponse(
     userMessage: string
   ): Promise<{ conversationId: string; message: WidgetMessage; conversation?: ConversationBriefMetadata; searchResults?: WidgetSearchResult[] }> {
-    // Simulate realistic API delay
     await new Promise((resolve) => setTimeout(resolve, 700 + Math.random() * 400));
 
     const conversationId = 'demo-' + Date.now();
@@ -180,7 +179,6 @@ export class ApiClient {
   }
 
   private updateDemoState(lower: string): void {
-    // Event type
     if (lower.includes('wedding') || lower.includes('civil partnership')) {
       this.demoState.eventType = 'wedding';
     } else if (lower.includes('birthday')) {
@@ -195,7 +193,6 @@ export class ApiClient {
       this.demoState.eventType = 'party';
     }
 
-    // Budget — most specific first, with word boundaries to prevent partial matches
     if (/under\s*[£$]?5k\b/i.test(lower) || /under\s*£?5,000\b/.test(lower)) {
       this.demoState.budget = 'under £5,000';
     } else if (/\b[£$]?50k\b|\b50,000\b/.test(lower)) {
@@ -208,7 +205,6 @@ export class ApiClient {
       this.demoState.budget = '£5,000–£10,000';
     }
 
-    // Guest count — support comma-formatted numbers (e.g. "1,000 guests")
     const guestMatch = /\b(\d{1,3}(?:,\d{3})*|\d+)\s*(guests?|people|attendees?|pax)\b/.exec(lower);
     if (guestMatch) {
       this.demoState.guestCount = guestMatch[1].replace(/,/g, '');
@@ -218,7 +214,6 @@ export class ApiClient {
       this.demoState.guestCount = '150+';
     }
 
-    // Location
     if (lower.includes('london')) {
       this.demoState.location = 'London';
     } else if (lower.includes('scotland') || lower.includes('edinburgh') || lower.includes('glasgow')) {
@@ -237,7 +232,6 @@ export class ApiClient {
       this.demoState.location = 'South West';
     }
 
-    // Date
     if (lower.includes('this year')) {
       this.demoState.eventDate = 'this year';
     } else if (lower.includes('next year')) {
@@ -248,7 +242,6 @@ export class ApiClient {
   private buildDemoResponse(lower: string): { content: string; quickReplies?: string[] } {
     const state = this.demoState;
 
-    // Opening greetings
     if (
       (lower.includes('yes') && lower.includes('please')) ||
       lower === 'help' || lower === 'start' || lower === 'hi' ||
@@ -268,23 +261,31 @@ export class ApiClient {
       };
     }
 
-    // Demo-mode detailed responses are intentionally kept below in this file.
-    // The hosted widget uses /api/widget/chat for live supplier and website search.
     return this.buildDetailedDemoResponse(lower, state);
   }
 
   private buildDetailedDemoResponse(lower: string, state: DemoConversationState): { content: string; quickReplies?: string[] } {
-    if (lower.includes('venue') || lower.includes('supplier') || lower.includes('search')) {
+    const event = state.eventType || 'event';
+    const loc = state.location || 'your area';
+
+    if (lower.includes('venue') || lower.includes('supplier') || lower.includes('search') || lower.includes('recommend')) {
       return {
-        content: 'In live mode I can search EventFlow suppliers and website sections. In demo mode, try asking for a budget breakdown, venue checklist, or planning timeline.',
-        quickReplies: ['Budget breakdown', 'Venue checklist', 'Planning timeline'],
+        content: `In live mode I can search EventFlow suppliers and website sections. For demo mode, here is the supplier approach I would use for a ${event} in ${loc}:\n\n- Shortlist 3 options so you can compare like-for-like.\n- Ask for full written quotes, not headline prices.\n- Check insurance, cancellation terms, setup times and what is included.\n- For venues, confirm capacity, access, curfew and wet-weather options.\n\nIn live mode, I would return actual supplier or website results from EventFlow where available.`,
+        quickReplies: ['Budget breakdown', 'Venue checklist', 'Planning timeline', 'Supplier questions'],
       };
     }
 
     if (lower.includes('budget') || lower.includes('cost') || lower.includes('price')) {
       return {
-        content: `For a ${state.eventType || 'event'}, start with venue, food and drink, guest experience, styling, and a 10% contingency. Tell me your guest count and location and I can make this more specific.`,
+        content: `For a ${event} in ${loc}, start with this practical budget split:\n\n- Venue: 25–35%\n- Food and drink: 30–40%\n- Photography, entertainment or main experience: 10–20%\n- Styling, stationery and extras: 10–15%\n- Contingency: keep 10% back\n\nIf you give me your guest count and rough budget, I can make the numbers more specific.`,
         quickReplies: ['Venue checklist', 'Planning timeline', 'Supplier questions'],
+      };
+    }
+
+    if (lower.includes('timeline') || lower.includes('schedule') || lower.includes('when') || lower.includes('plan')) {
+      return {
+        content: `A sensible ${event} planning order is:\n\n- Confirm budget, guest count and location.\n- Shortlist and secure the venue/date.\n- Book key suppliers that affect availability.\n- Confirm guest communication, timings and layout.\n- In the final month, lock final numbers, balances and the day schedule.`,
+        quickReplies: ['Find suppliers', 'Budget breakdown', 'Venue checklist'],
       };
     }
 
