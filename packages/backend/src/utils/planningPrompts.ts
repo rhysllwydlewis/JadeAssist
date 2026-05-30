@@ -65,14 +65,21 @@ function clampNumber(value: number, min: number, max: number): number | undefine
 
 function parseBudget(message: string): number | undefined {
   const lower = message.toLowerCase();
-  const match = /(?:budget(?:\s*(?:is|of|around|about|approx(?:imately)?))?\s*)?[£$]?\s*(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)\s*(k|thousand|grand)?\b/i.exec(lower);
+  const explicitBudget = /\b(budget|spend|cost|price|afford)\b/.test(lower);
+  const hasCurrency = /[£$]/.test(message);
+  const hasBudgetSuffix = /\b\d+(?:\.\d+)?\s*(k|thousand|grand)\b/i.test(message);
+
+  if (!explicitBudget && !hasCurrency && !hasBudgetSuffix) {
+    return undefined;
+  }
+
+  const match = /(?:budget|spend|cost|price|afford)?(?:\s*(?:is|of|around|about|approx(?:imately)?|up to|under|over))?\s*[£$]?\s*(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)\s*(k|thousand|grand)?\b/i.exec(lower);
   if (!match) return undefined;
 
   const raw = Number(match[1].replace(/,/g, ''));
   const multiplier = match[2] ? 1000 : 1;
   const amount = raw * multiplier;
 
-  // Avoid mistaking guest counts or dates for budgets.
   return clampNumber(amount, 100, 1_000_000);
 }
 
