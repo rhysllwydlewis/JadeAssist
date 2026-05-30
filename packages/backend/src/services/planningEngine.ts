@@ -11,7 +11,11 @@ import {
   buildEnrichedUserMessage,
   detectInformationGaps,
   extractContextualSuggestions,
+  extractPlanningContextFromMessage,
+  getContextCompleteness,
   getMissingDetails,
+  getPlanningStage,
+  mergePlanningContext,
 } from '../utils/planningPrompts';
 
 export interface PlanningContext {
@@ -22,6 +26,8 @@ export interface PlanningContext {
   guestCount?: number;
   eventDate?: Date;
   location?: string;
+  planningStage?: string;
+  contextCompleteness?: number;
 }
 
 export interface PlanningResponse {
@@ -30,24 +36,40 @@ export interface PlanningResponse {
   timeline?: TimelineItem[];
   checklist?: ChecklistItem[];
   requiresMoreInfo: boolean;
+  context: PlanningContext;
+  missingDetails: string[];
 }
 
 class PlanningEngineService {
   /**
    * Process a planning request and generate response.
    *
-   * Conversation persistence is useful, but it should not make the public
-   * widget fail. If MongoDB is still warming up or temporarily unavailable, the
-   * request falls back to a stateless LLM turn and logs the persistence issue.
+   * The widget is public and must be resilient. When MongoDB is available we
+   * persist the event brief and conversation history; when it is warming up, we
+   * still return a stateless LLM answer instead of failing the visitor journey.
    */
   async processRequest(context: PlanningContext, userMessage: string): Promise<PlanningResponse> {
     try {
       const persistenceReady = mongoose.connection.readyState === 1;
+      const trimmedMessage = userMessage.trim();
+      let persistedContext: PlanningContext = context;
       let messages: Awaited<ReturnType<typeof ConversationModel.getMessages>> = [];
 
       if (persistenceReady) {
         try {
-          messages = await ConversationModel.getMessages(context.conversationId);
+          const conversation = await ConversationModel.ensureConversation(context.conversationId, context.userId);
+          persistedContext = {
+            ...context,
+            eventType: (conversation.eventType as EventType | undefined) ?? context.eventType,
+            eventDate: conversation.eventDate ?? context.eventDate,
+            guestCount: conversation.guestCount ?? context.guestCount,
+            budget: conversation.budget ?? context.budget,
+            location: conversation.location ?? context.location,
+            planningStage: conversation.planningStage ?? context.planningStage,
+            contextCompleteness: conversation.contextCompleteness ?? context.contextCompleteness,
+          };
+
+          messages = await ConversationModel.getMessages(context.conversationId, 20);
         } catch (historyError) {
           logger.warn(
             { historyError, conversationId: context.conversationId },
@@ -61,23 +83,41 @@ class PlanningEngineService {
         );
       }
 
-      // Build context for LLM from recent history only. This keeps prompts small
-      // and prevents stale/oversized conversations from degrading the widget.
-      const llmMessages: LLMMessage[] = messages.slice(-12).map((msg) => ({
+      const extractedContext = extractPlanningContextFromMessage(trimmedMessage);
+      const mergedContext = mergePlanningContext(persistedContext, extractedContext);
+      const enrichedContext: PlanningContext = {
+        ...mergedContext,
+        planningStage: getPlanningStage(mergedContext),
+        contextCompleteness: getContextCompleteness(mergedContext),
+      };
+      const missingDetails = getMissingDetails(enrichedContext);
+
+      if (persistenceReady) {
+        await ConversationModel.updateContext(context.conversationId, {
+          eventType: enrichedContext.eventType,
+          eventDate: enrichedContext.eventDate,
+          guestCount: enrichedContext.guestCount,
+          budget: enrichedContext.budget,
+          location: enrichedContext.location,
+          planningStage: enrichedContext.planningStage,
+          contextCompleteness: enrichedContext.contextCompleteness,
+        });
+      }
+
+      const llmMessages: LLMMessage[] = messages.slice(-10).map((msg) => ({
         role: msg.role as 'user' | 'assistant' | 'system',
-        content: msg.content.slice(0, 4000),
+        content: msg.content.slice(0, 2500),
       }));
 
-      const enrichedMessage = buildEnrichedUserMessage(context, userMessage.trim());
       llmMessages.push({
         role: 'user',
-        content: enrichedMessage,
+        content: buildEnrichedUserMessage(enrichedContext, trimmedMessage),
       });
 
-      const dynamicSystemPrompt = buildDynamicSystemPrompt(context);
-
       const response = await llmService.chat(llmMessages, {
-        systemPrompt: dynamicSystemPrompt,
+        systemPrompt: buildDynamicSystemPrompt(enrichedContext),
+        temperature: missingDetails.length > 0 ? 0.55 : 0.7,
+        maxTokens: missingDetails.length > 0 ? 550 : 900,
       });
 
       if (!response.content.trim()) {
@@ -85,7 +125,7 @@ class PlanningEngineService {
       }
 
       if (persistenceReady) {
-        await this.persistTurn(context, userMessage, response.content, response.tokensUsed);
+        await this.persistTurn(context, trimmedMessage, response.content, response.tokensUsed);
       } else {
         logger.warn(
           { conversationId: context.conversationId },
@@ -93,7 +133,7 @@ class PlanningEngineService {
         );
       }
 
-      return this.parseResponse(response.content, context);
+      return this.parseResponse(response.content, enrichedContext);
     } catch (error) {
       logger.error({ error, context }, 'Planning request failed');
       throw error;
@@ -200,6 +240,7 @@ class PlanningEngineService {
    * Parse LLM response and extract structured data
    */
   private parseResponse(content: string, context: PlanningContext): PlanningResponse {
+    const missingDetails = getMissingDetails(context);
     const needsMoreInfo = detectInformationGaps(content, context);
     const suggestions = extractContextualSuggestions(content, context);
 
@@ -207,6 +248,8 @@ class PlanningEngineService {
       message: content,
       suggestions,
       requiresMoreInfo: needsMoreInfo,
+      context,
+      missingDetails,
     };
   }
 
