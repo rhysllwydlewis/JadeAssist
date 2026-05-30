@@ -8,6 +8,7 @@
 import { Supplier, SupplierModel } from '../models/Supplier';
 import { catalogService, CatalogSupplier, CatalogVenue } from './catalogService';
 import { logger } from '../utils/logger';
+import { SUPPLIER_CATEGORIES, SupplierCategory } from '@jadeassist/shared';
 
 export interface SearchResult {
   id: string;
@@ -63,7 +64,7 @@ const WEBSITE_INDEX: SearchResult[] = [
   },
 ];
 
-const CATEGORY_ALIASES: Record<string, string> = {
+const CATEGORY_ALIASES: Record<string, SupplierCategory> = {
   venue: 'venue',
   venues: 'venue',
   caterer: 'catering',
@@ -72,6 +73,8 @@ const CATEGORY_ALIASES: Record<string, string> = {
   photographer: 'photographer',
   photography: 'photographer',
   photo: 'photographer',
+  video: 'videographer',
+  videographer: 'videographer',
   florist: 'florist',
   flowers: 'florist',
   entertainment: 'entertainment',
@@ -80,15 +83,28 @@ const CATEGORY_ALIASES: Record<string, string> = {
   decor: 'decorator',
   decorator: 'decorator',
   transport: 'transport',
+  accommodation: 'accommodation',
+  stationery: 'stationery',
+  beauty: 'beauty',
+  equipment: 'equipment',
 };
+
+const VALID_CATEGORIES = new Set<string>(SUPPLIER_CATEGORIES);
 
 function normalise(value: string | undefined): string {
   return (value ?? '').trim().toLowerCase();
 }
 
-function inferCategory(query: string, explicit?: string): string | undefined {
-  const direct = normalise(explicit);
-  if (direct) return CATEGORY_ALIASES[direct] ?? direct;
+function asSupplierCategory(value: string | undefined): SupplierCategory | undefined {
+  const normalised = normalise(value);
+  if (!normalised) return undefined;
+  const alias = CATEGORY_ALIASES[normalised] ?? normalised;
+  return VALID_CATEGORIES.has(alias) ? (alias as SupplierCategory) : undefined;
+}
+
+function inferCategory(query: string, explicit?: string): SupplierCategory | undefined {
+  const direct = asSupplierCategory(explicit);
+  if (direct) return direct;
 
   const q = normalise(query);
   for (const [needle, category] of Object.entries(CATEGORY_ALIASES)) {
@@ -157,7 +173,7 @@ class SearchService {
     const results: SearchResult[] = [];
 
     const localSuppliers = await SupplierModel.search({
-      category: category as never,
+      category,
       region: location,
       limit,
     }).catch((error) => {
