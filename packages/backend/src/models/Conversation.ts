@@ -12,6 +12,12 @@ interface ConversationDoc {
   _id: string;
   userId: string;
   eventType?: string;
+  eventDate?: Date;
+  guestCount?: number;
+  budget?: number;
+  location?: string;
+  planningStage?: string;
+  contextCompleteness?: number;
   startedAt: Date;
   updatedAt: Date;
 }
@@ -25,13 +31,29 @@ interface MessageDoc {
   createdAt: Date;
 }
 
+export interface ConversationContextUpdate {
+  eventType?: string;
+  eventDate?: Date;
+  guestCount?: number;
+  budget?: number;
+  location?: string;
+  planningStage?: string;
+  contextCompleteness?: number;
+}
+
 // ── Schemas ───────────────────────────────────────────────────────────────────
 
 const ConversationSchema = new Schema<ConversationDoc>(
   {
     _id: { type: String, default: () => randomUUID() },
     userId: { type: String, required: true, index: true },
-    eventType: String,
+    eventType: { type: String, index: true },
+    eventDate: Date,
+    guestCount: Number,
+    budget: Number,
+    location: String,
+    planningStage: String,
+    contextCompleteness: { type: Number, min: 0, max: 100, default: 0 },
   },
   {
     // Map Mongoose timestamp fields to the names used in the shared type
@@ -54,6 +76,8 @@ const MessageSchema = new Schema<MessageDoc>(
 
 // Compound index: efficient chronological fetch per conversation
 MessageSchema.index({ conversationId: 1, createdAt: 1 });
+ConversationSchema.index({ userId: 1, updatedAt: -1 });
+ConversationSchema.index({ eventType: 1, updatedAt: -1 });
 
 // ── Mongoose models ───────────────────────────────────────────────────────────
 
@@ -71,6 +95,12 @@ function toConversation(doc: ConversationDoc): Conversation {
     id: doc._id,
     userId: doc.userId,
     eventType: doc.eventType,
+    eventDate: doc.eventDate,
+    guestCount: doc.guestCount,
+    budget: doc.budget,
+    location: doc.location,
+    planningStage: doc.planningStage,
+    contextCompleteness: doc.contextCompleteness,
     startedAt: doc.startedAt,
     updatedAt: doc.updatedAt,
   };
@@ -92,6 +122,12 @@ function toMessage(doc: MessageDoc): Message {
 export interface CreateConversationParams {
   userId: string;
   eventType?: string;
+  eventDate?: Date;
+  guestCount?: number;
+  budget?: number;
+  location?: string;
+  planningStage?: string;
+  contextCompleteness?: number;
 }
 
 export class ConversationModel {
@@ -100,6 +136,12 @@ export class ConversationModel {
     const doc = await ConversationMongoose.create({
       userId: params.userId,
       eventType: params.eventType,
+      eventDate: params.eventDate,
+      guestCount: params.guestCount,
+      budget: params.budget,
+      location: params.location,
+      planningStage: params.planningStage,
+      contextCompleteness: params.contextCompleteness,
     });
     const result = toConversation(doc.toObject() as ConversationDoc);
     logger.info({ conversationId: result.id }, 'Conversation created');
@@ -120,7 +162,7 @@ export class ConversationModel {
     return docs.map(toConversation);
   }
 
-  /** Update conversation event type */
+  /** Update conversation event type. Kept for existing routes. */
   static async update(id: string, eventType?: string): Promise<Conversation | null> {
     const update = eventType !== undefined
       ? { $set: { eventType } }
@@ -131,6 +173,54 @@ export class ConversationModel {
     if (!doc) return null;
     logger.info({ conversationId: id }, 'Conversation updated');
     return toConversation(doc);
+  }
+
+  /** Merge structured planning context into a conversation. */
+  static async updateContext(
+    id: string,
+    context: ConversationContextUpdate
+  ): Promise<Conversation | null> {
+    const $set: Record<string, unknown> = {};
+
+    for (const [key, value] of Object.entries(context)) {
+      if (value !== undefined && value !== null && value !== '') {
+        $set[key] = value;
+      }
+    }
+
+    if (Object.keys($set).length === 0) {
+      return this.findById(id);
+    }
+
+    const doc = await ConversationMongoose.findByIdAndUpdate(
+      id,
+      { $set },
+      { new: true, upsert: false }
+    ).lean<ConversationDoc>();
+
+    if (!doc) return null;
+    logger.info({ conversationId: id, contextKeys: Object.keys($set) }, 'Conversation context updated');
+    return toConversation(doc);
+  }
+
+  /** Ensure a conversation exists for the given ID. */
+  static async ensureConversation(
+    id: string,
+    userId: string,
+    context?: ConversationContextUpdate
+  ): Promise<Conversation> {
+    const existing = await this.findById(id);
+    if (existing) {
+      if (context) {
+        return (await this.updateContext(id, context)) ?? existing;
+      }
+      return existing;
+    }
+
+    return this.create({
+      userId,
+      ...context,
+    });
   }
 
   /** Delete conversation (cascades to messages via application logic) */
@@ -155,10 +245,12 @@ export class ConversationModel {
   }
 
   /** Get messages for a conversation in chronological order */
-  static async getMessages(conversationId: string): Promise<Message[]> {
+  static async getMessages(conversationId: string, limit = 40): Promise<Message[]> {
     const docs = await MessageMongoose.find({ conversationId })
-      .sort({ createdAt: 1 })
+      .sort({ createdAt: -1 })
+      .limit(limit)
       .lean<MessageDoc[]>();
-    return docs.map(toMessage);
+
+    return docs.reverse().map(toMessage);
   }
 }
