@@ -21,6 +21,12 @@ export interface WidgetConfig {
   offsetLeftMobile?: string;
   scale?: number;
   debug?: boolean;
+  /** Enable browser speech recognition controls when supported by the host browser. */
+  enableSpeechInput?: boolean;
+  /** Enable read-aloud controls using browser speech synthesis when supported. */
+  enableSpeechOutput?: boolean;
+  /** BCP-47 language tag used for browser speech APIs. */
+  speechLanguage?: string;
 }
 
 export interface WidgetState {
@@ -65,6 +71,9 @@ export const DEFAULT_CONFIG: Required<WidgetConfig> = {
   offsetLeftMobile: '', // Empty string means use offsetLeft
   scale: 1,
   debug: false,
+  enableSpeechInput: false,
+  enableSpeechOutput: false,
+  speechLanguage: 'en-GB',
 };
 
 export const STORAGE_KEYS = {
